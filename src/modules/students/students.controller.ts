@@ -57,4 +57,13 @@ export class StudentsController {
   remove(@Param('id') id: string) {
     return this.studentsService.remove(id);
   }
+
+  @Roles('ADMIN', 'MANAGER')
+  @Post(':id/enroll')
+  @ApiOperation({ summary: 'Enroll a student into a course independently' })
+  @ApiParam({ name: 'id', description: 'Student UUID' })
+  @ApiResponse({ status: 201, description: 'Student enrolled successfully.' })
+  enroll(@Param('id') id: string, @Body('course_id') courseId: string) {
+    return this.studentsService.enroll(id, courseId);
+  }
 }

@@ -19,4 +19,5 @@ export declare class StudentsController {
     remove(id: string): Promise<{
         success: boolean;
     }>;
+    enroll(id: string, courseId: string): Promise<any>;
 }

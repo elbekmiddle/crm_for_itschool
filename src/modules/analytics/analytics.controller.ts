@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Request } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -27,5 +27,13 @@ export class AnalyticsController {
   @ApiResponse({ status: 200, description: 'Aggregated sums of presence and payments.' })
   getStudentAnalytics(@Param('id') id: string) {
     return this.analyticsService.getStudentAnalytics(id);
+  }
+
+  @Roles('TEACHER', 'ADMIN', 'MANAGER')
+  @Get('teacher/dashboard')
+  @ApiOperation({ summary: 'Teacher specific aggregate metrics including their specific groups, debtors and exams' })
+  @ApiResponse({ status: 200, description: 'Dashboard metrics payload.' })
+  getTeacherDashboard(@Request() req) {
+    return this.analyticsService.getTeacherDashboard(req.user.id);
   }
 }

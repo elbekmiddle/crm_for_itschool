@@ -13,6 +13,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { QueueModule } from './infrastructure/queue/queue.module';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ExamsModule } from './modules/exams/exams.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     AiModule,
     RedisModule,
     QueueModule,
+    ExamsModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,

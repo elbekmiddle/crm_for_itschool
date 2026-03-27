@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
@@ -85,5 +85,21 @@ export class StudentsService {
     );
     if (!result.length) throw new NotFoundException('Student not found');
     return { success: true };
+  }
+
+  async enroll(studentId: string, courseId: string) {
+    try {
+      const result = await this.dbService.query(
+        `INSERT INTO student_courses (student_id, course_id) VALUES ($1, $2) ON CONFLICT (student_id, course_id) DO NOTHING RETURNING *`,
+        [studentId, courseId]
+      );
+      if (!result.length) {
+         throw new ConflictException('Student is already enrolled in this course');
+      }
+      return result[0];
+    } catch (error: any) {
+      if (error instanceof ConflictException) throw error;
+      throw new ConflictException('Failed to enroll: Verify course and student exist.');
+    }
   }
 }

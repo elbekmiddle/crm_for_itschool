@@ -76,6 +76,20 @@ let StudentsService = class StudentsService {
             throw new common_1.NotFoundException('Student not found');
         return { success: true };
     }
+    async enroll(studentId, courseId) {
+        try {
+            const result = await this.dbService.query(`INSERT INTO student_courses (student_id, course_id) VALUES ($1, $2) ON CONFLICT (student_id, course_id) DO NOTHING RETURNING *`, [studentId, courseId]);
+            if (!result.length) {
+                throw new common_1.ConflictException('Student is already enrolled in this course');
+            }
+            return result[0];
+        }
+        catch (error) {
+            if (error instanceof common_1.ConflictException)
+                throw error;
+            throw new common_1.ConflictException('Failed to enroll: Verify course and student exist.');
+        }
+    }
 };
 exports.StudentsService = StudentsService;
 exports.StudentsService = StudentsService = __decorate([

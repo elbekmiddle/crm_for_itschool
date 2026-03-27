@@ -40,6 +40,9 @@ let StudentsController = class StudentsController {
     remove(id) {
         return this.studentsService.remove(id);
     }
+    enroll(id, courseId) {
+        return this.studentsService.enroll(id, courseId);
+    }
 };
 exports.StudentsController = StudentsController;
 __decorate([
@@ -99,6 +102,18 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "remove", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER'),
+    (0, common_1.Post)(':id/enroll'),
+    (0, swagger_1.ApiOperation)({ summary: 'Enroll a student into a course independently' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Student UUID' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Student enrolled successfully.' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)('course_id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "enroll", null);
 exports.StudentsController = StudentsController = __decorate([
     (0, swagger_1.ApiTags)('students'),
     (0, swagger_1.ApiBearerAuth)(),

@@ -22,6 +22,7 @@ const ai_module_1 = require("./modules/ai/ai.module");
 const redis_module_1 = require("./infrastructure/redis/redis.module");
 const queue_module_1 = require("./infrastructure/queue/queue.module");
 const throttler_1 = require("@nestjs/throttler");
+const exams_module_1 = require("./modules/exams/exams.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -44,6 +45,7 @@ exports.AppModule = AppModule = __decorate([
             ai_module_1.AiModule,
             redis_module_1.RedisModule,
             queue_module_1.QueueModule,
+            exams_module_1.ExamsModule,
             throttler_1.ThrottlerModule.forRoot([{
                     ttl: 60000,
                     limit: 100,

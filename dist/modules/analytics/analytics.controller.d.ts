@@ -7,4 +7,14 @@ export declare class AnalyticsController {
         attendance_summary: any[];
         total_paid: any;
     }>;
+    getTeacherDashboard(req: any): Promise<{
+        total_groups: number;
+        groups: any[];
+        total_students: number;
+        students: any[];
+        debtors_count: number;
+        debtors: any[];
+        today_attendance: any[];
+        exams: any[];
+    }>;
 }

@@ -9,4 +9,14 @@ export declare class AnalyticsService {
         attendance_summary: any[];
         total_paid: any;
     }>;
+    getTeacherDashboard(teacherId: string): Promise<{
+        total_groups: number;
+        groups: any[];
+        total_students: number;
+        students: any[];
+        debtors_count: number;
+        debtors: any[];
+        today_attendance: any[];
+        exams: any[];
+    }>;
 }

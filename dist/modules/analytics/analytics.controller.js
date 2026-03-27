@@ -29,6 +29,9 @@ let AnalyticsController = class AnalyticsController {
     getStudentAnalytics(id) {
         return this.analyticsService.getStudentAnalytics(id);
     }
+    getTeacherDashboard(req) {
+        return this.analyticsService.getTeacherDashboard(req.user.id);
+    }
 };
 exports.AnalyticsController = AnalyticsController;
 __decorate([
@@ -51,6 +54,16 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], AnalyticsController.prototype, "getStudentAnalytics", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('TEACHER', 'ADMIN', 'MANAGER'),
+    (0, common_1.Get)('teacher/dashboard'),
+    (0, swagger_1.ApiOperation)({ summary: 'Teacher specific aggregate metrics including their specific groups, debtors and exams' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Dashboard metrics payload.' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AnalyticsController.prototype, "getTeacherDashboard", null);
 exports.AnalyticsController = AnalyticsController = __decorate([
     (0, swagger_1.ApiTags)('analytics'),
     (0, swagger_1.ApiBearerAuth)(),

@@ -14,31 +14,42 @@ export class AiService {
   }
 
   async analyzeStudent(data: any) {
-    if (!this.openai) throw new HttpException('OpenAI missing or not configured in .env', HttpStatus.NOT_IMPLEMENTED);
+    if (!this.openai) return { analysis: "AI sozlamalari yopilgan yoki kalit yo'q." };
     
-    // Limits and queues would go here in fully connected environment
-    const response = await this.openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "Analyze student performance based on attendance and payments. Keep it humorous. If attendance < 60%, warn them of risk." },
-        { role: "user", content: JSON.stringify(data) }
-      ]
-    });
-    
-    return { analysis: response.choices[0].message.content };
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "Analyze student performance based on attendance and payments. Keep it humorous. If attendance < 60%, warn them of risk." },
+          { role: "user", content: JSON.stringify(data) }
+        ]
+      });
+      return { analysis: response.choices[0].message.content };
+    } catch (error: any) {
+      if (error?.status === 429 || error?.message?.includes('429')) {
+        return { analysis: "AI tavsiyalar xizmati ayni vaqtda faol emas (Kvota tugagan)." };
+      }
+      return { analysis: "AI moduli ulanishida vaqtinchalik xato chiqdi." };
+    }
   }
   
   async groupSummary(data: any) {
-    if (!this.openai) throw new HttpException('OpenAI missing or not configured in .env', HttpStatus.NOT_IMPLEMENTED);
+    if (!this.openai) return { summary: "AI sozlamalari yopilgan yoki kalit yo'q." };
     
-    const response = await this.openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "Summarize group dynamics based on given data. Identify the best student (max attendance) and keep response humorous." },
-        { role: "user", content: JSON.stringify(data) }
-      ]
-    });
-    
-    return { summary: response.choices[0].message.content };
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "Summarize group dynamics based on given data. Identify the best student (max attendance) and keep response humorous." },
+          { role: "user", content: JSON.stringify(data) }
+        ]
+      });
+      return { summary: response.choices[0].message.content };
+    } catch (error: any) {
+      if (error?.status === 429 || error?.message?.includes('429')) {
+        return { summary: "AI tavsiyalar xizmati ayni vaqtda faol emas (Kvota tugagan)." };
+      }
+      return { summary: "AI moduli ulanishida vaqtinchalik xato chiqdi." };
+    }
   }
 }

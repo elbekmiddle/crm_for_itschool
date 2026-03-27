@@ -35,6 +35,11 @@ export class GroupsService {
     }
 
     try {
+      await this.dbService.query(
+        `INSERT INTO student_courses (student_id, course_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [studentId, courseId]
+      );
+      
       const result = await this.dbService.query(
         `INSERT INTO group_students (group_id, student_id) VALUES ($1, $2) RETURNING *`,
         [groupId, studentId]
