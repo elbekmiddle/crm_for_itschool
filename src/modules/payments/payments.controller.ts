@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Delete } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -39,4 +39,23 @@ export class PaymentsController {
   getStudentPayments(@Param('id') id: string) {
     return this.paymentsService.getStudentPayments(id);
   }
+
+  @Roles('ADMIN', 'MANAGER')
+  @Get()
+  @ApiOperation({ summary: 'Get all payments' })
+  @ApiResponse({ status: 200, description: 'Returns all payments.' })
+  findAll() {
+    return this.paymentsService.findAll();
+  }
+
+  @Roles('ADMIN')
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a payment' })
+  @ApiParam({ name: 'id', description: 'Payment UUID' })
+  @ApiResponse({ status: 200, description: 'Payment deleted.' })
+  remove(@Param('id') id: string) {
+    return this.paymentsService.remove(id);
+  }
 }
+
+

@@ -9,5 +9,8 @@ export declare class AiService {
     groupSummary(data: any): Promise<{
         summary: string;
     }>;
+    analyzeFinancials(data: any): Promise<{
+        analysis: string;
+    }>;
     generateExamQuestions(topic: string, level: string, count: number): Promise<any[]>;
 }

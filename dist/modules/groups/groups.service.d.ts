@@ -12,4 +12,5 @@ export declare class GroupsService {
     softDelete(id: string): Promise<{
         success: boolean;
     }>;
+    findAll(): Promise<any[]>;
 }

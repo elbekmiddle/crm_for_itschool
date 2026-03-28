@@ -7,8 +7,6 @@ export declare class UsersService {
     create(data: any): Promise<any>;
     findAll(): Promise<any[]>;
     findOne(id: string): Promise<any>;
-    update(id: string, data: any, file?: Express.Multer.File): Promise<any>;
-    softDelete(id: string): Promise<{
-        success: boolean;
-    }>;
+    update(id: string, data: any): Promise<any>;
+    softDelete(id: string): Promise<any>;
 }

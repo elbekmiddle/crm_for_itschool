@@ -7,4 +7,6 @@ export declare class PaymentsService {
         status: string;
         payments: any[];
     }>;
+    findAll(): Promise<any[]>;
+    remove(id: string): Promise<any>;
 }

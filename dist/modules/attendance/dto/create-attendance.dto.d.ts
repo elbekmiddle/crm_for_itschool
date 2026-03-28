@@ -3,4 +3,5 @@ export declare class CreateAttendanceDto {
     student_id: string;
     status: string;
     lesson_id?: string;
+    lesson_date?: string;
 }

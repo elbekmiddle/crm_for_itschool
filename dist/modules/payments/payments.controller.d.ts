@@ -8,4 +8,6 @@ export declare class PaymentsController {
         status: string;
         payments: any[];
     }>;
+    findAll(): Promise<any[]>;
+    remove(id: string): Promise<any>;
 }

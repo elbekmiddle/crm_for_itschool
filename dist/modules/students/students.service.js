@@ -12,83 +12,33 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.StudentsService = void 0;
 const common_1 = require("@nestjs/common");
 const db_service_1 = require("../../infrastructure/database/db.service");
+const all_students_1 = require("./queries/all_students");
+const get_student_1 = require("./queries/get_student");
+const create_student_1 = require("./commands/create_student");
+const update_student_1 = require("./commands/update_student");
+const delete_student_1 = require("./commands/delete_student");
+const enroll_student_1 = require("./commands/enroll_student");
 let StudentsService = class StudentsService {
     constructor(dbService) {
         this.dbService = dbService;
     }
     async create(createStudentDto, createdBy) {
-        const { first_name, last_name, phone } = createStudentDto;
-        const result = await this.dbService.query(`INSERT INTO students (first_name, last_name, phone, created_by) 
-       VALUES ($1, $2, $3, $4) RETURNING *`, [first_name, last_name, phone, createdBy]);
-        return result[0];
+        return (0, create_student_1.create_student)(this.dbService, createStudentDto, createdBy);
     }
     async findAll(page = 1, limit = 20) {
-        const offset = (page - 1) * limit;
-        const [data, total] = await Promise.all([
-            this.dbService.query(`SELECT * FROM students WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT $1 OFFSET $2`, [limit, offset]),
-            this.dbService.query(`SELECT COUNT(*) FROM students WHERE deleted_at IS NULL`)
-        ]);
-        return {
-            data,
-            meta: {
-                total: parseInt(total[0].count, 10),
-                page,
-                limit,
-                totalPages: Math.ceil(parseInt(total[0].count, 10) / limit)
-            }
-        };
+        return (0, all_students_1.all_students)(this.dbService, page, limit);
     }
     async findOne(id) {
-        const result = await this.dbService.query(`SELECT * FROM students WHERE id = $1 AND deleted_at IS NULL`, [id]);
-        if (!result.length)
-            throw new common_1.NotFoundException('Student not found');
-        return result[0];
+        return (0, get_student_1.get_student)(this.dbService, id);
     }
     async update(id, updateStudentDto) {
-        const { first_name, last_name, phone } = updateStudentDto;
-        const updates = [];
-        const values = [];
-        let queryIdx = 1;
-        if (first_name) {
-            updates.push(`first_name = $${queryIdx++}`);
-            values.push(first_name);
-        }
-        if (last_name) {
-            updates.push(`last_name = $${queryIdx++}`);
-            values.push(last_name);
-        }
-        if (phone) {
-            updates.push(`phone = $${queryIdx++}`);
-            values.push(phone);
-        }
-        if (!updates.length)
-            return this.findOne(id);
-        values.push(id);
-        const query = `UPDATE students SET ${updates.join(', ')} WHERE id = $${queryIdx} AND deleted_at IS NULL RETURNING *`;
-        const result = await this.dbService.query(query, values);
-        if (!result.length)
-            throw new common_1.NotFoundException('Student not found');
-        return result[0];
+        return (0, update_student_1.update_student)(this.dbService, id, updateStudentDto);
     }
     async remove(id) {
-        const result = await this.dbService.query(`UPDATE students SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL RETURNING id`, [id]);
-        if (!result.length)
-            throw new common_1.NotFoundException('Student not found');
-        return { success: true };
+        return (0, delete_student_1.delete_student)(this.dbService, id);
     }
-    async enroll(studentId, courseId) {
-        try {
-            const result = await this.dbService.query(`INSERT INTO student_courses (student_id, course_id) VALUES ($1, $2) ON CONFLICT (student_id, course_id) DO NOTHING RETURNING *`, [studentId, courseId]);
-            if (!result.length) {
-                throw new common_1.ConflictException('Student is already enrolled in this course');
-            }
-            return result[0];
-        }
-        catch (error) {
-            if (error instanceof common_1.ConflictException)
-                throw error;
-            throw new common_1.ConflictException('Failed to enroll: Verify course and student exist.');
-        }
+    async enroll(id, courseId) {
+        return (0, enroll_student_1.enroll_student)(this.dbService, id, courseId);
     }
 };
 exports.StudentsService = StudentsService;

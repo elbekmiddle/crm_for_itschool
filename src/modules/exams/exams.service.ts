@@ -1,83 +1,56 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { AiService } from '../ai/ai.service';
+import { QueueService } from '../../infrastructure/queue/queue.service';
+import { all_exams_by_course } from './queries/all_exams_by_course';
+import { get_exam_results } from './queries/get_exam_results';
+import { create_exam } from './commands/create_exam';
+import { add_questions_to_exam } from './commands/add_questions_to_exam';
+import { grade_exam } from './commands/grade_exam';
 
 @Injectable()
 export class ExamsService {
-  constructor(private readonly dbService: DbService, private readonly aiService: AiService) {}
+  constructor(
+    private readonly dbService: DbService, 
+    private readonly aiService: AiService,
+    private readonly queueService: QueueService
+  ) {}
 
   async create(createExamDto: CreateExamDto, teacherId: string) {
-    const { title, course_id } = createExamDto;
-    const result = await this.dbService.query(
-      `INSERT INTO exams (title, course_id, created_by) VALUES ($1, $2, $3) RETURNING *`,
-      [title, course_id, teacherId]
-    );
-    return result[0];
+    return create_exam(this.dbService, createExamDto, teacherId);
   }
 
   async addQuestionsToExam(examId: string, questionIds: string[]) {
-    const results = [];
-    for (const qId of questionIds) {
-      const res = await this.dbService.query(
-        `INSERT INTO exam_questions (exam_id, question_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING *`,
-        [examId, qId]
-      );
-      if (res.length) results.push(res[0]);
-    }
-    return { linked: results.length, total_requested: questionIds.length };
+    return add_questions_to_exam(this.dbService, examId, questionIds);
   }
 
   async generateAiExam(examId: string, lessonId: string, topic: string, level: string, count: number, teacherId: string) {
-    const questionsText = await this.aiService.generateExamQuestions(topic, level, count);
-    const results = [];
-    for (const text of questionsText) {
-      const qRes = await this.dbService.query(
-        `INSERT INTO questions (lesson_id, created_by, level, text) VALUES ($1, $2, $3, $4) RETURNING id`,
-        [lessonId, teacherId, level, text]
-      );
-      if (qRes.length) {
-        const qId = qRes[0].id;
-        await this.dbService.query(
-          `INSERT INTO exam_questions (exam_id, question_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-          [examId, qId]
-        );
-        results.push(qId);
-      }
-    }
-    return { success: true, ai_questions_added: results.length };
+    const job = await this.queueService.addExamJob({
+      examId,
+      lessonId,
+      topic,
+      level,
+      count,
+      teacherId
+    });
+
+    return { 
+      success: true, 
+      message: 'AI Exam generation queued.',
+      jobId: job?.id 
+    };
   }
 
   async gradeExam(examId: string, grades: { student_id: string; score: number; feedback?: string }[]) {
-    // Check if exam exists
-    const examCheck = await this.dbService.query(`SELECT id FROM exams WHERE id = $1`, [examId]);
-    if (!examCheck.length) throw new NotFoundException('Exam not found');
-
-    const results = [];
-    for (const grade of grades) {
-       const res = await this.dbService.query(
-         `INSERT INTO exam_results (exam_id, student_id, score, feedback) 
-          VALUES ($1, $2, $3, $4)
-          ON CONFLICT (exam_id, student_id) 
-          DO UPDATE SET score = EXCLUDED.score, feedback = EXCLUDED.feedback RETURNING *`,
-         [examId, grade.student_id, grade.score, grade.feedback || '']
-       );
-       results.push(res[0]);
-    }
-    return results;
+    return grade_exam(this.dbService, examId, grades);
   }
 
   async findAllByCourse(courseId: string) {
-    return this.dbService.query(`SELECT * FROM exams WHERE course_id = $1 ORDER BY created_at DESC`, [courseId]);
+    return all_exams_by_course(this.dbService, courseId);
   }
 
   async getExamResults(examId: string) {
-    return this.dbService.query(
-      `SELECT e.*, s.first_name, s.last_name 
-       FROM exam_results e 
-       JOIN students s ON e.student_id = s.id 
-       WHERE e.exam_id = $1 ORDER BY e.score DESC`, 
-       [examId]
-    );
+    return get_exam_results(this.dbService, examId);
   }
 }

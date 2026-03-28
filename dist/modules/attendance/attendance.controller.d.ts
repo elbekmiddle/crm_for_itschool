@@ -5,4 +5,5 @@ export declare class AttendanceController {
     constructor(attendanceService: AttendanceService);
     markAttendance(body: CreateAttendanceDto): Promise<any>;
     getGroupAttendance(id: string): Promise<any[]>;
+    update(id: string, status: string): Promise<any>;
 }

@@ -26,6 +26,9 @@ const exams_module_1 = require("./modules/exams/exams.module");
 const lessons_module_1 = require("./modules/lessons/lessons.module");
 const questions_module_1 = require("./modules/questions/questions.module");
 const cloudinary_module_1 = require("./modules/cloudinary/cloudinary.module");
+const core_1 = require("@nestjs/core");
+const transform_interceptor_1 = require("./common/interceptors/transform.interceptor");
+const root_controller_1 = require("./root.controller");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -62,7 +65,12 @@ exports.AppModule = AppModule = __decorate([
                 provide: 'APP_GUARD',
                 useClass: require('@nestjs/throttler').ThrottlerGuard,
             },
+            {
+                provide: core_1.APP_INTERCEPTOR,
+                useClass: transform_interceptor_1.TransformInterceptor,
+            },
         ],
+        controllers: [root_controller_1.RootController],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

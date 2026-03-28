@@ -16,42 +16,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DbService = void 0;
 const common_1 = require("@nestjs/common");
 const pg_1 = require("pg");
-const fs = require("fs");
-const path = require("path");
 let DbService = DbService_1 = class DbService {
     constructor(pool) {
         this.pool = pool;
         this.logger = new common_1.Logger(DbService_1.name);
     }
     async onModuleInit() {
-        this.logger.log('Starting DB Initialization check...');
-        try {
-            const initSqlPath = path.join(process.cwd(), 'database', 'init.sql');
-            const seedSqlPath = path.join(process.cwd(), 'database', 'seed.sql');
-            if (fs.existsSync(initSqlPath)) {
-                try {
-                    const initSql = fs.readFileSync(initSqlPath, 'utf8');
-                    await this.pool.query(initSql);
-                    this.logger.log('✔ init.sql schema executed automatically.');
-                }
-                catch (e) {
-                    this.logger.warn(`init.sql warning (ignoring): ${e.message}`);
-                }
-            }
-            if (fs.existsSync(seedSqlPath)) {
-                try {
-                    const seedSql = fs.readFileSync(seedSqlPath, 'utf8');
-                    await this.pool.query(seedSql);
-                    this.logger.log('✔ seed.sql executed automatically.');
-                }
-                catch (e) {
-                    this.logger.warn(`seed.sql warning (ignoring): ${e.message}`);
-                }
-            }
-        }
-        catch (err) {
-            this.logger.error('Database connection failed totally.', err.message);
-        }
+        this.logger.log('Database service initialized.');
     }
     async query(queryText, values) {
         this.logger.debug(`Executing query: ${queryText}`);

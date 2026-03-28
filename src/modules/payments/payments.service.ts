@@ -1,24 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
+import { all_payments } from './queries/all_payments';
+import { get_student_payments_raw } from './queries/get_student_payments_raw';
+import { create_payment } from './commands/create_payment';
+import { delete_payment } from './commands/delete_payment';
 
 @Injectable()
 export class PaymentsService {
   constructor(private readonly dbService: DbService) {}
 
   async create(data: any) {
-    const { student_id, group_id, amount } = data;
-    const result = await this.dbService.query(
-      `INSERT INTO payments (student_id, group_id, amount) VALUES ($1, $2, $3) RETURNING *`,
-      [student_id, group_id, amount]
-    );
-    return result[0];
+    return create_payment(this.dbService, data);
   }
 
   async getStudentPayments(studentId: string) {
-    const payments = await this.dbService.query(
-      `SELECT * FROM payments WHERE student_id = $1 ORDER BY paid_at DESC`,
-      [studentId]
-    );
+    const payments = await get_student_payments_raw(this.dbService, studentId);
 
     let status = 'ACTIVE';
     if (payments.length > 0) {
@@ -33,4 +29,13 @@ export class PaymentsService {
 
     return { status, payments };
   }
+
+  async findAll() {
+    return all_payments(this.dbService);
+  }
+
+  async remove(id: string) {
+    return delete_payment(this.dbService, id);
+  }
 }
+

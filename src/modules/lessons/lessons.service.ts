@@ -1,23 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
+import { get_lessons_by_course } from './queries/get_lessons_by_course';
+import { create_lesson } from './commands/create_lesson';
 
 @Injectable()
 export class LessonsService {
   constructor(private readonly dbService: DbService) {}
 
   async create(data: any) {
-    const { course_id, title } = data;
-    const result = await this.dbService.query(
-      `INSERT INTO lessons (course_id, title) VALUES ($1, $2) RETURNING *`,
-      [course_id, title]
-    );
-    return result[0];
+    return create_lesson(this.dbService, data);
   }
 
   async findByCourse(courseId: string) {
-    return this.dbService.query(
-      `SELECT * FROM lessons WHERE course_id = $1 AND deleted_at IS NULL ORDER BY created_at ASC`,
-      [courseId]
-    );
+    return get_lessons_by_course(this.dbService, courseId);
   }
 }

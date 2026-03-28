@@ -13,6 +13,14 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 @Controller('groups')
 export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}
+  
+  @Get()
+  @ApiOperation({ summary: 'List all groups' })
+  @ApiResponse({ status: 200, description: 'Returns all groups.' })
+  findAll() {
+    return this.groupsService.findAll();
+  }
+
 
   @Roles('ADMIN', 'MANAGER')
   @Post()

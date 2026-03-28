@@ -28,7 +28,10 @@ let AiService = class AiService {
             const response = await this.openai.chat.completions.create({
                 model: "gpt-4o-mini",
                 messages: [
-                    { role: "system", content: "Analyze student performance based on attendance and payments. Keep it humorous. If attendance < 60%, warn them of risk." },
+                    { role: "system", content: data.special_mode === 'DEMO'
+                            ? "You are a legendary Web Development Teacher. Provide an inspiring, humorous, and tech-savvy 'Web Dasturlash' (Web Development) themed analysis of this student. Use terms like 'Full-stack', 'Commit', 'Bug-free' etc."
+                            : "Analyze student performance based on attendance and payments. Keep it humorous. If attendance < 60%, warn them of risk. Use Uzbek language for the analysis."
+                    },
                     { role: "user", content: JSON.stringify(data) }
                 ]
             });
@@ -59,6 +62,26 @@ let AiService = class AiService {
                 return { summary: "AI tavsiyalar xizmati ayni vaqtda faol emas (Kvota tugagan)." };
             }
             return { summary: "AI moduli ulanishida vaqtinchalik xato chiqdi." };
+        }
+    }
+    async analyzeFinancials(data) {
+        if (!this.openai)
+            return { analysis: "AI sozlamalari yopilgan yoki kalit yo'q." };
+        try {
+            const response = await this.openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    {
+                        role: "system",
+                        content: "You are a senior business analyst for an IT school. Analyze the provided monthly financial and growth data. Identify trends, calculate basic ROI if possible, and provide 3 actionable strategic recommendations. Keep it professional but concise."
+                    },
+                    { role: "user", content: JSON.stringify(data) }
+                ]
+            });
+            return { analysis: response.choices[0].message.content };
+        }
+        catch (error) {
+            return { analysis: "AI moliyaviy tahlil moduli ulanishida xato chiqdi." };
         }
     }
     async generateExamQuestions(topic, level, count) {

@@ -12,8 +12,7 @@ export declare class AuthController {
         access_token: string;
         refresh_token: string;
     }>;
-    logout(): {
+    logout(req: any): Promise<{
         success: boolean;
-        message: string;
-    };
+    }>;
 }

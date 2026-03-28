@@ -1,11 +1,13 @@
 import { DbService } from '../../infrastructure/database/db.service';
 import { RedisService } from '../../infrastructure/redis/redis.service';
 import { AiService } from '../ai/ai.service';
+import { QueueService } from '../../infrastructure/queue/queue.service';
 export declare class AnalyticsService {
     private readonly dbService;
     private readonly redisService;
     private readonly aiService;
-    constructor(dbService: DbService, redisService: RedisService, aiService: AiService);
+    private readonly queueService;
+    constructor(dbService: DbService, redisService: RedisService, aiService: AiService, queueService: QueueService);
     getDashboard(): Promise<any>;
     getStudentAnalytics(studentId: string): Promise<{
         error: string;
@@ -38,5 +40,31 @@ export declare class AnalyticsService {
         most_active_student: any;
         ai_humor: any;
         exams: any[];
+    }>;
+    getMonthlyAiReport(month: number, year: number): Promise<{
+        message: string;
+        jobId: string;
+        stats: {
+            month: number;
+            year: number;
+            total_revenue: number;
+            new_students: number;
+            attendance_summary: any[];
+        };
+    }>;
+    getAiJobStatus(jobId: string): Promise<{
+        status: string;
+        id?: undefined;
+        state?: undefined;
+        progress?: undefined;
+        result?: undefined;
+        failedReason?: undefined;
+    } | {
+        id: string;
+        state: string;
+        progress: number | object;
+        result: any;
+        failedReason: string;
+        status?: undefined;
     }>;
 }

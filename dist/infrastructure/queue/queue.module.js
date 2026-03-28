@@ -9,12 +9,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.QueueModule = void 0;
 const common_1 = require("@nestjs/common");
 const queue_service_1 = require("./queue.service");
+const ai_module_1 = require("../../modules/ai/ai.module");
+const db_module_1 = require("../database/db.module");
 let QueueModule = class QueueModule {
 };
 exports.QueueModule = QueueModule;
 exports.QueueModule = QueueModule = __decorate([
     (0, common_1.Global)(),
     (0, common_1.Module)({
+        imports: [(0, common_1.forwardRef)(() => ai_module_1.AiModule), db_module_1.DbModule],
         providers: [queue_service_1.QueueService],
         exports: [queue_service_1.QueueService],
     })

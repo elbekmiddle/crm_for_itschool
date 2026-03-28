@@ -30,6 +30,12 @@ let PaymentsController = class PaymentsController {
     getStudentPayments(id) {
         return this.paymentsService.getStudentPayments(id);
     }
+    findAll() {
+        return this.paymentsService.findAll();
+    }
+    remove(id) {
+        return this.paymentsService.remove(id);
+    }
 };
 exports.PaymentsController = PaymentsController;
 __decorate([
@@ -63,6 +69,26 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], PaymentsController.prototype, "getStudentPayments", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER'),
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all payments' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Returns all payments.' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], PaymentsController.prototype, "findAll", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, common_1.Delete)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Delete a payment' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Payment UUID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Payment deleted.' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], PaymentsController.prototype, "remove", null);
 exports.PaymentsController = PaymentsController = __decorate([
     (0, swagger_1.ApiTags)('payments'),
     (0, swagger_1.ApiBearerAuth)(),

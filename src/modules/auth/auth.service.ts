@@ -2,8 +2,11 @@ import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/co
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { DbService } from '../../infrastructure/database/db.service';
+import { RedisService } from '../../infrastructure/redis/redis.service';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
+import { get_user_by_email } from './queries/get_user_by_email';
+import { get_user_by_id_for_auth } from './queries/get_user_by_id_for_auth';
 
 @Injectable()
 export class AuthService {
@@ -11,13 +14,26 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly dbService: DbService,
     private readonly configService: ConfigService,
+    private readonly redisService: RedisService,
   ) {}
 
+  async logout(token: string) {
+    try {
+      const decoded = this.jwtService.decode(token) as any;
+      if (!decoded || !decoded.exp) return { success: true };
+
+      const ttl = decoded.exp - Math.floor(Date.now() / 1000);
+      if (ttl > 0) {
+        await this.redisService.set(`blacklist:${token}`, '1', { ex: ttl });
+      }
+      return { success: true };
+    } catch (e) {
+      return { success: true }; // Silent fail for invalid tokens
+    }
+  }
+
   async login(loginDto: LoginDto) {
-    const users = await this.dbService.query(
-      'SELECT id, email, password, role FROM users WHERE email = $1 AND deleted_at IS NULL',
-      [loginDto.email]
-    );
+    const users = await get_user_by_email(this.dbService, loginDto.email);
 
     if (!users.length) {
       throw new NotFoundException('User not found');
@@ -39,10 +55,7 @@ export class AuthService {
         secret: this.configService.get('JWT_REFRESH_SECRET'),
       });
 
-      const users = await this.dbService.query(
-        'SELECT id, email, role FROM users WHERE id = $1 AND deleted_at IS NULL',
-        [payload.sub]
-      );
+      const users = await get_user_by_id_for_auth(this.dbService, payload.sub);
 
       if (!users.length) throw new Error();
 

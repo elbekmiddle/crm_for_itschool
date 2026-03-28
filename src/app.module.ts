@@ -18,6 +18,10 @@ import { LessonsModule } from './modules/lessons/lessons.module';
 import { QuestionsModule } from './modules/questions/questions.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { RootController } from './root.controller';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -50,6 +54,12 @@ import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
       provide: 'APP_GUARD',
       useClass: require('@nestjs/throttler').ThrottlerGuard,
     },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TransformInterceptor,
+    },
   ],
+  controllers: [RootController],
 })
+
 export class AppModule {}

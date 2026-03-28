@@ -7,20 +7,23 @@ const helmet_1 = require("helmet");
 const compression = require("compression");
 const swagger_1 = require("@nestjs/swagger");
 const all_exceptions_filter_1 = require("./common/filters/all-exceptions.filter");
-const transform_interceptor_1 = require("./common/interceptors/transform.interceptor");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.use((0, helmet_1.default)());
     app.use(compression());
-    app.enableCors();
-    app.setGlobalPrefix('api/v1');
+    app.enableCors({
+        origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3001', 'http://localhost:3000'],
+        credentials: true,
+    });
+    app.setGlobalPrefix('api/v1', {
+        exclude: ['api/docs', 'favicon.ico'],
+    });
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
         transform: true,
         forbidNonWhitelisted: true,
     }));
     app.useGlobalFilters(new all_exceptions_filter_1.AllExceptionsFilter());
-    app.useGlobalInterceptors(new transform_interceptor_1.TransformInterceptor());
     const config = new swagger_1.DocumentBuilder()
         .setTitle('IT School CRM API')
         .setDescription('It school crm')

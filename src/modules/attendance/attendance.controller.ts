@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Patch } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -41,4 +41,16 @@ export class AttendanceController {
   getGroupAttendance(@Param('id') id: string) {
     return this.attendanceService.getGroupAttendance(id);
   }
+
+  @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update attendance status' })
+  @ApiParam({ name: 'id', description: 'Attendance UUID' })
+  @ApiBody({ schema: { type: 'object', properties: { status: { type: 'string', example: 'ABSENT' } } } })
+  @ApiResponse({ status: 200, description: 'Attendance updated.' })
+  update(@Param('id') id: string, @Body('status') status: string) {
+    return this.attendanceService.update(id, status);
+  }
 }
+
+

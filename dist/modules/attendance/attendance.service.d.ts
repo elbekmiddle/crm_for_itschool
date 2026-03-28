@@ -4,4 +4,5 @@ export declare class AttendanceService {
     constructor(dbService: DbService);
     markAttendance(data: any): Promise<any>;
     getGroupAttendance(groupId: string): Promise<any[]>;
+    update(id: string, status: string): Promise<any>;
 }

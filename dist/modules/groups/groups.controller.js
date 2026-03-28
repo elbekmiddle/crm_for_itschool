@@ -25,6 +25,9 @@ let GroupsController = class GroupsController {
     constructor(groupsService) {
         this.groupsService = groupsService;
     }
+    findAll() {
+        return this.groupsService.findAll();
+    }
     create(body) {
         return this.groupsService.create(body);
     }
@@ -45,6 +48,14 @@ let GroupsController = class GroupsController {
     }
 };
 exports.GroupsController = GroupsController;
+__decorate([
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: 'List all groups' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Returns all groups.' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], GroupsController.prototype, "findAll", null);
 __decorate([
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER'),
     (0, common_1.Post)(),

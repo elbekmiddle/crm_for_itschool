@@ -1,29 +1,23 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
+import { get_group_attendance } from './queries/get_group_attendance';
+import { mark_attendance } from './commands/mark_attendance';
+import { update_attendance } from './commands/update_attendance';
 
 @Injectable()
 export class AttendanceService {
   constructor(private readonly dbService: DbService) {}
 
   async markAttendance(data: any) {
-    const { group_id, student_id, status, lesson_id } = data;
-    
-    try {
-      const result = await this.dbService.query(
-        `INSERT INTO attendance (group_id, student_id, lesson_id, status) 
-         VALUES ($1, $2, $3, $4) RETURNING *`,
-        [group_id, student_id, lesson_id, status]
-      );
-      return result[0];
-    } catch (error) {
-       throw new ConflictException('Attendance already marked for this student today');
-    }
+    return mark_attendance(this.dbService, data);
   }
 
   async getGroupAttendance(groupId: string) {
-    return this.dbService.query(
-      `SELECT * FROM attendance WHERE group_id = $1 ORDER BY created_at DESC`,
-      [groupId]
-    );
+    return get_group_attendance(this.dbService, groupId);
+  }
+
+  async update(id: string, status: string) {
+    return update_attendance(this.dbService, id, status);
   }
 }
+

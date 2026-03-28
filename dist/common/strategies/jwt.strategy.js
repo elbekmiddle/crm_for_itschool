@@ -14,21 +14,32 @@ const passport_jwt_1 = require("passport-jwt");
 const passport_1 = require("@nestjs/passport");
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
+const redis_service_1 = require("../../infrastructure/redis/redis.service");
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
-    constructor(configService) {
+    constructor(configService, redisService) {
         super({
             jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
             secretOrKey: configService.get('JWT_SECRET') || 'super_secret_jwt_key_here',
+            passReqToCallback: true,
         });
+        this.redisService = redisService;
     }
-    async validate(payload) {
+    async validate(req, payload) {
+        const authHeader = req.headers.authorization;
+        if (authHeader) {
+            const token = authHeader.split(' ')[1];
+            const blacklisted = await this.redisService.get(`blacklist:${token}`);
+            if (blacklisted) {
+                throw new common_1.UnauthorizedException('Token is blacklisted');
+            }
+        }
         return { id: payload.sub, email: payload.email, role: payload.role };
     }
 };
 exports.JwtStrategy = JwtStrategy;
 exports.JwtStrategy = JwtStrategy = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [config_1.ConfigService])
+    __metadata("design:paramtypes", [config_1.ConfigService, redis_service_1.RedisService])
 ], JwtStrategy);
 //# sourceMappingURL=jwt.strategy.js.map

@@ -2,13 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { RedisService } from '../../infrastructure/redis/redis.service';
 import { AiService } from '../ai/ai.service';
+import { QueueService } from '../../infrastructure/queue/queue.service';
+import { dashboard_stats } from './queries/dashboard_stats';
+import { student_analytics_data } from './queries/student_analytics_data';
+import { teacher_dashboard_data } from './queries/teacher_dashboard_data';
+import { monthly_report_data } from './queries/monthly_report_data';
 
 @Injectable()
 export class AnalyticsService {
   constructor(
     private readonly dbService: DbService,
     private readonly redisService: RedisService,
-    private readonly aiService: AiService
+    private readonly aiService: AiService,
+    private readonly queueService: QueueService
   ) {}
 
   async getDashboard() {
@@ -16,53 +22,18 @@ export class AnalyticsService {
     const cached = await this.redisService.get(cacheKey);
     if (cached) return typeof cached === 'string' ? JSON.parse(cached) : cached;
 
-    const studentsCount = await this.dbService.query(`SELECT COUNT(*) FROM students WHERE deleted_at IS NULL`);
-    const coursesCount = await this.dbService.query(`SELECT COUNT(*) FROM courses`);
-    const totalRevenue = await this.dbService.query(`SELECT SUM(amount) as total FROM payments`);
-
-    const data = {
-      total_students: parseInt(studentsCount[0].count, 10),
-      total_courses: parseInt(coursesCount[0].count, 10),
-      total_revenue: totalRevenue[0].total || 0,
-    };
+    const data = await dashboard_stats(this.dbService);
 
     await this.redisService.set(cacheKey, data, { ex: 60 });
     return data;
   }
 
   async getStudentAnalytics(studentId: string) {
-    const studentCheck = await this.dbService.query(`SELECT * FROM students WHERE id = $1 AND deleted_at IS NULL`, [studentId]);
-    if (!studentCheck.length) return { error: 'Student not found' };
-    const student = studentCheck[0];
+    const data = await student_analytics_data(this.dbService, studentId);
+    if (!data) return { error: 'Student not found' };
 
-    const presence = await this.dbService.query(
-      `SELECT status, COUNT(*) as count FROM attendance WHERE student_id = $1 GROUP BY status`,
-      [studentId]
-    );
-
-    const attendanceHistory = await this.dbService.query(
-      `SELECT a.status, l.title as lesson_title, a.created_at 
-       FROM attendance a 
-       JOIN lessons l ON a.lesson_id = l.id 
-       WHERE a.student_id = $1 
-       ORDER BY a.created_at DESC`,
-      [studentId]
-    );
-
-    const payments = await this.dbService.query(
-      `SELECT amount, paid_at FROM payments WHERE student_id = $1 ORDER BY paid_at DESC`,
-      [studentId]
-    );
+    const { student, presence, attendanceHistory, payments, exams } = data;
     const totalPaid = payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-
-    const exams = await this.dbService.query(
-      `SELECT e.title, er.score, er.submitted_at 
-       FROM exam_results er 
-       JOIN exams e ON er.exam_id = e.id 
-       WHERE er.student_id = $1 
-       ORDER BY er.submitted_at DESC`,
-      [studentId]
-    );
 
     let ai_humor = null;
     const missedObj = presence.find(p => p.status === 'ABSENT');
@@ -79,6 +50,16 @@ export class AnalyticsService {
       ai_humor = aiResponse.analysis;
     }
 
+    // Demo Logic for Web Dasturlash
+    if (student.first_name?.includes('Web') || student.last_name?.includes('Dasturlash')) {
+      const demoAi = await this.aiService.analyzeStudent({
+        name: "Web Dasturlash O'qituvchisi",
+        special_mode: "DEMO",
+        topic: "Full-Stack Development"
+      });
+      ai_humor = `${ai_humor ? ai_humor + '\n\n' : ''}🚀 DEMO: ${demoAi.analysis}`;
+    }
+
     return {
       personal_info: student,
       attendance_summary: presence,
@@ -91,87 +72,42 @@ export class AnalyticsService {
   }
 
   async getTeacherDashboard(teacherId: string) {
-    const groups = await this.dbService.query(`SELECT * FROM groups WHERE teacher_id = $1`, [teacherId]);
-    const groupIds = groups.map((g: any) => g.id);
+    const data = await teacher_dashboard_data(this.dbService, teacherId);
+    const { groups, students, attendance, debtors, attendance_stats, exams } = data;
     
-    let students = [];
-    let attendance = [];
-    let debtors = [];
-    let attendance_stats = [];
     let ai_humor = null;
     let most_active_student = null;
     
-    if (groupIds.length > 0) {
-      const groupIdsStr = groupIds.map((id: string) => `'${id}'`).join(',');
-      
-      students = await this.dbService.query(`
-        SELECT DISTINCT s.* FROM students s 
-        JOIN group_students gs ON s.id = gs.student_id 
-        WHERE gs.group_id IN (${groupIdsStr}) AND s.deleted_at IS NULL
-      `);
-      
-      attendance = await this.dbService.query(`
-        SELECT * FROM attendance 
-        WHERE group_id IN (${groupIdsStr}) AND lesson_date = CURRENT_DATE
-      `);
-      
-      debtors = await this.dbService.query(`
-        SELECT DISTINCT s.* FROM students s
-        JOIN group_students gs ON s.id = gs.student_id
-        LEFT JOIN (
-          SELECT student_id, MAX(paid_at) as last_payment 
-          FROM payments GROUP BY student_id
-        ) p ON p.student_id = s.id
-        WHERE gs.group_id IN (${groupIdsStr}) 
-        AND (p.last_payment IS NULL OR p.last_payment < NOW() - INTERVAL '60 days')
-        AND s.deleted_at IS NULL
-      `);
+    if (attendance_stats.length > 0) {
+      let maxAttended = -1;
+      let maxMissed = -1;
+      let mostAbsentStudent = null;
 
-      attendance_stats = await this.dbService.query(`
-        SELECT 
-          s.id, s.first_name, s.last_name,
-          COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) as attended,
-          COUNT(CASE WHEN a.status = 'ABSENT' THEN 1 END) as missed
-        FROM students s
-        JOIN group_students gs ON s.id = gs.student_id
-        LEFT JOIN attendance a ON a.student_id = s.id AND a.group_id = gs.group_id
-        WHERE gs.group_id IN (${groupIdsStr}) AND s.deleted_at IS NULL
-        GROUP BY s.id
-      `);
-
-      if (attendance_stats.length > 0) {
-        let maxAttended = -1;
-        let maxMissed = -1;
-        let mostAbsentStudent = null;
-
-        for (const stat of attendance_stats) {
-          const attended = parseInt(stat.attended, 10);
-          const missed = parseInt(stat.missed, 10);
-          if (attended >= maxAttended && attended > 0) {
-            maxAttended = attended;
-            most_active_student = stat;
-          }
-          if (missed > maxMissed && missed > 0) {
-            maxMissed = missed;
-            mostAbsentStudent = stat;
-          }
+      for (const stat of attendance_stats) {
+        const attended = parseInt(stat.attended, 10);
+        const missed = parseInt(stat.missed, 10);
+        if (attended >= maxAttended && attended > 0) {
+          maxAttended = attended;
+          most_active_student = stat;
         }
-
-        if (mostAbsentStudent) {
-          const aiResponse = await this.aiService.analyzeStudent({
-             name: `${mostAbsentStudent.first_name} ${mostAbsentStudent.last_name}`,
-             missed_classes: maxMissed,
-             total_attended: mostAbsentStudent.attended
-          });
-          ai_humor = {
-             student_id: mostAbsentStudent.id,
-             joke: aiResponse.analysis
-          };
+        if (missed > maxMissed && missed > 0) {
+          maxMissed = missed;
+          mostAbsentStudent = stat;
         }
       }
-    }
 
-    const exams = await this.dbService.query(`SELECT * FROM exams WHERE teacher_id = $1`, [teacherId]);
+      if (mostAbsentStudent) {
+        const aiResponse = await this.aiService.analyzeStudent({
+           name: `${mostAbsentStudent.first_name} ${mostAbsentStudent.last_name}`,
+           missed_classes: maxMissed,
+           total_attended: mostAbsentStudent.attended
+        });
+        ai_humor = {
+           student_id: mostAbsentStudent.id,
+           joke: aiResponse.analysis
+        };
+      }
+    }
 
     return {
       total_groups: groups.length,
@@ -187,4 +123,19 @@ export class AnalyticsService {
       exams
     };
   }
+
+  async getMonthlyAiReport(month: number, year: number) {
+    const data = await monthly_report_data(this.dbService, month, year);
+    const job = await this.queueService.addFinancialJob(data);
+    return {
+      message: 'Monthly AI analysis has been queued.',
+      jobId: job?.id,
+      stats: data
+    };
+  }
+
+  async getAiJobStatus(jobId: string) {
+    return this.queueService.getJobResult(jobId);
+  }
 }
+

@@ -1,16 +1,21 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Queue, Worker } from 'bullmq';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
-
-@Injectable()
+import { AiService } from '../../modules/ai/ai.service';
+import { DbService } from '../database/db.service';
+import { process_exam_questions } from './commands/process_exam_questions';
 export class QueueService implements OnModuleInit {
   private readonly logger = new Logger(QueueService.name);
   public aiQueue?: Queue;
   private worker?: Worker;
 
-  constructor(private configService: ConfigService) {
-    // BullMQ requires standard TCP Redis connection
+  constructor(
+    private configService: ConfigService,
+    @Inject(forwardRef(() => AiService)) private aiService: AiService,
+    private dbService: DbService
+  ) {
+
     const url = this.configService.get<string>('REDIS_URL');
     if (!url) {
       this.logger.warn('REDIS_URL missing from .env, Queue service is disabled.');
@@ -23,12 +28,35 @@ export class QueueService implements OnModuleInit {
     this.worker = new Worker(
       'ai-processing',
       async (job) => {
-        this.logger.log(`Processing AI job ${job.id} for payload: ${JSON.stringify(job.data)}`);
-        // We'd delegate actual GPT requests here to avoid delaying HTTP requests
-        return { success: true };
+        this.logger.log(`Processing AI job ${job.id} type: ${job.name}`);
+        
+        try {
+          let result;
+          switch (job.name) {
+            case 'analyze-financials':
+              result = await this.aiService.analyzeFinancials(job.data);
+              break;
+            case 'analyze-student':
+              result = await this.aiService.analyzeStudent(job.data);
+              break;
+            case 'generate-exam':
+              const { examId, lessonId, topic, level, count, teacherId } = job.data;
+              const questions = await this.aiService.generateExamQuestions(topic, level, count);
+              result = await process_exam_questions(this.dbService, examId, lessonId, teacherId, level, questions);
+              break;
+            default:
+              this.logger.warn(`Unknown job type: ${job.name}`);
+              return { success: false, error: 'Unknown job type' };
+          }
+          return { success: true, result };
+        } catch (error: any) {
+          this.logger.error(`Failed to process job ${job.id}: ${error.message}`);
+          throw error;
+        }
       },
       { connection }
     );
+
 
     this.worker.on('completed', (job) => {
       this.logger.log(`Job ${job.id} completed successfully`);
@@ -43,8 +71,36 @@ export class QueueService implements OnModuleInit {
     this.logger.log('BullMQ QueueService initialized. Ready for background tasks.');
   }
 
-  async addAiJob(data: any) {
-    if (!this.aiQueue) return { success: false, message: 'Queue is disabled' };
-    return this.aiQueue.add('analyze', data);
+  async addFinancialJob(data: any) {
+    if (!this.aiQueue) return null;
+    return this.aiQueue.add('analyze-financials', data, {
+      removeOnComplete: true,
+      removeOnFail: false
+    });
+  }
+
+  async addExamJob(data: any) {
+    if (!this.aiQueue) return null;
+    return this.aiQueue.add('generate-exam', data, {
+      removeOnComplete: true,
+      removeOnFail: false
+    });
+  }
+
+
+  async getJobResult(jobId: string) {
+    if (!this.aiQueue) return null;
+    const job = await this.aiQueue.getJob(jobId);
+    if (!job) return { status: 'NOT_FOUND' };
+    
+    const state = await job.getState();
+    return {
+      id: job.id,
+      state: state.toUpperCase(),
+      progress: job.progress,
+      result: job.returnvalue?.result || null,
+      failedReason: job.failedReason
+    };
   }
 }
+

@@ -32,6 +32,12 @@ let AnalyticsController = class AnalyticsController {
     getTeacherDashboard(req) {
         return this.analyticsService.getTeacherDashboard(req.user.id);
     }
+    getMonthlyReport(year, month) {
+        return this.analyticsService.getMonthlyAiReport(month, year);
+    }
+    getJobStatus(id) {
+        return this.analyticsService.getAiJobStatus(id);
+    }
 };
 exports.AnalyticsController = AnalyticsController;
 __decorate([
@@ -64,6 +70,30 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], AnalyticsController.prototype, "getTeacherDashboard", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER'),
+    (0, common_1.Get)('monthly-report/:year/:month'),
+    (0, swagger_1.ApiOperation)({ summary: 'Generate AI-powered monthly financial and growth report (Async)' }),
+    (0, swagger_1.ApiParam)({ name: 'year', type: 'number', example: 2026 }),
+    (0, swagger_1.ApiParam)({ name: 'month', type: 'number', example: 3 }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Stats with a jobId to track AI analysis.' }),
+    __param(0, (0, common_1.Param)('year')),
+    __param(1, (0, common_1.Param)('month')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number]),
+    __metadata("design:returntype", void 0)
+], AnalyticsController.prototype, "getMonthlyReport", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER'),
+    (0, common_1.Get)('job-status/:id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Check status of a background AI job' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Job UUID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Job status and result if completed.' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], AnalyticsController.prototype, "getJobStatus", null);
 exports.AnalyticsController = AnalyticsController = __decorate([
     (0, swagger_1.ApiTags)('analytics'),
     (0, swagger_1.ApiBearerAuth)(),

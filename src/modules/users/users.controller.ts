@@ -27,26 +27,27 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  @Roles('ADMIN', 'MANAGER')
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  @ApiOperation({ summary: 'Get user profile (Self or Admin)' })
+  findOne(@Param('id') id: string, @Req() req: any) {
+    if (req.user.role !== 'ADMIN' && req.user.role !== 'MANAGER' && req.user.id !== id) {
+      throw new ForbiddenException('Kechirasiz, siz faqat o\'z profilingizni ko\'rishingiz mumkin');
+    }
     return this.usersService.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update user profile (Self or Admin)' })
-  @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('avatar'))
-  update(@Param('id') id: string, @Body() body: UpdateUserDto, @Req() req: any, @UploadedFile() file: Express.Multer.File) {
+  update(@Param('id') id: string, @Body() body: UpdateUserDto, @Req() req: any) {
     // Users can only update their own profile, unless they are an ADMIN
     if (req.user.role !== 'ADMIN' && req.user.id !== id) {
-      throw new ForbiddenException('You can only update your own profile');
+      throw new ForbiddenException('Kechirasiz, siz faqat o\'z profilingizni tahrirlashingiz mumkin');
     }
     // Only Admin can change roles
     if (body.role && req.user.role !== 'ADMIN') {
-      throw new ForbiddenException('Only admins can change roles');
+      throw new ForbiddenException('Faqat adminlar rollarni o\'zgartirishi mumkin');
     }
-    return this.usersService.update(id, body, file);
+    return this.usersService.update(id, body);
   }
 
   @Roles('ADMIN')

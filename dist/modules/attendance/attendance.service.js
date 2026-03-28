@@ -12,23 +12,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AttendanceService = void 0;
 const common_1 = require("@nestjs/common");
 const db_service_1 = require("../../infrastructure/database/db.service");
+const get_group_attendance_1 = require("./queries/get_group_attendance");
+const mark_attendance_1 = require("./commands/mark_attendance");
+const update_attendance_1 = require("./commands/update_attendance");
 let AttendanceService = class AttendanceService {
     constructor(dbService) {
         this.dbService = dbService;
     }
     async markAttendance(data) {
-        const { group_id, student_id, status, lesson_id } = data;
-        try {
-            const result = await this.dbService.query(`INSERT INTO attendance (group_id, student_id, lesson_id, status) 
-         VALUES ($1, $2, $3, $4) RETURNING *`, [group_id, student_id, lesson_id, status]);
-            return result[0];
-        }
-        catch (error) {
-            throw new common_1.ConflictException('Attendance already marked for this student today');
-        }
+        return (0, mark_attendance_1.mark_attendance)(this.dbService, data);
     }
     async getGroupAttendance(groupId) {
-        return this.dbService.query(`SELECT * FROM attendance WHERE group_id = $1 ORDER BY created_at DESC`, [groupId]);
+        return (0, get_group_attendance_1.get_group_attendance)(this.dbService, groupId);
+    }
+    async update(id, status) {
+        return (0, update_attendance_1.update_attendance)(this.dbService, id, status);
     }
 };
 exports.AttendanceService = AttendanceService;

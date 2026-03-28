@@ -35,4 +35,30 @@ export declare class AnalyticsController {
         ai_humor: any;
         exams: any[];
     }>;
+    getMonthlyReport(year: number, month: number): Promise<{
+        message: string;
+        jobId: string;
+        stats: {
+            month: number;
+            year: number;
+            total_revenue: number;
+            new_students: number;
+            attendance_summary: any[];
+        };
+    }>;
+    getJobStatus(id: string): Promise<{
+        status: string;
+        id?: undefined;
+        state?: undefined;
+        progress?: undefined;
+        result?: undefined;
+        failedReason?: undefined;
+    } | {
+        id: string;
+        state: string;
+        progress: number | object;
+        result: any;
+        failedReason: string;
+        status?: undefined;
+    }>;
 }

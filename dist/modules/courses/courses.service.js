@@ -12,67 +12,33 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CoursesService = void 0;
 const common_1 = require("@nestjs/common");
 const db_service_1 = require("../../infrastructure/database/db.service");
+const all_courses_1 = require("./queries/all_courses");
+const get_course_1 = require("./queries/get_course");
+const get_course_students_1 = require("./queries/get_course_students");
+const create_course_1 = require("./commands/create_course");
+const update_course_1 = require("./commands/update_course");
+const delete_course_1 = require("./commands/delete_course");
 let CoursesService = class CoursesService {
     constructor(dbService) {
         this.dbService = dbService;
     }
     async create(data) {
-        const { name, price } = data;
-        const result = await this.dbService.query(`INSERT INTO courses (name, price) VALUES ($1, $2) RETURNING *`, [name, price]);
-        return result[0];
+        return (0, create_course_1.create_course)(this.dbService, data);
     }
     async findAll() {
-        return this.dbService.query(`SELECT * FROM courses ORDER BY created_at DESC`);
+        return (0, all_courses_1.all_courses)(this.dbService);
     }
     async findOne(id) {
-        const result = await this.dbService.query(`SELECT * FROM courses WHERE id = $1`, [id]);
-        if (!result.length)
-            throw new common_1.NotFoundException('Course not found');
-        return result[0];
+        return (0, get_course_1.get_course)(this.dbService, id);
     }
     async getStudents(courseId) {
-        const query = `
-      SELECT 
-        s.id, 
-        s.first_name, 
-        s.last_name, 
-        s.phone,
-        CASE WHEN gs.group_id IS NOT NULL THEN 'GROUP' ELSE 'INDIVIDUAL' END as study_type,
-        g.name as group_name
-      FROM students s
-      JOIN student_courses sc ON sc.student_id = s.id
-      LEFT JOIN group_students gs ON gs.student_id = s.id
-      LEFT JOIN groups g ON g.id = gs.group_id AND g.course_id = sc.course_id
-      WHERE sc.course_id = $1 AND s.deleted_at IS NULL
-      ORDER BY study_type, s.first_name
-    `;
-        return this.dbService.query(query, [courseId]);
+        return (0, get_course_students_1.get_course_students)(this.dbService, courseId);
     }
     async update(id, data) {
-        const updates = [];
-        const values = [];
-        let queryIndex = 1;
-        if (data.name) {
-            updates.push(`name = $${queryIndex++}`);
-            values.push(data.name);
-        }
-        if (data.price !== undefined) {
-            updates.push(`price = $${queryIndex++}`);
-            values.push(data.price);
-        }
-        if (updates.length === 0)
-            return { success: false, message: 'Nothing to update' };
-        values.push(id);
-        const result = await this.dbService.query(`UPDATE courses SET ${updates.join(', ')} WHERE id = $${queryIndex} AND deleted_at IS NULL RETURNING *`, values);
-        if (!result.length)
-            throw new common_1.NotFoundException('Course not found');
-        return result[0];
+        return (0, update_course_1.update_course)(this.dbService, id, data);
     }
     async softDelete(id) {
-        const result = await this.dbService.query(`UPDATE courses SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL RETURNING id`, [id]);
-        if (!result.length)
-            throw new common_1.NotFoundException('Course not found');
-        return { success: true };
+        return (0, delete_course_1.delete_course)(this.dbService, id);
     }
 };
 exports.CoursesService = CoursesService;

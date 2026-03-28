@@ -6,9 +6,7 @@ export declare class UsersController {
     constructor(usersService: UsersService);
     create(body: CreateUserDto): Promise<any>;
     findAll(): Promise<any[]>;
-    findOne(id: string): Promise<any>;
-    update(id: string, body: UpdateUserDto, req: any, file: Express.Multer.File): Promise<any>;
-    remove(id: string): Promise<{
-        success: boolean;
-    }>;
+    findOne(id: string, req: any): Promise<any>;
+    update(id: string, body: UpdateUserDto, req: any): Promise<any>;
+    remove(id: string): Promise<any>;
 }

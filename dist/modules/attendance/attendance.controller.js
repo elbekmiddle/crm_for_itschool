@@ -30,6 +30,9 @@ let AttendanceController = class AttendanceController {
     getGroupAttendance(id) {
         return this.attendanceService.getGroupAttendance(id);
     }
+    update(id, status) {
+        return this.attendanceService.update(id, status);
+    }
 };
 exports.AttendanceController = AttendanceController;
 __decorate([
@@ -65,6 +68,19 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], AttendanceController.prototype, "getGroupAttendance", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'TEACHER'),
+    (0, common_1.Patch)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update attendance status' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Attendance UUID' }),
+    (0, swagger_1.ApiBody)({ schema: { type: 'object', properties: { status: { type: 'string', example: 'ABSENT' } } } }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Attendance updated.' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)('status')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], AttendanceController.prototype, "update", null);
 exports.AttendanceController = AttendanceController = __decorate([
     (0, swagger_1.ApiTags)('attendance'),
     (0, swagger_1.ApiBearerAuth)(),

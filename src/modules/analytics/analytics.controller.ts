@@ -36,4 +36,25 @@ export class AnalyticsController {
   getTeacherDashboard(@Request() req) {
     return this.analyticsService.getTeacherDashboard(req.user.id);
   }
+
+  @Roles('ADMIN', 'MANAGER')
+  @Get('monthly-report/:year/:month')
+  @ApiOperation({ summary: 'Generate AI-powered monthly financial and growth report (Async)' })
+  @ApiParam({ name: 'year', type: 'number', example: 2026 })
+  @ApiParam({ name: 'month', type: 'number', example: 3 })
+  @ApiResponse({ status: 200, description: 'Stats with a jobId to track AI analysis.' })
+  getMonthlyReport(@Param('year') year: number, @Param('month') month: number) {
+    return this.analyticsService.getMonthlyAiReport(month, year);
+  }
+
+  @Roles('ADMIN', 'MANAGER')
+  @Get('job-status/:id')
+  @ApiOperation({ summary: 'Check status of a background AI job' })
+  @ApiParam({ name: 'id', description: 'Job UUID' })
+  @ApiResponse({ status: 200, description: 'Job status and result if completed.' })
+  getJobStatus(@Param('id') id: string) {
+    return this.analyticsService.getAiJobStatus(id);
+  }
 }
+
+

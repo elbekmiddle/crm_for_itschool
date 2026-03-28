@@ -12,17 +12,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaymentsService = void 0;
 const common_1 = require("@nestjs/common");
 const db_service_1 = require("../../infrastructure/database/db.service");
+const all_payments_1 = require("./queries/all_payments");
+const get_student_payments_raw_1 = require("./queries/get_student_payments_raw");
+const create_payment_1 = require("./commands/create_payment");
+const delete_payment_1 = require("./commands/delete_payment");
 let PaymentsService = class PaymentsService {
     constructor(dbService) {
         this.dbService = dbService;
     }
     async create(data) {
-        const { student_id, group_id, amount } = data;
-        const result = await this.dbService.query(`INSERT INTO payments (student_id, group_id, amount) VALUES ($1, $2, $3) RETURNING *`, [student_id, group_id, amount]);
-        return result[0];
+        return (0, create_payment_1.create_payment)(this.dbService, data);
     }
     async getStudentPayments(studentId) {
-        const payments = await this.dbService.query(`SELECT * FROM payments WHERE student_id = $1 ORDER BY paid_at DESC`, [studentId]);
+        const payments = await (0, get_student_payments_raw_1.get_student_payments_raw)(this.dbService, studentId);
         let status = 'ACTIVE';
         if (payments.length > 0) {
             const lastPaymentDate = new Date(payments[0].paid_at);
@@ -35,6 +37,12 @@ let PaymentsService = class PaymentsService {
             status = 'PENDING';
         }
         return { status, payments };
+    }
+    async findAll() {
+        return (0, all_payments_1.all_payments)(this.dbService);
+    }
+    async remove(id) {
+        return (0, delete_payment_1.delete_payment)(this.dbService, id);
     }
 };
 exports.PaymentsService = PaymentsService;
