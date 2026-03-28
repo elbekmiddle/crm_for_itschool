@@ -14,6 +14,9 @@ import { RedisModule } from './infrastructure/redis/redis.module';
 import { QueueModule } from './infrastructure/queue/queue.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ExamsModule } from './modules/exams/exams.module';
+import { LessonsModule } from './modules/lessons/lessons.module';
+import { QuestionsModule } from './modules/questions/questions.module';
+import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -34,6 +37,9 @@ import { ExamsModule } from './modules/exams/exams.module';
     RedisModule,
     QueueModule,
     ExamsModule,
+    LessonsModule,
+    QuestionsModule,
+    CloudinaryModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,

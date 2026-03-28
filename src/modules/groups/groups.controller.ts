@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Patch } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { CreateGroupDto } from './dto/create-group.dto';
+import { UpdateGroupDto } from './dto/update-group.dto';
 
 @ApiTags('groups')
 @ApiBearerAuth()
@@ -58,5 +59,19 @@ export class GroupsController {
   @ApiResponse({ status: 200, description: 'Students list array.' })
   getStudents(@Param('id') id: string) {
     return this.groupsService.getStudents(id);
+  }
+
+  @Roles('ADMIN', 'MANAGER')
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update group details' })
+  update(@Param('id') id: string, @Body() body: UpdateGroupDto) {
+    return this.groupsService.update(id, body);
+  }
+
+  @Roles('ADMIN')
+  @Delete(':id')
+  @ApiOperation({ summary: 'Soft delete a group' })
+  remove(@Param('id') id: string) {
+    return this.groupsService.softDelete(id);
   }
 }

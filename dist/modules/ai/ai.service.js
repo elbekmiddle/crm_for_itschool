@@ -61,6 +61,25 @@ let AiService = class AiService {
             return { summary: "AI moduli ulanishida vaqtinchalik xato chiqdi." };
         }
     }
+    async generateExamQuestions(topic, level, count) {
+        if (!this.openai) {
+            return [`Default Q1 for ${topic} (AI Offline)`, `Default Q2 for ${topic}`];
+        }
+        try {
+            const response = await this.openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: `Generate exactly ${count} ${level} difficulty questions about ${topic}. Output ONLY a raw JSON array of strings. Do not include markdown formatting or tags like \`\`\`json.` },
+                ]
+            });
+            const text = response.choices[0].message.content.trim();
+            const jsonArr = JSON.parse(text.replace(/```json/g, '').replace(/```/g, ''));
+            return Array.isArray(jsonArr) ? jsonArr : [text];
+        }
+        catch (e) {
+            return [`Generated AI fallback 1 for ${topic}`, `Generated AI fallback 2 for ${topic}`];
+        }
+    }
 };
 exports.AiService = AiService;
 exports.AiService = AiService = __decorate([

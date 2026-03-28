@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Patch, Delete } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { CreateCourseDto } from './dto/create-course.dto';
+import { UpdateCourseDto } from './dto/update-course.dto';
 
 @ApiTags('courses')
 @ApiBearerAuth()
@@ -41,5 +42,27 @@ export class CoursesController {
   @ApiResponse({ status: 404, description: 'Course not found.' })
   findOne(@Param('id') id: string) {
     return this.coursesService.findOne(id);
+  }
+
+  @Get(':id/students')
+  @ApiOperation({ summary: 'Get all students in a course (Grouped & Individual)' })
+  @ApiParam({ name: 'id', description: 'Course UUID' })
+  @ApiResponse({ status: 200, description: 'Return list of students with their study types.' })
+  getStudents(@Param('id') id: string) {
+    return this.coursesService.getStudents(id);
+  }
+
+  @Roles('ADMIN', 'MANAGER')
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update course details' })
+  update(@Param('id') id: string, @Body() body: UpdateCourseDto) {
+    return this.coursesService.update(id, body);
+  }
+
+  @Roles('ADMIN')
+  @Delete(':id')
+  @ApiOperation({ summary: 'Soft delete a course' })
+  remove(@Param('id') id: string) {
+    return this.coursesService.softDelete(id);
   }
 }

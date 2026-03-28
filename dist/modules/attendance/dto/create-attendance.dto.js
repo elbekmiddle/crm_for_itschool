@@ -34,9 +34,9 @@ __decorate([
     __metadata("design:type", String)
 ], CreateAttendanceDto.prototype, "status", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: '2023-11-20', required: false }),
-    (0, class_validator_1.IsDateString)(),
+    (0, swagger_1.ApiProperty)({ example: 'lesson_uuid', required: false }),
+    (0, class_validator_1.IsUUID)('4'),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
-], CreateAttendanceDto.prototype, "lesson_date", void 0);
+], CreateAttendanceDto.prototype, "lesson_id", void 0);
 //# sourceMappingURL=create-attendance.dto.js.map

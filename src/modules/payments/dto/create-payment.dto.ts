@@ -7,10 +7,10 @@ export class CreatePaymentDto {
   @IsNotEmpty()
   student_id: string;
 
-  @ApiProperty({ example: 'course_uuid' })
+  @ApiProperty({ example: 'group_uuid' })
   @IsUUID('4')
   @IsNotEmpty()
-  course_id: string;
+  group_id: string;
 
   @ApiProperty({ example: 100 })
   @IsNumber()

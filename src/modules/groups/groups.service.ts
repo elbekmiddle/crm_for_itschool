@@ -66,4 +66,32 @@ export class GroupsService {
       [groupId]
     );
   }
+
+  async update(id: string, data: any) {
+    const updates = [];
+    const values = [];
+    let queryIndex = 1;
+
+    if (data.name) { updates.push(`name = $${queryIndex++}`); values.push(data.name); }
+    if (data.course_id) { updates.push(`course_id = $${queryIndex++}`); values.push(data.course_id); }
+    if (data.teacher_id) { updates.push(`teacher_id = $${queryIndex++}`); values.push(data.teacher_id); }
+
+    if (updates.length === 0) return { success: false, message: 'Nothing to update' };
+    values.push(id);
+    const result = await this.dbService.query(
+      `UPDATE groups SET ${updates.join(', ')} WHERE id = $${queryIndex} AND deleted_at IS NULL RETURNING *`,
+      values
+    );
+    if (!result.length) throw new NotFoundException('Group not found');
+    return result[0];
+  }
+
+  async softDelete(id: string) {
+    const result = await this.dbService.query(
+      `UPDATE groups SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL RETURNING id`,
+      [id]
+    );
+    if (!result.length) throw new NotFoundException('Group not found');
+    return { success: true };
+  }
 }

@@ -20,6 +20,7 @@ const roles_guard_1 = require("../../common/guards/roles.guard");
 const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 const swagger_1 = require("@nestjs/swagger");
 const create_course_dto_1 = require("./dto/create-course.dto");
+const update_course_dto_1 = require("./dto/update-course.dto");
 let CoursesController = class CoursesController {
     constructor(coursesService) {
         this.coursesService = coursesService;
@@ -32,6 +33,15 @@ let CoursesController = class CoursesController {
     }
     findOne(id) {
         return this.coursesService.findOne(id);
+    }
+    getStudents(id) {
+        return this.coursesService.getStudents(id);
+    }
+    update(id, body) {
+        return this.coursesService.update(id, body);
+    }
+    remove(id) {
+        return this.coursesService.softDelete(id);
     }
 };
 exports.CoursesController = CoursesController;
@@ -70,6 +80,35 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], CoursesController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Get)(':id/students'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all students in a course (Grouped & Individual)' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Course UUID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Return list of students with their study types.' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], CoursesController.prototype, "getStudents", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER'),
+    (0, common_1.Patch)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update course details' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, update_course_dto_1.UpdateCourseDto]),
+    __metadata("design:returntype", void 0)
+], CoursesController.prototype, "update", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, common_1.Delete)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Soft delete a course' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], CoursesController.prototype, "remove", null);
 exports.CoursesController = CoursesController = __decorate([
     (0, swagger_1.ApiTags)('courses'),
     (0, swagger_1.ApiBearerAuth)(),

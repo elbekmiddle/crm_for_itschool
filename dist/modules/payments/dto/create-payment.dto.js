@@ -22,11 +22,11 @@ __decorate([
     __metadata("design:type", String)
 ], CreatePaymentDto.prototype, "student_id", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'course_uuid' }),
+    (0, swagger_1.ApiProperty)({ example: 'group_uuid' }),
     (0, class_validator_1.IsUUID)('4'),
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
-], CreatePaymentDto.prototype, "course_id", void 0);
+], CreatePaymentDto.prototype, "group_id", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ example: 100 }),
     (0, class_validator_1.IsNumber)(),

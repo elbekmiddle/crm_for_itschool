@@ -17,8 +17,8 @@ let PaymentsService = class PaymentsService {
         this.dbService = dbService;
     }
     async create(data) {
-        const { student_id, course_id, amount } = data;
-        const result = await this.dbService.query(`INSERT INTO payments (student_id, course_id, amount) VALUES ($1, $2, $3) RETURNING *`, [student_id, course_id, amount]);
+        const { student_id, group_id, amount } = data;
+        const result = await this.dbService.query(`INSERT INTO payments (student_id, group_id, amount) VALUES ($1, $2, $3) RETURNING *`, [student_id, group_id, amount]);
         return result[0];
     }
     async getStudentPayments(studentId) {

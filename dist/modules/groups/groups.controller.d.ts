@@ -1,5 +1,6 @@
 import { GroupsService } from './groups.service';
 import { CreateGroupDto } from './dto/create-group.dto';
+import { UpdateGroupDto } from './dto/update-group.dto';
 export declare class GroupsController {
     private readonly groupsService;
     constructor(groupsService: GroupsService);
@@ -9,4 +10,8 @@ export declare class GroupsController {
         success: boolean;
     }>;
     getStudents(id: string): Promise<any[]>;
+    update(id: string, body: UpdateGroupDto): Promise<any>;
+    remove(id: string): Promise<{
+        success: boolean;
+    }>;
 }

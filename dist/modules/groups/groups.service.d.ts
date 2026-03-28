@@ -8,4 +8,8 @@ export declare class GroupsService {
         success: boolean;
     }>;
     getStudents(groupId: string): Promise<any[]>;
+    update(id: string, data: any): Promise<any>;
+    softDelete(id: string): Promise<{
+        success: boolean;
+    }>;
 }

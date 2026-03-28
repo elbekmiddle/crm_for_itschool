@@ -21,7 +21,7 @@ export class PaymentsController {
       type: 'object',
       properties: {
         student_id: { type: 'string', example: 'uuid-student' },
-        course_id: { type: 'string', example: 'uuid-course' },
+        group_id: { type: 'string', example: 'uuid-group' },
         amount: { type: 'number', example: 100 }
       }
     }

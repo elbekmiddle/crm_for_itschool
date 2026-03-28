@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import * as bcrypt from 'bcrypt';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly dbService: DbService) {}
+  constructor(private readonly dbService: DbService, private readonly cloudinaryService: CloudinaryService) {}
 
   async create(data: any) {
     const { email, password, role } = data;
@@ -17,11 +18,58 @@ export class UsersService {
   }
 
   async findAll() {
-    return this.dbService.query(`SELECT id, email, role, created_at FROM users WHERE deleted_at IS NULL`);
+    return this.dbService.query(`SELECT id, first_name, last_name, avatar_url, email, role, created_at FROM users WHERE deleted_at IS NULL`);
   }
 
   async findOne(id: string) {
-    const result = await this.dbService.query(`SELECT id, email, role, created_at FROM users WHERE id = $1 AND deleted_at IS NULL`, [id]);
+    const result = await this.dbService.query(`SELECT id, first_name, last_name, avatar_url, email, role, created_at FROM users WHERE id = $1 AND deleted_at IS NULL`, [id]);
+    if (!result.length) throw new NotFoundException('User not found');
+    return result[0];
+  }
+
+  async update(id: string, data: any, file?: Express.Multer.File) {
+    const updates = [];
+    const values = [];
+    let queryIndex = 1;
+
+    if (file) {
+       const uploadRes = await this.cloudinaryService.uploadImage(file);
+       if (uploadRes && uploadRes.secure_url) {
+          updates.push(`avatar_url = $${queryIndex++}`);
+          values.push(uploadRes.secure_url);
+       }
+    }
+
+    if (data.first_name) {
+      updates.push(`first_name = $${queryIndex++}`);
+      values.push(data.first_name);
+    }
+    if (data.last_name) {
+      updates.push(`last_name = $${queryIndex++}`);
+      values.push(data.last_name);
+    }
+    
+    if (data.email) {
+      updates.push(`email = $${queryIndex++}`);
+      values.push(data.email);
+    }
+    if (data.password) {
+      updates.push(`password = $${queryIndex++}`);
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+      values.push(hashedPassword);
+    }
+    if (data.role) {
+      updates.push(`role = $${queryIndex++}`);
+      values.push(data.role);
+    }
+
+    if (updates.length === 0) return { success: false, message: 'Nothing to update' };
+
+    values.push(id);
+    const result = await this.dbService.query(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${queryIndex} AND deleted_at IS NULL RETURNING id, first_name, last_name, avatar_url, email, role`,
+      values
+    );
     if (!result.length) throw new NotFoundException('User not found');
     return result[0];
   }

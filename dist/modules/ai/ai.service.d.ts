@@ -9,4 +9,5 @@ export declare class AiService {
     groupSummary(data: any): Promise<{
         summary: string;
     }>;
+    generateExamQuestions(topic: string, level: string, count: number): Promise<any[]>;
 }

@@ -1,18 +1,51 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { CreateExamDto } from './dto/create-exam.dto';
+import { AiService } from '../ai/ai.service';
 
 @Injectable()
 export class ExamsService {
-  constructor(private readonly dbService: DbService) {}
+  constructor(private readonly dbService: DbService, private readonly aiService: AiService) {}
 
   async create(createExamDto: CreateExamDto, teacherId: string) {
     const { title, course_id } = createExamDto;
     const result = await this.dbService.query(
-      `INSERT INTO exams (title, course_id, teacher_id) VALUES ($1, $2, $3) RETURNING *`,
+      `INSERT INTO exams (title, course_id, created_by) VALUES ($1, $2, $3) RETURNING *`,
       [title, course_id, teacherId]
     );
     return result[0];
+  }
+
+  async addQuestionsToExam(examId: string, questionIds: string[]) {
+    const results = [];
+    for (const qId of questionIds) {
+      const res = await this.dbService.query(
+        `INSERT INTO exam_questions (exam_id, question_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING *`,
+        [examId, qId]
+      );
+      if (res.length) results.push(res[0]);
+    }
+    return { linked: results.length, total_requested: questionIds.length };
+  }
+
+  async generateAiExam(examId: string, lessonId: string, topic: string, level: string, count: number, teacherId: string) {
+    const questionsText = await this.aiService.generateExamQuestions(topic, level, count);
+    const results = [];
+    for (const text of questionsText) {
+      const qRes = await this.dbService.query(
+        `INSERT INTO questions (lesson_id, created_by, level, text) VALUES ($1, $2, $3, $4) RETURNING id`,
+        [lessonId, teacherId, level, text]
+      );
+      if (qRes.length) {
+        const qId = qRes[0].id;
+        await this.dbService.query(
+          `INSERT INTO exam_questions (exam_id, question_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+          [examId, qId]
+        );
+        results.push(qId);
+      }
+    }
+    return { success: true, ai_questions_added: results.length };
   }
 
   async gradeExam(examId: string, grades: { student_id: string; score: number; feedback?: string }[]) {

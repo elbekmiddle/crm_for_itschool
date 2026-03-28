@@ -6,10 +6,10 @@ export class PaymentsService {
   constructor(private readonly dbService: DbService) {}
 
   async create(data: any) {
-    const { student_id, course_id, amount } = data;
+    const { student_id, group_id, amount } = data;
     const result = await this.dbService.query(
-      `INSERT INTO payments (student_id, course_id, amount) VALUES ($1, $2, $3) RETURNING *`,
-      [student_id, course_id, amount]
+      `INSERT INTO payments (student_id, group_id, amount) VALUES ($1, $2, $3) RETURNING *`,
+      [student_id, group_id, amount]
     );
     return result[0];
   }

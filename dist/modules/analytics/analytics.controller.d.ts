@@ -4,8 +4,23 @@ export declare class AnalyticsController {
     constructor(analyticsService: AnalyticsService);
     getDashboard(): Promise<any>;
     getStudentAnalytics(id: string): Promise<{
+        error: string;
+        personal_info?: undefined;
+        attendance_summary?: undefined;
+        attendance_history?: undefined;
+        payments?: undefined;
+        total_paid?: undefined;
+        exam_results?: undefined;
+        ai_humor?: undefined;
+    } | {
+        personal_info: any;
         attendance_summary: any[];
+        attendance_history: any[];
+        payments: any[];
         total_paid: any;
+        exam_results: any[];
+        ai_humor: any;
+        error?: undefined;
     }>;
     getTeacherDashboard(req: any): Promise<{
         total_groups: number;
@@ -15,6 +30,9 @@ export declare class AnalyticsController {
         debtors_count: number;
         debtors: any[];
         today_attendance: any[];
+        attendance_stats: any[];
+        most_active_student: any;
+        ai_humor: any;
         exams: any[];
     }>;
 }

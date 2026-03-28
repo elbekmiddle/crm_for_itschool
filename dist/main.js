@@ -23,7 +23,7 @@ async function bootstrap() {
     app.useGlobalInterceptors(new transform_interceptor_1.TransformInterceptor());
     const config = new swagger_1.DocumentBuilder()
         .setTitle('IT School CRM API')
-        .setDescription('Production-level CRM API built with NestJS & Raw SQL')
+        .setDescription('It school crm')
         .setVersion('1.0')
         .addBearerAuth()
         .build();

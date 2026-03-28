@@ -20,6 +20,7 @@ const roles_guard_1 = require("../../common/guards/roles.guard");
 const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 const swagger_1 = require("@nestjs/swagger");
 const create_group_dto_1 = require("./dto/create-group.dto");
+const update_group_dto_1 = require("./dto/update-group.dto");
 let GroupsController = class GroupsController {
     constructor(groupsService) {
         this.groupsService = groupsService;
@@ -35,6 +36,12 @@ let GroupsController = class GroupsController {
     }
     getStudents(id) {
         return this.groupsService.getStudents(id);
+    }
+    update(id, body) {
+        return this.groupsService.update(id, body);
+    }
+    remove(id) {
+        return this.groupsService.softDelete(id);
     }
 };
 exports.GroupsController = GroupsController;
@@ -95,6 +102,25 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], GroupsController.prototype, "getStudents", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER'),
+    (0, common_1.Patch)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update group details' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, update_group_dto_1.UpdateGroupDto]),
+    __metadata("design:returntype", void 0)
+], GroupsController.prototype, "update", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, common_1.Delete)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Soft delete a group' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], GroupsController.prototype, "remove", null);
 exports.GroupsController = GroupsController = __decorate([
     (0, swagger_1.ApiTags)('groups'),
     (0, swagger_1.ApiBearerAuth)(),

@@ -23,6 +23,22 @@ export class ExamsController {
   }
 
   @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Post(':id/questions')
+  @ApiOperation({ summary: 'Assign specific questions to an exam' })
+  @ApiResponse({ status: 201, description: 'Questions successfully linked to exam.' })
+  addQuestions(@Param('id') examId: string, @Body('question_ids') questionIds: string[]) {
+    return this.examsService.addQuestionsToExam(examId, questionIds);
+  }
+
+  @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Post(':id/ai-generate')
+  @ApiOperation({ summary: 'AI generates questions and attaches to exam' })
+  @ApiResponse({ status: 201, description: 'AI generated questions linked to exam.' })
+  generateAiExam(@Param('id') examId: string, @Body() body: { lesson_id: string; topic: string; level: string; count: number }, @Request() req) {
+    return this.examsService.generateAiExam(examId, body.lesson_id, body.topic, body.level, body.count, req.user.id);
+  }
+
+  @Roles('ADMIN', 'MANAGER', 'TEACHER')
   @Post(':id/grade')
   @ApiOperation({ summary: 'Grade students for this exam' })
   @ApiResponse({ status: 201, description: 'Grades successfully processed.' })

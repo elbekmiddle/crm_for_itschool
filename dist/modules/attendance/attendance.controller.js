@@ -43,7 +43,7 @@ __decorate([
                 group_id: { type: 'string', example: 'uuid-group' },
                 student_id: { type: 'string', example: 'uuid-student' },
                 status: { type: 'string', example: 'PRESENT' },
-                lesson_date: { type: 'string', example: '2023-11-20', description: 'Optional, defaults to current date' }
+                lesson_id: { type: 'string', example: 'uuid-lesson', description: 'Optional ID explicitly matching lesson' }
             }
         }
     }),

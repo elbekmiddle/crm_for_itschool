@@ -17,8 +17,8 @@ export class CreateAttendanceDto {
   @IsNotEmpty()
   status: string;
 
-  @ApiProperty({ example: '2023-11-20', required: false })
-  @IsDateString()
+  @ApiProperty({ example: 'lesson_uuid', required: false })
+  @IsUUID('4')
   @IsOptional()
-  lesson_date?: string;
+  lesson_id?: string;
 }

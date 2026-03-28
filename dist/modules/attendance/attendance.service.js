@@ -17,10 +17,10 @@ let AttendanceService = class AttendanceService {
         this.dbService = dbService;
     }
     async markAttendance(data) {
-        const { group_id, student_id, status, lesson_date } = data;
+        const { group_id, student_id, status, lesson_id } = data;
         try {
-            const result = await this.dbService.query(`INSERT INTO attendance (group_id, student_id, lesson_date, status) 
-         VALUES ($1, $2, COALESCE($3, CURRENT_DATE), $4) RETURNING *`, [group_id, student_id, lesson_date || null, status]);
+            const result = await this.dbService.query(`INSERT INTO attendance (group_id, student_id, lesson_id, status) 
+         VALUES ($1, $2, $3, $4) RETURNING *`, [group_id, student_id, lesson_id, status]);
             return result[0];
         }
         catch (error) {
@@ -28,7 +28,7 @@ let AttendanceService = class AttendanceService {
         }
     }
     async getGroupAttendance(groupId) {
-        return this.dbService.query(`SELECT * FROM attendance WHERE group_id = $1 ORDER BY lesson_date DESC`, [groupId]);
+        return this.dbService.query(`SELECT * FROM attendance WHERE group_id = $1 ORDER BY created_at DESC`, [groupId]);
     }
 };
 exports.AttendanceService = AttendanceService;
