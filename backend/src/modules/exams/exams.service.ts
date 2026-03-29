@@ -1,20 +1,17 @@
-import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { CreateExamDto } from './dto/create-exam.dto';
-import { AiService } from '../ai/ai.service';
 import { QueueService } from '../../infrastructure/queue/queue.service';
 import { all_exams_by_course } from './queries/all_exams_by_course';
 import { get_exam_results } from './queries/get_exam_results';
 import { create_exam } from './commands/create_exam';
 import { add_questions_to_exam } from './commands/add_questions_to_exam';
-import { grade_exam } from './commands/grade_exam';
 import * as dayjs from 'dayjs';
 
 @Injectable()
 export class ExamsService {
   constructor(
     private readonly dbService: DbService, 
-    private readonly aiService: AiService,
     private readonly queueService: QueueService
   ) {}
 
@@ -22,85 +19,29 @@ export class ExamsService {
     return create_exam(this.dbService, createExamDto, teacherId);
   }
 
-  async startExam(examId: string, studentId: string) {
-    // 1. Check student status
-    const student = await this.dbService.query(`SELECT status FROM students WHERE id = $1`, [studentId]);
-    if (!student.length || student[0].status !== 'active') {
-      throw new BadRequestException('Inactive student cannot take exams.');
-    }
-
-    // 2. Load session and limit
-    const session = await this.dbService.query(
-      `SELECT er.*, ex.time_limit 
-       FROM exam_results er 
-       JOIN exams ex ON er.exam_id = ex.id 
-       WHERE er.exam_id = $1 AND er.student_id = $2`,
-      [examId, studentId]
-    );
-
-    if (session.length > 0) {
-      const { started_at, finished_at, time_limit } = session[0];
-      
-      if (finished_at) {
-        throw new ConflictException('Exam already submitted.');
-      }
-
-      // 3. Auto-close if time limit exceeded
-      const now = dayjs();
-      if (now.diff(dayjs(started_at), 'minute') > time_limit) {
-        await this.dbService.query(
-          `UPDATE exam_results SET finished_at = started_at + interval '1 minute' * $3, score = 0, duration = $3 
-           WHERE exam_id = $1 AND student_id = $2`,
-          [examId, studentId, time_limit]
-        );
-        throw new ConflictException('Exam time limit exceeded. Session auto-closed with 0 score.');
-      }
-
-      return { message: 'Exam resumed', started_at };
-    }
-
-    // 4. Start new session
+  async update(id: string, data: any) {
+    const fields = Object.keys(data).map((key, i) => `${key} = $${i + 2}`).join(', ');
+    const values = Object.values(data);
     const result = await this.dbService.query(
-      `INSERT INTO exam_results (exam_id, student_id, started_at) VALUES ($1, $2, NOW()) RETURNING *`,
-      [examId, studentId]
+      `UPDATE exams SET ${fields} WHERE id = $1 RETURNING *`,
+      [id, ...values]
     );
     return result[0];
   }
 
-  async submitExam(examId: string, studentId: string, score: number) {
-    const session = await this.dbService.query(
-      `SELECT er.*, ex.time_limit 
-       FROM exam_results er
-       JOIN exams ex ON er.exam_id = ex.id
-       WHERE er.exam_id = $1 AND er.student_id = $2`,
-      [examId, studentId]
-    );
-
-    if (!session.length) throw new BadRequestException('Exam not started.');
-    if (session[0].finished_at) throw new ConflictException('Already submitted.');
-
-    const { started_at, time_limit } = session[0];
-    const duration = dayjs().diff(dayjs(started_at), 'minute');
-
-    // Rule: If time exceeded, cap score or mark as auto-submitted
-    let finalScore = score;
-    if (duration > time_limit + 2) { // 2 min grace period for network
-       finalScore = Math.min(score, 50); // Penalty for late submission
-    }
-
-    const result = await this.dbService.query(
-      `UPDATE exam_results 
-       SET finished_at = NOW(), score = $3, duration = $4 
-       WHERE exam_id = $1 AND student_id = $2
-       RETURNING *`,
-      [examId, studentId, finalScore, duration]
-    );
-
-    return result[0];
+  async delete(id: string) {
+    return this.dbService.query(`UPDATE exams SET deleted_at = NOW() WHERE id = $1`, [id]);
   }
 
   async addQuestionsToExam(examId: string, questionIds: string[]) {
     return add_questions_to_exam(this.dbService, examId, questionIds);
+  }
+
+  async removeQuestionFromExam(examId: string, questionId: string) {
+    return this.dbService.query(
+      `DELETE FROM exam_questions WHERE exam_id = $1 AND question_id = $2`,
+      [examId, questionId]
+    );
   }
 
   async generateAiExam(examId: string, lessonId: string, topic: string, level: string, count: number, teacherId: string) {
@@ -108,20 +49,156 @@ export class ExamsService {
       examId,
       lessonId,
       topic,
-      level,
+      level: level as any,
       count,
       teacherId
     });
-
-    return { 
-      success: true, 
-      message: 'AI Exam generation queued.',
-      jobId: job?.id 
-    };
+    return { success: true, message: 'AI generation started', jobId: job?.id };
   }
 
-  async gradeExam(examId: string, grades: { student_id: string; score: number; feedback?: string }[]) {
-    return grade_exam(this.dbService, examId, grades);
+  // --- Student Logic ---
+
+  async getAvailableExams(studentUserId: string) {
+    // Student belongs to groups, groups belong to courses.
+    return this.dbService.query(`
+      SELECT e.*, c.name as course_name 
+      FROM exams e
+      JOIN courses c ON e.course_id = c.id
+      JOIN groups g ON g.course_id = c.id
+      JOIN group_students gs ON gs.group_id = g.id
+      WHERE gs.student_id = (SELECT id FROM students WHERE id = $1)
+      AND e.status = 'published'
+      AND e.deleted_at IS NULL
+    `, [studentUserId]);
+  }
+
+  async startExamAttempt(examId: string, studentUserId: string) {
+    const exam = await this.dbService.query(`SELECT id, time_limit FROM exams WHERE id = $1 AND status = 'published'`, [examId]);
+    if (!exam.length) throw new NotFoundException('Exam not found or not published.');
+
+    // 1. Get the actual student record ID
+    const student = await this.dbService.query(`SELECT id FROM students WHERE id = $1`, [studentUserId]);
+    if (!student.length) throw new NotFoundException('Student record not found.');
+    const studentId = student[0].id;
+
+    // 2. Check for active attempt
+    const activeAttempt = await this.dbService.query(`
+      SELECT * FROM exam_attempts 
+      WHERE exam_id = $1 AND student_id = $2 AND status = 'in_progress'
+    `, [examId, studentId]);
+
+    if (activeAttempt.length) {
+      // Check if time is up
+      if (dayjs().isAfter(dayjs(activeAttempt[0].deadline_at))) {
+        await this.finishAttempt(activeAttempt[0].id);
+        throw new BadRequestException('Exam time limit exceeded. Session closed.');
+      }
+      return activeAttempt[0];
+    }
+
+    // 3. Create new attempt
+    const deadline = dayjs().add(exam[0].time_limit, 'minute').toDate();
+    const result = await this.dbService.query(`
+      INSERT INTO exam_attempts (exam_id, student_id, deadline_at) 
+      VALUES ($1, $2, $3) RETURNING *
+    `, [examId, studentId, deadline]);
+
+    return result[0];
+  }
+
+  async getAttemptQuestions(attemptId: string) {
+    const attempt = await this.dbService.query(`SELECT exam_id FROM exam_attempts WHERE id = $1`, [attemptId]);
+    if (!attempt.length) throw new NotFoundException('Attempt not found.');
+
+    const questions = await this.dbService.query(`
+      SELECT q.id, q.text, q.options, q.level
+      FROM questions q
+      JOIN exam_questions eq ON eq.question_id = q.id
+      WHERE eq.exam_id = $1
+      ORDER BY RANDOM()
+    `, [attempt[0].exam_id]);
+
+    return questions;
+  }
+
+  async saveAnswer(attemptId: string, questionId: string, payload: any) {
+    const attempt = await this.dbService.query(`SELECT status FROM exam_attempts WHERE id = $1`, [attemptId]);
+    if (attempt[0].status !== 'in_progress') throw new ConflictException('Exam session is not active.');
+
+    return this.dbService.query(`
+      INSERT INTO attempt_answers (attempt_id, question_id, answer_payload)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (attempt_id, question_id) DO UPDATE 
+      SET answer_payload = EXCLUDED.answer_payload, answered_at = NOW()
+    `, [attemptId, questionId, JSON.stringify(payload)]);
+  }
+
+  async submitExamAttempt(attemptId: string) {
+    return this.finishAttempt(attemptId);
+  }
+
+  private async finishAttempt(attemptId: string) {
+    const attempt = await this.dbService.query(`SELECT exam_id, student_id FROM exam_attempts WHERE id = $1`, [attemptId]);
+    if (!attempt.length) throw new NotFoundException('Attempt not found.');
+
+    const { exam_id, student_id } = attempt[0];
+
+    // Calculate score
+    const answers = await this.dbService.query(`
+      SELECT aa.*, q.correct_answer, q.id as question_id
+      FROM attempt_answers aa
+      JOIN questions q ON aa.question_id = q.id
+      WHERE aa.attempt_id = $1
+    `, [attemptId]);
+
+    let score = 0;
+    const totalQuestions = await this.dbService.query(`SELECT count(*) FROM exam_questions WHERE exam_id = $1`, [exam_id]);
+    const total = parseInt(totalQuestions[0].count);
+
+    for (const ans of answers) {
+       // Simple string/json compare for correct_answer
+       const isCorrect = JSON.stringify(ans.answer_payload) === JSON.stringify(ans.correct_answer);
+       if (isCorrect) score++;
+       
+       await this.dbService.query(`
+         UPDATE attempt_answers SET is_correct = $1, earned_points = $2 WHERE id = $3
+       `, [isCorrect, isCorrect ? 10 : 0, ans.id]);
+    }
+
+    const finalScore = total > 0 ? Math.round((score / total) * 100) : 0;
+
+    const result = await this.dbService.query(`
+      UPDATE exam_attempts 
+      SET status = 'submitted', finished_at = NOW(), score = $1 
+      WHERE id = $2 RETURNING *
+    `, [finalScore, attemptId]);
+
+    // Update the legacy exam_results table for CRM compatibility
+    await this.dbService.query(`
+       INSERT INTO exam_results (exam_id, student_id, score, submitted_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (exam_id, student_id) DO UPDATE SET score = EXCLUDED.score
+    `, [exam_id, student_id, finalScore]);
+
+    return result[0];
+  }
+
+  async getAttemptResult(attemptId: string) {
+    const attempt = await this.dbService.query(`
+      SELECT a.*, e.title as exam_title
+      FROM exam_attempts a
+      JOIN exams e ON a.exam_id = e.id
+      WHERE a.id = $1
+    `, [attemptId]);
+
+    const details = await this.dbService.query(`
+      SELECT aa.*, q.text as question_text, q.correct_answer
+      FROM attempt_answers aa
+      JOIN questions q ON aa.question_id = q.id
+      WHERE aa.attempt_id = $1
+    `, [attemptId]);
+
+    return { ...attempt[0], details };
   }
 
   async findAllByCourse(courseId: string) {

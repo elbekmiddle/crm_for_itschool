@@ -1,54 +1,58 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import StudentsPage from './pages/Students';
+import ExamsPage from './pages/Exams';
+import GroupsPage from './pages/Groups';
+import LoginPage from './pages/LoginPage';
+import CoursesPage from './pages/Courses';
+import AttendancePage from './pages/Attendance';
+import UsersPage from './pages/Users';
+import QuestionsPage from './pages/Questions';
+import { Loader2 } from 'lucide-react';
+
+const AnalyticsPage = () => (
+  <div className="p-14 space-y-4">
+    <h1 className="text-7xl font-black text-indigo-600 tracking-tighter uppercase leading-none">AI Analytics</h1>
+    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">V2.1 Platform Intelligence</p>
+  </div>
+);
 
 const queryClient = new QueryClient();
+
+const LoadingScreen = () => (
+  <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4">
+    <Loader2 className="w-10 h-10 text-primary-600 animate-spin" />
+    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest animate-pulse leading-none">Platforma yuklanmoqda...</span>
+  </div>
+);
 
 const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-          <div className="glass-card max-w-md w-full p-8 rounded-3xl space-y-8">
-            <div className="text-center space-y-2">
-              <h1 className="text-4xl font-extrabold bg-gradient-to-br from-primary-600 to-primary-900 bg-clip-text text-transparent">
-                IT School CRM
-              </h1>
-              <p className="text-slate-500 font-medium italic">Premium Educational LMS v2.0</p>
-            </div>
-            
-            <form className="space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-semibold text-slate-700 ml-1">Email</label>
-                  <input 
-                    type="email" 
-                    placeholder="admin@itschool.uz" 
-                    className="input-field mt-1" 
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-slate-700 ml-1">Parol</label>
-                  <input 
-                    type="password" 
-                    placeholder="••••••••" 
-                    className="input-field mt-1" 
-                  />
-                </div>
-              </div>
-              
-              <button className="btn-primary w-full py-4 text-lg">
-                Kirish
-              </button>
-            </form>
-            
-            <div className="pt-4 text-center border-t border-slate-100">
-              <p className="text-xs text-slate-400">
-                Barcha narxlar otomatik ravishda <strong>SO'M</strong>da hisoblanadi.
-              </p>
-            </div>
-          </div>
-        </div>
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+
+            <Route element={<Layout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/students" element={<StudentsPage />} />
+              <Route path="/courses" element={<CoursesPage />} />
+              <Route path="/groups" element={<GroupsPage />} />
+              <Route path="/attendance" element={<AttendancePage />} />
+              <Route path="/exams" element={<ExamsPage />} />
+              <Route path="/questions" element={<QuestionsPage />} />
+              <Route path="/users" element={<UsersPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+            </Route>
+
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </Suspense>
       </Router>
     </QueryClientProvider>
   );
