@@ -1,149 +1,133 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useExamStore } from '../store/useExamStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { ArrowLeft, CheckCircle2, XCircle, Loader2, BookOpen } from 'lucide-react';
 import api from '../lib/api';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  ArrowLeft, 
-  Target,
-  Loader2,
-  Trophy
-} from 'lucide-react';
-import { motion } from 'framer-motion';
-import { cn } from '../lib/utils';
 
 const ReviewPage: React.FC = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [result, setResult] = useState<any>(null);
+  const { questions, answers, attemptId } = useExamStore();
+  const { user } = useAuthStore();
+  const [reviewData, setReviewData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchResult = async () => {
+    const load = async () => {
       try {
-        const { data } = await api.get(`/exams/result/${id}`);
-        setResult(data);
-      } catch (error) {
-        console.error('Failed to fetch result review:', error);
-      } finally {
-        setLoading(false);
+        const aid = attemptId || id;
+        if (aid) {
+          const { data } = await api.get(`/exams/review/${aid}`);
+          setReviewData(Array.isArray(data) ? data : data.questions || []);
+          setLoading(false);
+          return;
+        }
+      } catch {}
+      // Fallback: use local store data
+      if (questions) {
+        setReviewData(questions.map((q: any) => ({
+          ...q,
+          student_answer: answers?.[q.id],
+          is_correct: null,
+          correct_answer: null,
+        })));
       }
+      setLoading(false);
     };
-    fetchResult();
-  }, [id]);
+    load();
+  }, [id, attemptId]);
 
-  if (loading) return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center space-y-4">
-      <Loader2 className="w-12 h-12 text-primary-600 animate-spin" />
-      <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Tahlillarni yuklanmoqda...</p>
-    </div>
-  );
+  if (loading) return <div className="min-h-screen flex justify-center items-center"><Loader2 className="w-8 h-8 text-primary-400 animate-spin" /></div>;
+
+  const correct = reviewData.filter((q) => q.is_correct).length;
+  const total = reviewData.length;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8 lg:p-14 space-y-12 max-w-7xl mx-auto">
-      
-      {/* Header */}
-      <header className="flex items-center justify-between">
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="p-4 bg-white rounded-2xl shadow-lg border border-slate-50 hover:bg-slate-50 transition-all text-slate-400 group"
-        >
-          <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
+    <div className="page-container max-w-2xl mx-auto space-y-6 pb-20 lg:pb-6 animate-in">
+      <div className="flex items-center gap-3">
+        <button onClick={() => navigate(`/exams/${id}/result`)} className="w-9 h-9 bg-white border border-slate-200 rounded-xl flex items-center justify-center hover:border-primary-300 transition-all">
+          <ArrowLeft className="w-4 h-4 text-slate-500" />
         </button>
-        <div className="text-right space-y-1">
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight uppercase leading-none">Natija Tahlili</h1>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{result?.exam_title}</p>
-        </div>
-      </header>
-
-      {/* Summary Score */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-12 rounded-[3.5rem] shadow-2xl shadow-slate-100 flex flex-col md:flex-row items-center justify-between gap-12 border border-slate-50 relative overflow-hidden"
-      >
-        <div className="space-y-4 relative z-10 text-center md:text-left">
-           <div className="flex items-center justify-center md:justify-start gap-3">
-              <Trophy className="w-8 h-8 text-orange-400" />
-              <h2 className="text-5xl font-black text-slate-900 leading-none">{result?.score}%</h2>
-           </div>
-           <p className="text-slate-400 font-bold max-w-md uppercase tracking-wide text-xs leading-none">Siz jami {result?.total_questions} ta savoldan {result?.correct_answers} tasiga to'g'ri javob berdingiz.</p>
-        </div>
-
-        <div className="flex gap-8 relative z-10">
-           <div className="flex flex-col items-center gap-2">
-              <div className="w-16 h-16 rounded-[1.5rem] bg-green-50 text-green-600 flex items-center justify-center shadow-sm">
-                 <CheckCircle2 className="w-8 h-8" />
-              </div>
-              <span className="text-lg font-black text-slate-800">{result?.correct_answers}</span>
-           </div>
-           <div className="flex flex-col items-center gap-2">
-              <div className="w-16 h-16 rounded-[1.5rem] bg-red-50 text-red-500 flex items-center justify-center shadow-sm">
-                 <XCircle className="w-8 h-8" />
-              </div>
-              <span className="text-lg font-black text-slate-800">{result?.total_questions - result?.correct_answers}</span>
-           </div>
-        </div>
-        
-        <Target className="absolute -right-10 -bottom-10 w-64 h-64 text-slate-50 opacity-10 rotate-12" />
-      </motion.div>
-
-      {/* Questions Review */}
-      <div className="space-y-8">
-        <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest px-4">Batafsil sharh</h3>
-        <div className="grid gap-6">
-          {result?.details.map((item: any, idx: number) => (
-            <motion.div 
-              key={idx}
-              initial={{ opacity: 0, scale: 0.98 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              className={cn(
-                "p-8 rounded-[3rem] border-4 transition-all bg-white shadow-xl shadow-slate-50",
-                item.is_correct ? "border-green-100" : "border-red-100"
-              )}
-            >
-              <div className="flex items-start gap-6">
-                 <div className={cn(
-                   "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 font-black",
-                   item.is_correct ? "bg-green-100 text-green-600" : "bg-red-100 text-red-500"
-                 )}>
-                    {idx + 1}
-                 </div>
-                 <div className="flex-1 space-y-6">
-                    <h4 className="text-xl font-bold text-slate-800 tracking-tight leading-relaxed">{item.question_text}</h4>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       <div className="p-5 bg-slate-50 rounded-2xl border-2 border-transparent">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-2">
-                             Sizning javob
-                          </p>
-                          <div className={cn(
-                            "text-md font-bold",
-                            item.is_correct ? "text-green-600" : "text-red-500"
-                          )}>
-                             {item.student_answer || "Javob berilmagan"}
-                          </div>
-                       </div>
-                       
-                       {!item.is_correct && (
-                         <div className="p-5 bg-green-50 rounded-2xl border-2 border-transparent">
-                            <p className="text-[10px] font-black text-green-400 uppercase tracking-widest flex items-center gap-2 mb-2">
-                               To'g'ri javob
-                            </p>
-                            <div className="text-md font-bold text-green-600">
-                               {item.correct_answer}
-                            </div>
-                         </div>
-                       )}
-                    </div>
-                 </div>
-              </div>
-            </motion.div>
-          ))}
+        <div>
+          <h1 className="text-xl font-black text-slate-900">Javoblarni ko'rish</h1>
+          <p className="text-slate-400 text-xs mt-0.5">{correct} / {total} to'g'ri javob</p>
         </div>
       </div>
 
+      {/* Summary bar */}
+      <div className="card p-4 flex items-center gap-4">
+        <div className="flex-1 bg-slate-100 rounded-full h-3 overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-700"
+            style={{ width: `${total > 0 ? (correct / total) * 100 : 0}%` }}
+          />
+        </div>
+        <span className="text-sm font-black text-slate-700 whitespace-nowrap">{total > 0 ? Math.round((correct / total) * 100) : 0}%</span>
+      </div>
+
+      {/* Questions */}
+      {reviewData.length > 0 ? (
+        <div className="space-y-4">
+          {reviewData.map((q: any, i: number) => {
+            const isCorrect = q.is_correct;
+            const isAnswered = q.student_answer !== undefined && q.student_answer !== null;
+            return (
+              <div key={q.id || i} className={`card p-5 border-l-4 ${isCorrect === true ? 'border-l-green-400' : isCorrect === false ? 'border-l-red-400' : 'border-l-slate-200'}`}>
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-start gap-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase mt-0.5 shrink-0">#{i + 1}</span>
+                    <p className="text-sm font-semibold text-slate-800 leading-relaxed">{q.text || q.question}</p>
+                  </div>
+                  {isCorrect === true && <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />}
+                  {isCorrect === false && <XCircle className="w-5 h-5 text-red-400 shrink-0" />}
+                </div>
+
+                {/* Options */}
+                {q.options && Array.isArray(q.options) && (
+                  <div className="space-y-2">
+                    {q.options.map((opt: any, oi: number) => {
+                      const optVal = typeof opt === 'object' ? opt.text || opt.value : opt;
+                      const optId = typeof opt === 'object' ? opt.id || opt.value : opt;
+                      const isStudentAnswer = q.student_answer === optId || q.student_answer === oi;
+                      const isCorrectOpt = q.correct_answer === optId || q.correct_answer === oi;
+                      return (
+                        <div key={oi} className={`p-3 rounded-xl text-sm font-medium border transition-all ${isCorrectOpt ? 'bg-green-50 border-green-200 text-green-800' : isStudentAnswer && !isCorrectOpt ? 'bg-red-50 border-red-200 text-red-700' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
+                          {isCorrectOpt && <span className="font-bold mr-1">✓</span>}
+                          {isStudentAnswer && !isCorrectOpt && <span className="font-bold mr-1">✗</span>}
+                          {optVal}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Text answer */}
+                {!q.options && isAnswered && (
+                  <div className={`p-3 rounded-xl text-sm font-medium border ${isCorrect ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                    Javobingiz: {q.student_answer}
+                  </div>
+                )}
+
+                {!isAnswered && (
+                  <div className="p-3 rounded-xl text-sm font-medium bg-slate-50 border border-slate-100 text-slate-400">
+                    Savol javobsiz qoldirildi
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="card p-12 text-center">
+          <BookOpen className="w-10 h-10 text-slate-200 mx-auto mb-2" />
+          <p className="text-slate-400 font-semibold text-sm">Ko'rib chiqish ma'lumotlari yo'q</p>
+        </div>
+      )}
+
+      <button onClick={() => navigate('/exams')} className="btn-primary w-full py-3.5 flex items-center justify-center gap-2">
+        <ArrowLeft className="w-4 h-4" /> Imtihonlarga qaytish
+      </button>
     </div>
   );
 };

@@ -1,253 +1,264 @@
 import React, { useEffect, useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
-import { 
-  Plus, Search, Trash2, Edit2, Loader2, Wallet, DollarSign, GraduationCap
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Button from '../components/Button';
-import Modal from '../components/Modal';
-import ConfirmModal from '../components/ConfirmModal';
-import api from '../lib/api';
 import { cn } from '../lib/utils';
+import {
+  GraduationCap, Plus, Download, Search, Loader2,
+  Pencil, Trash2, X, UserPlus, ChevronLeft, ChevronRight
+} from 'lucide-react';
 
-const StudentsPage = () => {
-  const { students, fetchStudents, createStudent, updateStudent, deleteStudent, courses, fetchCourses, fetchGroups, isLoading } = useAdminStore();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<any>(null);
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+const statusPill = (s: string) => {
+  const m: Record<string, string> = {
+    active: 'pill-active', frozen: 'pill-frozen', dropped: 'pill-dropped', graduated: 'pill-completed',
+  };
+  return m[s?.toLowerCase()] || 'pill-pending';
+};
 
-  useEffect(() => {
-    fetchStudents();
-    fetchCourses();
-    fetchGroups();
-  }, []);
+const StudentsPage: React.FC = () => {
+  const { students, courses, fetchStudents, fetchCourses, createStudent, updateStudent, deleteStudent, enrollStudent, isLoading } = useAdminStore();
+  const [search, setSearch] = useState('');
+  const [modal, setModal] = useState<'create' | 'edit' | null>(null);
+  const [enrollModal, setEnrollModal] = useState<any>(null);
+  const [editTarget, setEditTarget] = useState<any>(null);
+  const [form, setForm] = useState({ first_name: '', last_name: '', phone: '', email: '', parent_name: '', parent_phone: '' });
+  const [enrollCourseId, setEnrollCourseId] = useState('');
+  const [page, setPage] = useState(1);
+  const perPage = 10;
 
-  const filteredStudents = (students || []).filter((s: any) => 
-    `${s.first_name} ${s.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (s.phone || '').includes(searchTerm)
+  useEffect(() => { fetchStudents(); fetchCourses(); }, []);
+
+  const filtered = students.filter((s: any) =>
+    `${s.first_name} ${s.last_name} ${s.phone}`.toLowerCase().includes(search.toLowerCase())
   );
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
-  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData.entries());
-    if (editingStudent) {
-      await updateStudent(editingStudent.id, data);
-    } else {
-      await createStudent(data);
-    }
-    setIsModalOpen(false);
-    setEditingStudent(null);
+  const openCreate = () => {
+    setForm({ first_name: '', last_name: '', phone: '', email: '', parent_name: '', parent_phone: '' });
+    setModal('create');
   };
 
-  const handlePayment = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    setIsSubmittingPayment(true);
-    try {
-      await api.post('/payments', {
-        student_id: selectedStudent.id,
-        course_id: formData.get('course_id'),
-        amount: Number(formData.get('amount')),
-      });
-      alert("To'lov muvaffaqiyatli qabul qilindi!");
-      setIsPaymentModalOpen(false);
-      setSelectedStudent(null);
-    } catch (e) {
-      alert("To'lovda xato!");
-    } finally {
-      setIsSubmittingPayment(false);
+  const openEdit = (s: any) => {
+    setEditTarget(s);
+    setForm({ first_name: s.first_name, last_name: s.last_name, phone: s.phone, email: s.email || '', parent_name: s.parent_name || '', parent_phone: s.parent_phone || '' });
+    setModal('edit');
+  };
+
+  const handleSave = async () => {
+    if (modal === 'create') await createStudent(form);
+    else if (editTarget) await updateStudent(editTarget.id, form);
+    setModal(null);
+  };
+
+  const handleEnroll = async () => {
+    if (enrollModal && enrollCourseId) {
+      await enrollStudent(enrollModal.id, enrollCourseId);
+      setEnrollModal(null);
     }
   };
 
-  const handleEnroll = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const courseId = formData.get('course_id') as string;
-    if (selectedStudent && courseId) {
-      try {
-        await api.post(`/students/${selectedStudent.id}/enroll`, { course_id: courseId });
-        alert('Talaba kursga muvaffaqiyatli yozildi!');
-      } catch (err: any) {
-        alert(err.response?.data?.message || 'Yozishda xato');
-      }
-      setIsEnrollModalOpen(false);
-      setSelectedStudent(null);
-    }
+  const handleDelete = async (id: string) => {
+    if (confirm("Talabani o'chirishni tasdiqlaysizmi?")) await deleteStudent(id);
   };
 
   return (
-    <div className="p-8 lg:p-14 space-y-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-1">
-          <h1 className="text-5xl font-black text-slate-900 tracking-tight">Talabalar</h1>
-          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Jami: {students.length} kishi</p>
-        </motion.div>
-        
-        <div className="flex gap-4">
-           <div className="bg-white px-6 py-4 rounded-3xl shadow-xl flex items-center gap-4 border border-slate-50 focus-within:ring-2 focus-within:ring-primary-100 transition-all group">
-              <Search className="w-5 h-5 text-slate-300 group-focus-within:text-primary-600" />
-              <input placeholder="Ism yoki telefon..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="outline-none border-none bg-transparent font-bold text-slate-600 w-48 md:w-64" />
-           </div>
-           <Button onClick={() => setIsModalOpen(true)}>
-              <Plus className="w-6 h-6" /> QO'SHISH
-           </Button>
+    <div className="page-container animate-in">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">Talabalar</h1>
+          <p className="text-sm text-slate-400 mt-0.5">{filtered.length} ta talaba ro'yxatda</p>
+        </div>
+        <div className="flex gap-3">
+          <button className="btn-secondary flex items-center gap-2">
+            <Download className="w-4 h-4" /> Export
+          </button>
+          <button onClick={openCreate} className="btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Talaba qo'shish
+          </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-50">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50/50">
-              <th className="py-6 px-10 text-xs font-black text-slate-400 uppercase tracking-widest">To'liq ism</th>
-              <th className="py-6 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">Telefon</th>
-              <th className="py-6 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">Guruh</th>
-              <th className="py-6 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
-              <th className="py-6 px-10 text-right">Amallar</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            <AnimatePresence mode="popLayout">
-              {filteredStudents.map((s: any, idx: number) => (
-                <motion.tr 
-                  key={s.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="group hover:bg-slate-50/50 transition-colors"
-                >
-                  <td className="py-6 px-10">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                        {(s.first_name || '?')[0]}
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="card p-5">
+          <p className="label-subtle mb-1">Jami ro'yxatga olingan</p>
+          <p className="text-3xl font-black text-slate-800">{students.length}</p>
+        </div>
+        <div className="card p-5">
+          <p className="label-subtle mb-1">Faol</p>
+          <p className="text-3xl font-black text-green-600">{students.filter((s: any) => s.status === 'active').length}</p>
+        </div>
+        <div className="card p-5">
+          <p className="label-subtle mb-1">Muzlatilgan</p>
+          <p className="text-3xl font-black text-blue-600">{students.filter((s: any) => s.status === 'frozen').length}</p>
+        </div>
+      </div>
+
+      {/* Search & Filter */}
+      <div className="card p-4 mb-4 flex items-center gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+          <input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Talaba qidirish..."
+            className="input pl-10"
+          />
+        </div>
+        <span className="text-xs font-bold text-slate-400">{filtered.length} ta natija</span>
+      </div>
+
+      {/* Table */}
+      <div className="card overflow-hidden">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary-500" /></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Talaba</th>
+                  <th>Telefon</th>
+                  <th>Kurs</th>
+                  <th>Guruh</th>
+                  <th>Status</th>
+                  <th className="text-right">Amallar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginated.map((s: any) => (
+                  <tr key={s.id}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-primary-100 rounded-lg flex items-center justify-center text-xs font-black text-primary-600">
+                          {s.first_name?.[0]}{s.last_name?.[0]}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-700">{s.first_name} {s.last_name}</p>
+                          <p className="text-[11px] text-slate-400">{s.email || ''}</p>
+                        </div>
                       </div>
-                      <div className="font-bold text-slate-800">{s.first_name} {s.last_name}</div>
-                    </div>
-                  </td>
-                  <td className="py-6 px-4 font-mono font-bold text-slate-500">{s.phone}</td>
-                  <td className="py-6 px-4">
-                    <span className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-xs font-black uppercase tracking-tighter">
-                      {s.group_name || "Individual"}
-                    </span>
-                  </td>
-                  <td className="py-6 px-4">
-                    <span className={cn("w-2.5 h-2.5 rounded-full inline-block mr-2", s.status === 'ACTIVE' ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-red-500")} />
-                    <span className="text-xs font-black text-slate-600 tracking-widest uppercase">{s.status || 'ACTIVE'}</span>
-                  </td>
-                  <td className="py-6 px-10 text-right space-x-2">
-                    <button onClick={() => { setSelectedStudent(s); setIsEnrollModalOpen(true); }} className="p-3 hover:bg-white hover:shadow-lg rounded-2xl transition-all text-slate-400 hover:text-indigo-600" title="Kursga yozish">
-                      <GraduationCap className="w-5 h-5" />
-                    </button>
-                    <button onClick={() => { setSelectedStudent(s); setIsPaymentModalOpen(true); }} className="p-3 hover:bg-white hover:shadow-lg rounded-2xl transition-all text-slate-400 hover:text-green-600" title="To'lov">
-                      <Wallet className="w-5 h-5" />
-                    </button>
-                    <button onClick={() => { setEditingStudent(s); setIsModalOpen(true); }} className="p-3 hover:bg-white hover:shadow-lg rounded-2xl transition-all text-slate-400 hover:text-blue-600">
-                      <Edit2 className="w-5 h-5" />
-                    </button>
-                    <button onClick={() => { setDeletingId(s.id); setIsConfirmOpen(true); }} className="p-3 hover:bg-white hover:shadow-lg rounded-2xl transition-all text-slate-400 hover:text-red-600">
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </td>
-                </motion.tr>
+                    </td>
+                    <td className="font-mono text-xs">{s.phone}</td>
+                    <td>{s.course_name || <span className="text-slate-300">—</span>}</td>
+                    <td>
+                      {s.group_name ? (
+                        <span className="course-badge bg-primary-50 text-primary-600">{s.group_name}</span>
+                      ) : <span className="text-slate-300">—</span>}
+                    </td>
+                    <td><span className={cn("status-pill", statusPill(s.status))}>{s.status || 'active'}</span></td>
+                    <td>
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => { setEnrollModal(s); setEnrollCourseId(''); }} className="p-2 rounded-lg hover:bg-primary-50 text-primary-600 transition-all" title="Kursga yozish">
+                          <UserPlus className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => openEdit(s)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-all" title="Tahrirlash">
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDelete(s.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-all" title="O'chirish">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {paginated.length === 0 && (
+                  <tr><td colSpan={6} className="text-center py-12 text-slate-400">Talabalar topilmadi</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-50">
+            <span className="text-xs text-slate-400">Sahifa {page} / {totalPages}</span>
+            <div className="flex gap-1">
+              <button disabled={page === 1} onClick={() => setPage(page - 1)} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
+                <button key={n} onClick={() => setPage(n)} className={cn("w-8 h-8 rounded-lg text-xs font-bold", page === n ? "bg-primary-600 text-white" : "hover:bg-slate-100 text-slate-500")}>
+                  {n}
+                </button>
               ))}
-            </AnimatePresence>
-          </tbody>
-        </table>
-        {isLoading && filteredStudents.length === 0 && (
-           <div className="py-20 flex flex-col items-center justify-center gap-4 text-slate-300">
-             <Loader2 className="w-10 h-10 animate-spin" />
-             <p className="font-bold uppercase tracking-widest text-xs leading-none">Yuklanmoqda...</p>
-           </div>
+              <button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* CRUD Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingStudent(null); }} title={editingStudent ? "Tahrirlash" : "Yangi Talaba Qo'shish"}>
-        <form onSubmit={handleSave} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Ism</label>
-              <input required name="first_name" defaultValue={editingStudent?.first_name} className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold text-slate-800 transition-all" />
+      {/* Create/Edit Modal */}
+      {modal && (
+        <div className="modal-overlay" onClick={() => setModal(null)}>
+          <div className="modal-content p-6 animate-in-scale" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-black text-slate-800">{modal === 'create' ? "Yangi talaba" : "Tahrirlash"}</h2>
+              <button onClick={() => setModal(null)} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Familiya</label>
-              <input required name="last_name" defaultValue={editingStudent?.last_name} className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold text-slate-800 transition-all" />
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="input-label">Ism</label>
+                  <input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className="input" placeholder="Ahmad" />
+                </div>
+                <div>
+                  <label className="input-label">Familiya</label>
+                  <input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className="input" placeholder="Karimov" />
+                </div>
+              </div>
+              <div>
+                <label className="input-label">Telefon</label>
+                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input" placeholder="+998901234567" />
+              </div>
+              <div>
+                <label className="input-label">Email</label>
+                <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="input" placeholder="talaba@email.com" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="input-label">Ota-ona ismi</label>
+                  <input value={form.parent_name} onChange={(e) => setForm({ ...form, parent_name: e.target.value })} className="input" />
+                </div>
+                <div>
+                  <label className="input-label">Ota-ona telefoni</label>
+                  <input value={form.parent_phone} onChange={(e) => setForm({ ...form, parent_phone: e.target.value })} className="input" />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setModal(null)} className="btn-secondary">Bekor qilish</button>
+              <button onClick={handleSave} className="btn-primary">{modal === 'create' ? 'Yaratish' : 'Saqlash'}</button>
             </div>
           </div>
-          <div className="space-y-2">
-             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Telefon</label>
-             <input required name="phone" placeholder="+998" defaultValue={editingStudent?.phone} className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold text-slate-800 transition-all" />
-          </div>
-          <Button type="submit" className="w-full py-6">SAQLASH</Button>
-        </form>
-      </Modal>
-
-      {/* Payment Modal */}
-      <Modal isOpen={isPaymentModalOpen} onClose={() => { setIsPaymentModalOpen(false); setSelectedStudent(null); }} title="To'lov Qabul Qilish">
-        <form onSubmit={handlePayment} className="space-y-8">
-          <div className="bg-green-50 p-6 rounded-3xl border border-green-100 flex items-center gap-6">
-             <div className="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
-                <DollarSign className="w-8 h-8" />
-             </div>
-             <div>
-                <h4 className="font-black text-green-900 uppercase text-xs tracking-[0.2em] leading-none mb-1">{selectedStudent?.first_name} {selectedStudent?.last_name}</h4>
-                <p className="text-xs font-bold text-green-400 uppercase tracking-widest leading-none">O'quv kursi uchun to'lov</p>
-             </div>
-          </div>
-          <div className="space-y-2">
-             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Kurs</label>
-             <select required name="course_id" className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-green-500 rounded-2xl outline-none font-bold text-slate-800 transition-all">
-               <option value="">Tanlang...</option>
-               {(courses || []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-             </select>
-          </div>
-          <div className="space-y-2">
-             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">To'lov Summasi (SO'M)</label>
-             <input required type="number" name="amount" placeholder="1,200,000" className="w-full p-8 bg-slate-50 border-2 border-transparent focus:border-green-500 rounded-[2rem] outline-none font-black text-3xl text-slate-800 transition-all" />
-          </div>
-          <Button isLoading={isSubmittingPayment} type="submit" className="w-full py-8 text-lg bg-green-600 shadow-xl shadow-green-100 uppercase">
-            To'lovni Tasdiqlash
-          </Button>
-        </form>
-      </Modal>
+        </div>
+      )}
 
       {/* Enroll Modal */}
-      <Modal isOpen={isEnrollModalOpen} onClose={() => { setIsEnrollModalOpen(false); setSelectedStudent(null); }} title="Kursga Yozish">
-        <form onSubmit={handleEnroll} className="space-y-6">
-          <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100 flex items-center gap-4">
-            <GraduationCap className="w-8 h-8 text-indigo-600" />
-            <div>
-              <h4 className="font-black text-indigo-900 uppercase text-xs tracking-widest">{selectedStudent?.first_name} {selectedStudent?.last_name}</h4>
-              <p className="text-xs text-indigo-400 font-bold">Yangi kursga yozish</p>
+      {enrollModal && (
+        <div className="modal-overlay" onClick={() => setEnrollModal(null)}>
+          <div className="modal-content p-6 animate-in-scale" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-black text-slate-800">Kursga yozish</h2>
+              <button onClick={() => setEnrollModal(null)} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            <p className="text-sm text-slate-600 mb-4">
+              <strong>{enrollModal.first_name} {enrollModal.last_name}</strong> ni kursga yozish
+            </p>
+            <select value={enrollCourseId} onChange={(e) => setEnrollCourseId(e.target.value)} className="select">
+              <option value="">Kursni tanlang</option>
+              {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setEnrollModal(null)} className="btn-secondary">Bekor qilish</button>
+              <button onClick={handleEnroll} disabled={!enrollCourseId} className="btn-primary">Yozish</button>
             </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Kurs</label>
-            <select required name="course_id" className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold text-slate-800 transition-all">
-              <option value="">Tanlang...</option>
-              {(courses || []).map((c: any) => <option key={c.id} value={c.id}>{c.name} — {Number(c.price).toLocaleString()} so'm</option>)}
-            </select>
-          </div>
-          <Button type="submit" className="w-full py-6">YOZISH</Button>
-        </form>
-      </Modal>
-
-      {/* Delete Confirmation */}
-      <ConfirmModal 
-        isOpen={isConfirmOpen}
-        onClose={() => setIsConfirmOpen(false)}
-        onConfirm={() => { if (deletingId) { deleteStudent(deletingId); setDeletingId(null); } }}
-        title="O'chirishni tasdiqlaysizmi?"
-        message="Bu talabani butunlay o'chirib yuboradi. Ushbu amalni qaytarib bo'lmaydi."
-        confirmText="O'CHIRISH"
-      />
+        </div>
+      )}
     </div>
   );
 };

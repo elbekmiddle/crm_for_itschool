@@ -1,263 +1,276 @@
 import React, { useEffect, useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
-import { 
-  Plus, ClipboardList, Trash2, Loader2, Send, Sparkles, Eye
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Button from '../components/Button';
-import Modal from '../components/Modal';
-import ConfirmModal from '../components/ConfirmModal';
 import { cn } from '../lib/utils';
+import {
+  ClipboardList, Plus, Search, Loader2, Pencil, Trash2, X,
+  Play, Eye, ChevronLeft, ChevronRight, Radio, FileText, Sparkles
+} from 'lucide-react';
 
-const ExamsPage = () => {
-  const { 
-    exams, fetchExams, createExam, deleteExam, publishExam, generateAiExam,
-    examResults, fetchExamResults,
-    courses, fetchCourses, lessons, fetchLessons,
-    isLoading 
-  } = useAdminStore();
-  
-  const [selectedCourse, setSelectedCourse] = useState('');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [isResultsModalOpen, setIsResultsModalOpen] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
+const statusMap: Record<string, { label: string; cls: string }> = {
+  draft: { label: 'DRAFT', cls: 'pill-draft' },
+  published: { label: 'PUBLISHED', cls: 'pill-published' },
+  active: { label: 'ACTIVE', cls: 'pill-active' },
+  completed: { label: 'COMPLETED', cls: 'pill-completed' },
+};
 
-  useEffect(() => { 
-    fetchCourses(); 
-  }, []);
+const ExamsPage: React.FC = () => {
+  const { exams, courses, examResults, fetchExams, fetchCourses, createExam, updateExam, deleteExam, publishExam, fetchExamResults, isLoading } = useAdminStore();
+  const [modal, setModal] = useState<'create' | 'edit' | 'results' | null>(null);
+  const [editTarget, setEditTarget] = useState<any>(null);
+  const [form, setForm] = useState({ title: '', course_id: '', duration_minutes: '', passing_score: '' });
+  const [search, setSearch] = useState('');
+  const [tab, setTab] = useState<'all' | 'active' | 'completed' | 'draft'>('all');
+  const [page, setPage] = useState(1);
+  const perPage = 8;
 
-  useEffect(() => {
-    if (selectedCourse) fetchExams(selectedCourse);
-  }, [selectedCourse]);
+  useEffect(() => { fetchExams(); fetchCourses(); }, []);
 
-  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    await createExam({
-      title: formData.get('title'),
-      course_id: selectedCourse || formData.get('course_id'),
-      duration_minutes: Number(formData.get('duration_minutes')),
-      max_attempts: Number(formData.get('max_attempts') || 1),
-    });
-    setIsCreateModalOpen(false);
+  const filtered = exams
+    .filter((e: any) => tab === 'all' || e.status?.toLowerCase() === tab)
+    .filter((e: any) => e.title?.toLowerCase().includes(search.toLowerCase()));
+
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
+
+  const openCreate = () => {
+    setForm({ title: '', course_id: '', duration_minutes: '30', passing_score: '60' });
+    setModal('create');
   };
 
-  const handleAiGenerate = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!selectedExamId) return;
-    setAiLoading(true);
-    const formData = new FormData(e.currentTarget);
-    await generateAiExam(selectedExamId, {
-      lesson_id: formData.get('lesson_id'),
-      topic: formData.get('topic'),
-      level: formData.get('level'),
-      count: Number(formData.get('count')),
+  const openEdit = (e: any) => {
+    setEditTarget(e);
+    setForm({
+      title: e.title, course_id: e.course_id || '',
+      duration_minutes: e.duration_minutes?.toString() || '30',
+      passing_score: e.passing_score?.toString() || '60'
     });
-    setAiLoading(false);
-    setIsAiModalOpen(false);
+    setModal('edit');
   };
 
-  const showResults = async (examId: string) => {
+  const handleSave = async () => {
+    const payload = { ...form, duration_minutes: Number(form.duration_minutes), passing_score: Number(form.passing_score) };
+    if (modal === 'create') await createExam(payload);
+    else if (editTarget) await updateExam(editTarget.id, payload);
+    setModal(null);
+  };
+
+  const viewResults = async (examId: string) => {
     await fetchExamResults(examId);
-    setIsResultsModalOpen(true);
-  };
-
-  const statusColor = (status: string) => {
-    switch (status) {
-      case 'draft': return 'bg-slate-100 text-slate-600';
-      case 'published': return 'bg-green-100 text-green-700';
-      case 'closed': return 'bg-red-100 text-red-700';
-      default: return 'bg-slate-100 text-slate-600';
-    }
+    setModal('results');
   };
 
   return (
-    <div className="p-8 lg:p-14 space-y-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-1">
-          <h1 className="text-5xl font-black text-slate-900 tracking-tight">Imtihonlar</h1>
-          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Jami: {exams.length} imtihon</p>
-        </motion.div>
-        <div className="flex gap-4 items-center">
-          <select value={selectedCourse} onChange={(e) => setSelectedCourse(e.target.value)} className="p-4 bg-white border border-slate-100 rounded-2xl outline-none font-bold text-slate-700 shadow-lg">
-            <option value="">Barcha kurslar</option>
-            {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="w-6 h-6" /> YARATISH
-          </Button>
+    <div className="page-container animate-in">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+          <p className="label-subtle mb-1">ACADEMIC EDGE › EXAM MANAGEMENT</p>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">Imtihon Boshqaruvi</h1>
+        </div>
+        <button onClick={openCreate} className="btn-primary flex items-center gap-2">
+          <Plus className="w-4 h-4" /> Imtihon yaratish
+        </button>
+      </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="card p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="label-subtle mb-1">Jami imtihonlar</p>
+              <p className="text-3xl font-black text-slate-800">{exams.length}</p>
+            </div>
+            <span className="stat-badge bg-green-50 text-green-600">+4.2%</span>
+          </div>
+        </div>
+        <div className="card p-5 flex items-center gap-4">
+          <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+            <Radio className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-black text-slate-800">{exams.filter((e: any) => e.status === 'active' || e.status === 'published').length}</p>
+            <p className="label-subtle">Faol seanslar</p>
+          </div>
+        </div>
+        <div className="card p-5 flex items-center gap-4">
+          <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+            <FileText className="w-5 h-5 text-amber-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-black text-slate-800">{exams.filter((e: any) => e.status === 'draft').length}</p>
+            <p className="label-subtle">Qoralamalar</p>
+          </div>
         </div>
       </div>
 
-      {/* Exams Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-        <AnimatePresence>
-          {exams.map((exam: any, idx: number) => (
-            <motion.div 
-              key={exam.id}
-              layout
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: idx * 0.05 }}
-              className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-50 flex flex-col gap-6 group"
-            >
-              <div className="flex justify-between items-start">
-                <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-600 group-hover:bg-primary-600 group-hover:text-white transition-all">
-                  <ClipboardList className="w-7 h-7" />
-                </div>
-                <span className={cn("px-3 py-1 rounded-full text-xs font-black uppercase", statusColor(exam.status))}>
-                  {exam.status === 'draft' ? 'Qoralama' : exam.status === 'published' ? 'Nashr' : exam.status}
-                </span>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight leading-tight">{exam.title}</h3>
-                <p className="text-xs font-bold text-slate-400 mt-1">{exam.course_name || 'Kurs'} • {exam.duration_minutes || 60} daqiqa</p>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mt-auto pt-4 border-t border-slate-50">
-                {exam.status === 'draft' && (
-                  <button onClick={() => publishExam(exam.id)} className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-xl text-xs font-black uppercase hover:bg-green-100 transition-colors">
-                    <Send className="w-3.5 h-3.5" /> Nashr
-                  </button>
-                )}
-                <button onClick={() => { setSelectedExamId(exam.id); fetchLessons(exam.course_id || selectedCourse); setIsAiModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-600 rounded-xl text-xs font-black uppercase hover:bg-purple-100 transition-colors">
-                  <Sparkles className="w-3.5 h-3.5" /> AI
-                </button>
-                <button onClick={() => showResults(exam.id)} className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-black uppercase hover:bg-blue-100 transition-colors">
-                  <Eye className="w-3.5 h-3.5" /> Natijalar
-                </button>
-                <button onClick={() => { setDeletingId(exam.id); setIsConfirmOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase hover:bg-red-100 transition-colors">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </motion.div>
+      {/* Tabs & Search */}
+      <div className="card p-4 mb-4 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+          {(['all', 'active', 'completed', 'draft'] as const).map(t => (
+            <button key={t} onClick={() => { setTab(t); setPage(1); }}
+              className={cn("px-4 py-2 rounded-lg text-xs font-bold transition-all capitalize", tab === t ? "bg-white shadow-sm text-slate-700" : "text-slate-400")}
+            >{t === 'all' ? 'Hammasi' : t === 'active' ? 'Faol' : t === 'completed' ? 'Tugatilgan' : 'Qoralama'}</button>
           ))}
-        </AnimatePresence>
+        </div>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Imtihon qidirish..." className="input pl-10" />
+        </div>
       </div>
 
-      {isLoading && exams.length === 0 && (
-        <div className="py-20 flex justify-center"><Loader2 className="w-10 h-10 animate-spin text-slate-300" /></div>
-      )}
-      {!isLoading && exams.length === 0 && (
-        <div className="py-20 text-center text-slate-300">
-          <ClipboardList className="w-16 h-16 mx-auto mb-4 opacity-30" />
-          <p className="font-black uppercase tracking-widest">{selectedCourse ? 'Bu kursda imtihon yo\'q' : 'Kurs tanlang'}</p>
-        </div>
-      )}
-
-      {/* Create Exam Modal */}
-      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Yangi Imtihon">
-        <form onSubmit={handleCreate} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Nomi</label>
-            <input required name="title" placeholder="Masalan: Python Final Exam" className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none font-bold text-slate-800" />
-          </div>
-          {!selectedCourse && (
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Kurs</label>
-              <select required name="course_id" className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none font-bold text-slate-800">
-                <option value="">Tanlang...</option>
-                {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Davomiyligi (daq)</label>
-              <input required name="duration_minutes" type="number" defaultValue={60} className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none font-bold text-slate-800" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Max Urinishlar</label>
-              <input name="max_attempts" type="number" defaultValue={1} className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none font-bold text-slate-800" />
-            </div>
-          </div>
-          <Button type="submit" className="w-full py-6">YARATISH</Button>
-        </form>
-      </Modal>
-
-      {/* AI Generate Modal */}
-      <Modal isOpen={isAiModalOpen} onClose={() => setIsAiModalOpen(false)} title="AI Savol Generatsiya">
-        <form onSubmit={handleAiGenerate} className="space-y-6">
-          <div className="bg-purple-50 p-6 rounded-2xl border border-purple-100 flex items-center gap-4">
-            <Sparkles className="w-8 h-8 text-purple-600" />
-            <p className="text-sm font-bold text-purple-700">AI avtomatik savollar yaratadi va imtihonga biriktiradi</p>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Dars</label>
-            <select required name="lesson_id" className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none font-bold text-slate-800">
-              <option value="">Tanlang...</option>
-              {(lessons || []).map((l: any) => <option key={l.id} value={l.id}>{l.title}</option>)}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Mavzu</label>
-            <input required name="topic" placeholder="Masalan: Variables va Data Types" className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none font-bold text-slate-800" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Daraja</label>
-              <select required name="level" className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none font-bold text-slate-800">
-                <option value="easy">Oson</option>
-                <option value="medium">O'rtacha</option>
-                <option value="hard">Qiyin</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Soni</label>
-              <input required name="count" type="number" defaultValue={10} className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none font-bold text-slate-800" />
-            </div>
-          </div>
-          <Button type="submit" isLoading={aiLoading} className="w-full py-6 bg-purple-600 shadow-purple-200">
-            <Sparkles className="w-5 h-5" /> GENERATSIYA QILISH
-          </Button>
-        </form>
-      </Modal>
-
-      {/* Results Modal */}
-      <Modal isOpen={isResultsModalOpen} onClose={() => setIsResultsModalOpen(false)} title="Imtihon Natijalari" className="max-w-2xl">
-        <div className="space-y-4">
-          {(examResults || []).length === 0 ? (
-            <p className="text-center text-slate-400 font-bold py-8">Hali natijalar yo'q</p>
-          ) : (
-            <table className="w-full text-left">
+      {/* Table */}
+      <div className="card overflow-hidden">
+        {isLoading ? (
+          <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary-500" /></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="data-table">
               <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="py-3 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">Talaba</th>
-                  <th className="py-3 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">Ball</th>
-                  <th className="py-3 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
+                <tr>
+                  <th>Imtihon nomi</th>
+                  <th>Kurs</th>
+                  <th>Vaqt</th>
+                  <th>Status</th>
+                  <th>Natijalar</th>
+                  <th className="text-right">Amallar</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
-                {examResults.map((r: any) => (
-                  <tr key={r.id || r.attempt_id}>
-                    <td className="py-3 px-4 font-bold text-slate-700">{r.student_first_name || 'Talaba'} {r.student_last_name || ''}</td>
-                    <td className="py-3 px-4 font-black text-primary-600">{r.score || 0} / {r.total || '?'}</td>
-                    <td className="py-3 px-4">
-                      <span className={cn("px-3 py-1 rounded-full text-xs font-black uppercase", r.status === 'submitted' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>
-                        {r.status || 'Kutilmoqda'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+              <tbody>
+                {paginated.map((exam: any) => {
+                  const st = statusMap[exam.status?.toLowerCase()] || statusMap.draft;
+                  return (
+                    <tr key={exam.id}>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 bg-primary-100 rounded-lg flex items-center justify-center">
+                            <ClipboardList className="w-4 h-4 text-primary-600" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-700">{exam.title}</p>
+                            <p className="text-[11px] text-slate-400">{exam.question_count || 0} savol</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="course-badge bg-primary-50 text-primary-600">{exam.course_name || '—'}</span>
+                      </td>
+                      <td className="text-xs text-slate-500">{exam.duration_minutes || 30} daqiqa</td>
+                      <td><span className={cn("status-pill", st.cls)}>● {st.label}</span></td>
+                      <td>
+                        {exam.status === 'completed' ?
+                          <span className="text-sm font-bold text-green-600">{exam.avg_score || '—'}%</span> :
+                          <span className="text-slate-300">—</span>
+                        }
+                      </td>
+                      <td>
+                        <div className="flex items-center justify-end gap-1">
+                          {exam.status === 'draft' && (
+                            <button onClick={() => publishExam(exam.id)} className="p-2 rounded-lg hover:bg-green-50 text-green-600" title="Nashr qilish">
+                              <Play className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button onClick={() => viewResults(exam.id)} className="p-2 rounded-lg hover:bg-primary-50 text-primary-600" title="Natijalar">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => openEdit(exam)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500" title="Tahrirlash">
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => { if (confirm("O'chirishni tasdiqlaysizmi?")) deleteExam(exam.id); }} className="p-2 rounded-lg hover:bg-red-50 text-red-500" title="O'chirish">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {paginated.length === 0 && (
+                  <tr><td colSpan={6} className="text-center py-12 text-slate-400">Imtihonlar topilmadi</td></tr>
+                )}
               </tbody>
             </table>
-          )}
-        </div>
-      </Modal>
+          </div>
+        )}
 
-      <ConfirmModal 
-        isOpen={isConfirmOpen}
-        onClose={() => setIsConfirmOpen(false)}
-        onConfirm={() => { if (deletingId) { deleteExam(deletingId); setDeletingId(null); } }}
-        title="Imtihonni o'chirish"
-        message="Rostdan ham bu imtihonni o'chirasizmi?"
-        confirmText="O'CHIRISH"
-      />
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-50">
+            <span className="text-xs text-slate-400">Sahifa {page} / {totalPages}</span>
+            <div className="flex gap-1">
+              <button disabled={page === 1} onClick={() => setPage(page - 1)} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
+                <button key={n} onClick={() => setPage(n)} className={cn("w-8 h-8 rounded-lg text-xs font-bold", page === n ? "bg-primary-600 text-white" : "hover:bg-slate-100 text-slate-500")}>{n}</button>
+              ))}
+              <button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Create/Edit Modal */}
+      {(modal === 'create' || modal === 'edit') && (
+        <div className="modal-overlay" onClick={() => setModal(null)}>
+          <div className="modal-content p-6 animate-in-scale" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-black">{modal === 'create' ? 'Yangi Imtihon' : 'Tahrirlash'}</h2>
+              <button onClick={() => setModal(null)} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="input-label">Imtihon nomi</label>
+                <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input" placeholder="Midterm Exam" />
+              </div>
+              <div>
+                <label className="input-label">Kurs</label>
+                <select value={form.course_id} onChange={(e) => setForm({ ...form, course_id: e.target.value })} className="select">
+                  <option value="">Kursni tanlang</option>
+                  {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="input-label">Vaqt (daqiqa)</label>
+                  <input type="number" value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: e.target.value })} className="input" />
+                </div>
+                <div>
+                  <label className="input-label">O'tish bali (%)</label>
+                  <input type="number" value={form.passing_score} onChange={(e) => setForm({ ...form, passing_score: e.target.value })} className="input" />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setModal(null)} className="btn-secondary">Bekor qilish</button>
+              <button onClick={handleSave} className="btn-primary">{modal === 'create' ? 'Yaratish' : 'Saqlash'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Results Modal */}
+      {modal === 'results' && (
+        <div className="modal-overlay" onClick={() => setModal(null)}>
+          <div className="modal-content p-6 animate-in-scale max-w-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-black">Natijalar</h2>
+              <button onClick={() => setModal(null)} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="data-table">
+                <thead>
+                  <tr><th>Talaba</th><th>Ball</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                  {examResults.map((r: any) => (
+                    <tr key={r.id}>
+                      <td className="font-bold">{r.student_name || `${r.first_name || ''} ${r.last_name || ''}`}</td>
+                      <td className="font-bold text-primary-600">{r.score}%</td>
+                      <td><span className={cn("status-pill", r.score >= 60 ? 'pill-active' : 'pill-dropped')}>{r.score >= 60 ? 'O\'tdi' : 'Yiqildi'}</span></td>
+                    </tr>
+                  ))}
+                  {examResults.length === 0 && <tr><td colSpan={3} className="text-center py-8 text-slate-400">Natijalar yo'q</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,109 +1,140 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAdminStore } from '../store/useAdminStore';
+import { GraduationCap, Mail, Lock, Eye, EyeOff, Loader2, TrendingUp } from 'lucide-react';
 import api from '../lib/api';
-import { Lock, Mail } from 'lucide-react';
-import { motion } from 'framer-motion';
-import Button from '../components/Button';
+import { useAdminStore } from '../store/useAdminStore';
 
-const LoginPage = () => {
+const LoginPage: React.FC = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { setUser } = useAdminStore();
   const navigate = useNavigate();
+  const { setUser } = useAdminStore();
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     setError('');
-    setIsLoading(true);
-    
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get('email');
-    const password = formData.get('password');
-
     try {
       const { data } = await api.post('/auth/login', { email, password });
-      
-      // Backend returns { access_token, refresh_token }
-      localStorage.setItem('token', data.access_token);
-      if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
-      
-      // Decode JWT to extract user info
-      const payload = JSON.parse(atob(data.access_token.split('.')[1]));
-      setUser({ id: payload.sub, email: payload.email, role: payload.role });
-      
-      navigate('/dashboard', { replace: true });
+      localStorage.setItem('token', data.token);
+      setUser(data.user);
+      navigate('/dashboard');
     } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.response?.data?.message || 'Login xato! Email yoki parolni tekshiring.');
+      setError(err.response?.data?.message || 'Kirish amalga oshmadi');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-8 relative overflow-hidden">
-      {/* Background Glows */}
-      <div className="absolute top-0 right-0 w-[40vw] h-[40vh] bg-primary-100 rounded-full blur-[120px] -mr-20 -mt-20 opacity-40 animate-pulse" />
-      <div className="absolute bottom-0 left-0 w-[30vw] h-[30vh] bg-indigo-100 rounded-full blur-[100px] -ml-10 -mb-10 opacity-30 animate-pulse delay-700" />
-      
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white/80 backdrop-blur-xl p-16 rounded-[4rem] max-w-md w-full text-center space-y-12 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.1)] border border-white relative z-10"
-      >
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-20 h-20 bg-primary-600 rounded-[2rem] flex items-center justify-center text-white font-black text-3xl shadow-xl shadow-primary-100 rotate-6">
-            IT
+    <div className="min-h-screen flex">
+      {/* Left Panel — Branding */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-slate-800 via-slate-900 to-primary-900 flex-col justify-between p-12">
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-16">
+            <div className="w-10 h-10 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center">
+              <GraduationCap className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-lg font-black text-white tracking-tight">Scholar Flow</span>
           </div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase underline decoration-primary-600 decoration-8 underline-offset-8">Admin Kirish</h1>
+          <h2 className="text-4xl font-black text-white leading-tight tracking-tight">
+            Unlock your<br />
+            <span className="text-primary-400">intellectual potential.</span>
+          </h2>
+          <p className="text-slate-400 mt-4 text-sm leading-relaxed max-w-md">
+            Empowering Education through Intelligence. One dashboard to rule your campus ecosystem.
+          </p>
         </div>
 
-        {error && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-5 bg-red-50 border border-red-100 text-red-600 text-xs font-black uppercase rounded-2xl tracking-widest"
-          >
-            {error}
-          </motion.div>
-        )}
-        
-        <form className="space-y-8" onSubmit={handleLogin}>
-          <div className="space-y-4">
-             <div className="relative group">
-                <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-primary-600 transition-colors" />
-                <input 
-                   name="email" 
-                   placeholder="Email" 
-                   type="email" 
-                   autoComplete="email"
-                   required 
-                   className="w-full p-6 pl-16 bg-slate-50 border-2 border-transparent rounded-[2rem] outline-none focus:border-primary-500 font-bold text-lg transition-all" 
-                />
-             </div>
-             <div className="relative group">
-                <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-primary-600 transition-colors" />
-                <input 
-                   name="password" 
-                   placeholder="Parol" 
-                   type="password" 
-                   autoComplete="current-password"
-                   required 
-                   className="w-full p-6 pl-16 bg-slate-50 border-2 border-transparent rounded-[2rem] outline-none focus:border-primary-500 font-bold text-lg transition-all" 
-                />
-             </div>
+        <div className="relative z-10 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 max-w-xs">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global Progress</p>
+              <p className="text-xl font-black text-white">+24.8%</p>
+            </div>
           </div>
-          <Button isLoading={isLoading} type="submit" className="w-full py-8 rounded-[2rem] text-lg uppercase font-black">
-             Tizimga Kirish
-          </Button>
-        </form>
-        
-        <div className="flex items-center justify-center gap-2">
-           <div className="w-1.5 h-1.5 bg-primary-600 rounded-full animate-ping" />
-           <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest leading-none">© 2026 IT School ERP v2.0</p>
+          <div className="w-full bg-white/10 rounded-full h-1.5 mt-2">
+            <div className="bg-emerald-400 h-1.5 rounded-full" style={{ width: '72%' }} />
+          </div>
         </div>
-      </motion.div>
+
+        {/* BG Circles */}
+        <div className="absolute top-1/4 right-0 w-80 h-80 bg-primary-600/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-1/4 w-60 h-60 bg-primary-400/10 rounded-full blur-3xl" />
+      </div>
+
+      {/* Right Panel — Form */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-white">
+        <div className="w-full max-w-md animate-in">
+          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Xush kelibsiz</h1>
+          <p className="text-slate-400 text-sm mt-1 mb-8">Platformaga kirish uchun ma'lumotlaringizni kiriting.</p>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="input-label">Email yoki Login</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@itschool.uz"
+                  className="input pl-11"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="input-label mb-0">Parol</label>
+                <button type="button" className="text-[10px] font-bold text-primary-600 uppercase tracking-wider hover:underline">
+                  Parol esdan chiqdimi?
+                </button>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="input pl-11 pr-11"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
+                >
+                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm font-semibold">
+                {error}
+              </div>
+            )}
+
+            <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2 py-4">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {loading ? 'Kirilmoqda...' : 'Platformaga kirish'}
+            </button>
+          </form>
+
+          <p className="text-center text-xs text-slate-400 mt-8">
+            © 2024 Scholar Flow EdTech Solutions
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

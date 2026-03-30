@@ -1,216 +1,243 @@
 import React, { useEffect, useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
-import { 
-  Plus, Search, GraduationCap, Trash2, Edit2, UserPlus, UserMinus, ChevronDown, ChevronUp
+import { cn } from '../lib/utils';
+import {
+  Users, Plus, Loader2, Pencil, Trash2, X, UserPlus, UserMinus,
+  Radio, Calendar, ChevronRight
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Button from '../components/Button';
-import Modal from '../components/Modal';
-import ConfirmModal from '../components/ConfirmModal';
 
-
-const GroupsPage = () => {
-  const { groups, fetchGroups, createGroup, updateGroup, deleteGroup, courses, fetchCourses, users, fetchUsers, addStudentToGroup, removeStudentFromGroup, fetchGroupStudents, students, fetchStudents } = useAdminStore();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<any>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+const GroupsPage: React.FC = () => {
+  const { groups, courses, students, fetchGroups, fetchCourses, fetchStudents, createGroup, updateGroup, deleteGroup, addStudentToGroup, removeStudentFromGroup, fetchGroupStudents, isLoading } = useAdminStore();
+  const [modal, setModal] = useState<'create' | 'edit' | null>(null);
+  const [editTarget, setEditTarget] = useState<any>(null);
+  const [form, setForm] = useState({ name: '', course_id: '', schedule: '', max_students: '' });
+  const [selectedGroup, setSelectedGroup] = useState<any>(null);
   const [groupStudents, setGroupStudents] = useState<any[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [addStudentModal, setAddStudentModal] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState('');
 
-  useEffect(() => {
-    fetchGroups();
-    fetchCourses();
-    fetchUsers();
-    fetchStudents();
-  }, []);
+  useEffect(() => { fetchGroups(); fetchCourses(); fetchStudents(); }, []);
 
-  const filteredGroups = groups.filter(g =>
-    g.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const teachers = (users || []).filter((u: any) => u.role === 'TEACHER');
-
-  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData.entries());
-    if (editingGroup) {
-      await updateGroup(editingGroup.id, data);
-    } else {
-      await createGroup(data);
-    }
-    setIsModalOpen(false);
-    setEditingGroup(null);
+  const loadGroupStudents = async (group: any) => {
+    setSelectedGroup(group);
+    const data = await fetchGroupStudents(group.id);
+    setGroupStudents(data || []);
   };
 
-  const toggleExpand = async (groupId: string) => {
-    if (expandedGroup === groupId) {
-      setExpandedGroup(null);
-      setGroupStudents([]);
-    } else {
-      setExpandedGroup(groupId);
-      const data = await fetchGroupStudents(groupId);
-      setGroupStudents(data);
-    }
+  const openCreate = () => {
+    setForm({ name: '', course_id: '', schedule: '', max_students: '' });
+    setModal('create');
   };
 
-  const handleAddStudent = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const studentId = formData.get('student_id') as string;
-    if (selectedGroupId && studentId) {
-      await addStudentToGroup(selectedGroupId, studentId);
-      const data = await fetchGroupStudents(selectedGroupId);
-      setGroupStudents(data);
-      setIsStudentModalOpen(false);
+  const openEdit = (g: any) => {
+    setEditTarget(g);
+    setForm({ name: g.name, course_id: g.course_id || '', schedule: g.schedule || '', max_students: g.max_students?.toString() || '' });
+    setModal('edit');
+  };
+
+  const handleSave = async () => {
+    const payload = { ...form, max_students: Number(form.max_students) || 30 };
+    if (modal === 'create') await createGroup(payload);
+    else if (editTarget) await updateGroup(editTarget.id, payload);
+    setModal(null);
+  };
+
+  const handleAddStudent = async () => {
+    if (selectedGroup && selectedStudentId) {
+      await addStudentToGroup(selectedGroup.id, selectedStudentId);
+      await loadGroupStudents(selectedGroup);
+      setAddStudentModal(false);
     }
   };
 
   const handleRemoveStudent = async (studentId: string) => {
-    if (expandedGroup) {
-      await removeStudentFromGroup(expandedGroup, studentId);
-      const data = await fetchGroupStudents(expandedGroup);
-      setGroupStudents(data);
+    if (selectedGroup && confirm("Talabani guruhdan chiqarishni tasdiqlaysizmi?")) {
+      await removeStudentFromGroup(selectedGroup.id, studentId);
+      await loadGroupStudents(selectedGroup);
     }
   };
 
   return (
-    <div className="p-8 lg:p-14 space-y-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-1">
-          <h1 className="text-5xl font-black text-slate-900 tracking-tight">Guruhlar</h1>
-          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Jami: {groups.length} guruh</p>
-        </motion.div>
-        
-        <div className="flex gap-4">
-          <div className="bg-white px-6 py-4 rounded-3xl shadow-xl flex items-center gap-4 border border-slate-50 focus-within:ring-2 focus-within:ring-primary-100 transition-all group">
-            <Search className="w-5 h-5 text-slate-300 group-focus-within:text-primary-600" />
-            <input placeholder="Guruh nomi..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="outline-none border-none bg-transparent font-bold text-slate-600 w-48" />
-          </div>
-          <Button onClick={() => setIsModalOpen(true)}>
-            <Plus className="w-6 h-6" /> QO'SHISH
-          </Button>
+    <div className="page-container animate-in">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">Guruhlar</h1>
+          <p className="text-sm text-slate-400 mt-0.5">{groups.length} ta guruh boshqarilmoqda</p>
+        </div>
+        <button onClick={openCreate} className="btn-primary flex items-center gap-2">
+          <Plus className="w-4 h-4" /> Yangi Guruh
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Groups List */}
+        <div className="lg:col-span-2 space-y-4">
+          {isLoading ? (
+            <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary-500" /></div>
+          ) : groups.length > 0 ? (
+            groups.map((group: any) => (
+              <div
+                key={group.id}
+                onClick={() => loadGroupStudents(group)}
+                className={cn("card-hover p-5", selectedGroup?.id === group.id && "border-primary-300 bg-primary-50/30")}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center text-sm font-black text-primary-600">
+                      {group.name?.[0]}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-800">{group.name}</h3>
+                      <p className="text-xs text-slate-400">{group.course_name || 'Kurs belgilanmagan'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-lg font-black text-slate-700">{group.student_count || 0}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Talaba</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={(e) => { e.stopPropagation(); openEdit(group); }} className="p-2 rounded-lg hover:bg-slate-100">
+                        <Pencil className="w-4 h-4 text-slate-400" />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); if (confirm("O'chirishni tasdiqlaysizmi?")) deleteGroup(group.id); }} className="p-2 rounded-lg hover:bg-red-50">
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {group.schedule && (
+                  <div className="flex items-center gap-2 mt-3 text-xs text-slate-400">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>{group.schedule}</span>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="card p-12 text-center text-slate-400">Guruhlar topilmadi</div>
+          )}
+        </div>
+
+        {/* Right Panel — Group Detail */}
+        <div className="space-y-4">
+          {selectedGroup ? (
+            <>
+              <div className="card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="section-title">{selectedGroup.name}</h2>
+                  <div className="flex items-center gap-1">
+                    <Radio className="w-3 h-3 text-green-500" />
+                    <span className="text-[10px] font-bold text-green-600 uppercase">Faol</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-primary-50 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-black text-primary-600">{groupStudents.length}</p>
+                    <p className="text-[10px] font-bold text-primary-400 uppercase mt-1">Talabalar</p>
+                  </div>
+                  <div className="bg-green-50 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-black text-green-600">92%</p>
+                    <p className="text-[10px] font-bold text-green-400 uppercase mt-1">Davomat</p>
+                  </div>
+                </div>
+
+                <button onClick={() => { setAddStudentModal(true); setSelectedStudentId(''); }} className="btn-primary w-full flex items-center justify-center gap-2">
+                  <UserPlus className="w-4 h-4" /> Talaba qo'shish
+                </button>
+              </div>
+
+              {/* Group Students */}
+              <div className="card p-4">
+                <h3 className="text-sm font-bold text-slate-700 mb-3">Guruh a'zolari</h3>
+                <div className="space-y-2">
+                  {groupStudents.map((s: any) => (
+                    <div key={s.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center text-xs font-black text-primary-600">
+                          {s.first_name?.[0]}{s.last_name?.[0]}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-700">{s.first_name} {s.last_name}</p>
+                          <p className="text-[10px] text-slate-400">{s.phone}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => handleRemoveStudent(s.id)} className="p-1.5 rounded-lg hover:bg-red-50">
+                        <UserMinus className="w-3.5 h-3.5 text-red-400" />
+                      </button>
+                    </div>
+                  ))}
+                  {groupStudents.length === 0 && <p className="text-sm text-center text-slate-400 py-4">Talabalar yo'q</p>}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="card p-12 text-center">
+              <Users className="w-8 h-8 text-slate-300 mx-auto mb-3" />
+              <p className="text-sm text-slate-400">Guruhni tanlang</p>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="space-y-6">
-        <AnimatePresence>
-          {filteredGroups.map((group, idx) => (
-            <motion.div 
-              key={group.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.05 }}
-              className="bg-white rounded-[2.5rem] shadow-xl border border-slate-50 overflow-hidden"
-            >
-              <div className="p-8 flex items-center justify-between">
-                <div className="flex items-center gap-6">
-                  <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-600">
-                    <GraduationCap className="w-7 h-7" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">{group.name}</h3>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                      {group.course_name || 'Kurs'} • {group.teacher_name || 'O\'qituvchi'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button onClick={() => { setSelectedGroupId(group.id); setIsStudentModalOpen(true); }} className="p-3 hover:bg-green-50 hover:text-green-600 rounded-2xl transition-all text-slate-400">
-                    <UserPlus className="w-5 h-5" />
-                  </button>
-                  <button onClick={() => toggleExpand(group.id)} className="p-3 hover:bg-slate-50 rounded-2xl transition-all text-slate-400">
-                    {expandedGroup === group.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                  </button>
-                  <button onClick={() => { setEditingGroup(group); setIsModalOpen(true); }} className="p-3 hover:bg-blue-50 hover:text-blue-600 rounded-2xl transition-all text-slate-400">
-                    <Edit2 className="w-5 h-5" />
-                  </button>
-                  <button onClick={() => { setDeletingId(group.id); setIsConfirmOpen(true); }} className="p-3 hover:bg-red-50 hover:text-red-600 rounded-2xl transition-all text-slate-400">
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
+      {/* Create/Edit Modal */}
+      {modal && (
+        <div className="modal-overlay" onClick={() => setModal(null)}>
+          <div className="modal-content p-6 animate-in-scale" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-black">{modal === 'create' ? 'Yangi Guruh' : 'Tahrirlash'}</h2>
+              <button onClick={() => setModal(null)} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="input-label">Guruh nomi</label>
+                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input" placeholder="React-14" />
               </div>
-
-              {expandedGroup === group.id && (
-                <div className="px-8 pb-8 border-t border-slate-50 pt-6">
-                  <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Talabalar ({groupStudents.length})</div>
-                  {groupStudents.length === 0 ? (
-                    <p className="text-sm font-bold text-slate-300">Hozircha talabalar yo'q</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {groupStudents.map((s: any) => (
-                        <div key={s.id || s.student_id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-sm">
-                              {(s.first_name || s.student_first_name || '?')[0]}
-                            </div>
-                            <span className="font-bold text-slate-700">{s.first_name || s.student_first_name} {s.last_name || s.student_last_name}</span>
-                          </div>
-                          <button onClick={() => handleRemoveStudent(s.id || s.student_id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                            <UserMinus className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
-      {/* Create/Edit Group Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingGroup(null); }} title={editingGroup ? "Guruhni Tahrirlash" : "Yangi Guruh"}>
-        <form onSubmit={handleSave} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Guruh Nomi</label>
-            <input required name="name" defaultValue={editingGroup?.name} placeholder="RN-1" className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none font-bold text-slate-800 transition-all" />
+              <div>
+                <label className="input-label">Kurs</label>
+                <select value={form.course_id} onChange={(e) => setForm({ ...form, course_id: e.target.value })} className="select">
+                  <option value="">Kursni tanlang</option>
+                  {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="input-label">Jadval</label>
+                <input value={form.schedule} onChange={(e) => setForm({ ...form, schedule: e.target.value })} className="input" placeholder="Du, Chor, Jum 14:00-16:00" />
+              </div>
+              <div>
+                <label className="input-label">Maks. talabalar</label>
+                <input type="number" value={form.max_students} onChange={(e) => setForm({ ...form, max_students: e.target.value })} className="input" placeholder="20" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setModal(null)} className="btn-secondary">Bekor qilish</button>
+              <button onClick={handleSave} className="btn-primary">{modal === 'create' ? 'Yaratish' : 'Saqlash'}</button>
+            </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Kurs</label>
-            <select required name="course_id" defaultValue={editingGroup?.course_id} className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none font-bold text-slate-800 transition-all">
-              <option value="">Tanlang...</option>
-              {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </div>
+      )}
+
+      {/* Add Student Modal */}
+      {addStudentModal && (
+        <div className="modal-overlay" onClick={() => setAddStudentModal(false)}>
+          <div className="modal-content p-6 animate-in-scale" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-black">Talaba qo'shish</h2>
+              <button onClick={() => setAddStudentModal(false)} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            <select value={selectedStudentId} onChange={(e) => setSelectedStudentId(e.target.value)} className="select">
+              <option value="">Talabani tanlang</option>
+              {students.map((s: any) => <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>)}
             </select>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setAddStudentModal(false)} className="btn-secondary">Bekor qilish</button>
+              <button onClick={handleAddStudent} disabled={!selectedStudentId} className="btn-primary">Qo'shish</button>
+            </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">O'qituvchi</label>
-            <select name="teacher_id" defaultValue={editingGroup?.teacher_id} className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none font-bold text-slate-800 transition-all">
-              <option value="">Tanlang...</option>
-              {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.first_name} {t.last_name} ({t.email})</option>)}
-            </select>
-          </div>
-          <Button type="submit" className="w-full py-6">SAQLASH</Button>
-        </form>
-      </Modal>
-
-      {/* Add Student to Group Modal */}
-      <Modal isOpen={isStudentModalOpen} onClose={() => setIsStudentModalOpen(false)} title="Talaba Qo'shish">
-        <form onSubmit={handleAddStudent} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Talaba</label>
-            <select required name="student_id" className="w-full p-5 bg-slate-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none font-bold text-slate-800 transition-all">
-              <option value="">Tanlang...</option>
-              {(students || []).map((s: any) => <option key={s.id} value={s.id}>{s.first_name} {s.last_name} — {s.phone}</option>)}
-            </select>
-          </div>
-          <Button type="submit" className="w-full py-6">QO'SHISH</Button>
-        </form>
-      </Modal>
-
-      <ConfirmModal 
-        isOpen={isConfirmOpen}
-        onClose={() => setIsConfirmOpen(false)}
-        onConfirm={() => { if (deletingId) { deleteGroup(deletingId); setDeletingId(null); } }}
-        title="Guruhni o'chirish"
-        message="Rostdan ham bu guruhni o'chirasizmi? Bu amalni qaytarib bo'lmaydi."
-        confirmText="O'CHIRISH"
-      />
+        </div>
+      )}
     </div>
   );
 };

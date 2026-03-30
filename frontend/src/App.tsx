@@ -1,32 +1,36 @@
-import React, { Suspense } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import StudentsPage from './pages/Students';
-import ExamsPage from './pages/Exams';
-import GroupsPage from './pages/Groups';
-import LoginPage from './pages/LoginPage';
-import CoursesPage from './pages/Courses';
-import AttendancePage from './pages/Attendance';
-import UsersPage from './pages/Users';
-import QuestionsPage from './pages/Questions';
-import PaymentsPage from './pages/Payments';
-import { Loader2 } from 'lucide-react';
+import { Loader2, GraduationCap } from 'lucide-react';
 
-const AnalyticsPage = () => (
-  <div className="p-14 space-y-4">
-    <h1 className="text-7xl font-black text-indigo-600 tracking-tighter uppercase leading-none">AI Analytics</h1>
-    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">V2.1 Platform Intelligence</p>
-  </div>
-);
+import './index.css';
+
+// Lazy load all pages
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const StudentsPage = lazy(() => import('./pages/Students'));
+const StudentProfilePage = lazy(() => import('./pages/StudentProfile'));
+const CoursesPage = lazy(() => import('./pages/Courses'));
+const GroupsPage = lazy(() => import('./pages/Groups'));
+const AttendancePage = lazy(() => import('./pages/Attendance'));
+const ExamsPage = lazy(() => import('./pages/Exams'));
+const QuestionsPage = lazy(() => import('./pages/Questions'));
+const UsersPage = lazy(() => import('./pages/Users'));
+const PaymentsPage = lazy(() => import('./pages/Payments'));
+const AnalyticsPage = lazy(() => import('./pages/Analytics'));
+const SettingsPage = lazy(() => import('./pages/Settings'));
 
 const queryClient = new QueryClient();
 
 const LoadingScreen = () => (
   <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4">
-    <Loader2 className="w-10 h-10 text-primary-600 animate-spin" />
-    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest animate-pulse leading-none">Platforma yuklanmoqda...</span>
+    <div className="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-200/40">
+      <Loader2 className="w-7 h-7 text-white animate-spin" />
+    </div>
+    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest animate-pulse leading-none">
+      Scholar Flow yuklanmoqda...
+    </span>
   </div>
 );
 
@@ -41,6 +45,7 @@ const App: React.FC = () => {
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/students" element={<StudentsPage />} />
+              <Route path="/students/:id" element={<StudentProfilePage />} />
               <Route path="/courses" element={<CoursesPage />} />
               <Route path="/groups" element={<GroupsPage />} />
               <Route path="/attendance" element={<AttendancePage />} />
@@ -49,6 +54,7 @@ const App: React.FC = () => {
               <Route path="/users" element={<UsersPage />} />
               <Route path="/payments" element={<PaymentsPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Route>
 
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

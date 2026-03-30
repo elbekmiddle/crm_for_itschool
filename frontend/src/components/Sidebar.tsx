@@ -1,121 +1,134 @@
-import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  GraduationCap, 
-  BookOpen, 
-  ClipboardList, 
-  TrendingUp, 
-  LogOut,
-  Settings,
-  ShieldCheck,
+import React, { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  GraduationCap,
+  Users,
+  BookOpen,
+  Calendar,
+  ClipboardList,
   HelpCircle,
-  Wallet
+  Wallet,
+  BarChart3,
+  Settings,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Menu,
 } from 'lucide-react';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
-import ConfirmModal from './ConfirmModal';
 
-const SidebarItem = ({ to, icon: Icon, label }: any) => (
-  <NavLink
-    to={to}
-    className={({ isActive }) =>
-      cn(
-        "flex items-center gap-4 px-6 py-4 rounded-2xl transition-all duration-300 font-bold group border border-transparent uppercase tracking-wider text-xs leading-none",
-        isActive 
-          ? "bg-primary-600 text-white shadow-xl shadow-primary-200 border-primary-500" 
-          : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
-      )
-    }
-  >
-    <Icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-    <span>{label}</span>
-  </NavLink>
-);
+const navItems = [
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', shortcut: '⌘D' },
+  { to: '/courses', icon: BookOpen, label: 'Kurslar', shortcut: '⌘C' },
+  { to: '/groups', icon: Users, label: 'Guruhlar', shortcut: '⌘G' },
+  { to: '/students', icon: GraduationCap, label: 'Talabalar', shortcut: '⌘S' },
+  { to: '/attendance', icon: Calendar, label: 'Davomat' },
+  { to: '/exams', icon: ClipboardList, label: 'Imtihonlar' },
+  { to: '/questions', icon: HelpCircle, label: 'Savollar' },
+  { to: '/users', icon: Users, label: 'Foydalanuvchilar' },
+  { to: '/payments', icon: Wallet, label: "To'lovlar", shortcut: '⌘P' },
+  { to: '/analytics', icon: BarChart3, label: 'Analitika' },
+];
 
-const Sidebar = () => {
+interface SidebarProps {
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
   const { user, logout } = useAdminStore();
-  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <>
-      <div className="w-80 bg-white border-r border-slate-100 flex flex-col h-screen fixed inset-y-0 z-50">
-        <div className="p-10">
-          <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="w-12 h-12 bg-primary-600 rounded-[1.25rem] flex items-center justify-center text-white shadow-xl shadow-primary-200 rotate-12 group-hover:rotate-0 transition-transform">
-              <GraduationCap className="w-7 h-7" />
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div className="md:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40" onClick={onToggle} />
+      )}
+
+      <aside
+        className={cn(
+          "fixed top-0 left-0 h-screen bg-white border-r border-slate-100 flex flex-col z-50 transition-all duration-300",
+          isOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full md:translate-x-0 md:w-20"
+        )}
+      >
+        {/* Brand */}
+        <div className="p-5 border-b border-slate-50 flex items-center justify-between">
+          <div className={cn("flex items-center gap-3 overflow-hidden", !isOpen && "md:justify-center")}>
+            <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center text-white shrink-0">
+              <GraduationCap className="w-5 h-5" />
             </div>
-            <div className="flex flex-col">
-               <span className="text-2xl font-black text-slate-800 tracking-tighter leading-none">IT SCHOOL</span>
-               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none mt-1">Liderlar Akademiyasi</span>
+            <div className={cn("transition-all", !isOpen && "md:hidden")}>
+              <h1 className="text-base font-black text-primary-700 tracking-tight leading-none">Scholar Flow</h1>
+              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">LMS + CRM Admin</p>
             </div>
           </div>
-        </div>
-
-        <nav className="flex-1 px-4 space-y-2 overflow-y-auto pt-4 thin-scrollbar">
-          <SidebarItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
-          {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
-            <>
-              <SidebarItem to="/students" icon={Users} label="Talabalar" />
-              <SidebarItem to="/courses" icon={BookOpen} label="Kurslar" />
-            </>
-          )}
-          <SidebarItem to="/groups" icon={GraduationCap} label="Guruhlar" />
-          <SidebarItem to="/attendance" icon={ClipboardList} label="Yo'qlama" />
-          <SidebarItem to="/exams" icon={ClipboardList} label="Imtihonlar" />
-          
-          {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
-            <>
-              <div className="h-px bg-slate-50 mx-6 my-4" />
-              <SidebarItem to="/payments" icon={Wallet} label="To'lovlar" />
-            </>
-          )}
-          
-          {user?.role === 'ADMIN' && (
-            <>
-              <div className="h-px bg-slate-50 mx-6 my-4" />
-              <SidebarItem to="/questions" icon={HelpCircle} label="Savollar Bazasi" />
-              <SidebarItem to="/users" icon={ShieldCheck} label="Xodimlar" />
-            </>
-          )}
-          
-          {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
-            <SidebarItem to="/analytics" icon={TrendingUp} label="AI Analitika" />
-          )}
-        </nav>
-
-        <div className="p-8 border-t border-slate-50 space-y-4">
-          <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-3xl group cursor-pointer hover:bg-slate-100 transition-all">
-             <div className="w-10 h-10 rounded-[1rem] bg-white flex items-center justify-center text-primary-600 font-black shadow-sm group-hover:scale-110 transition-transform">
-                {user?.email?.[0].toUpperCase() || 'A'}
-             </div>
-             <div className="flex-1 overflow-hidden">
-                <div className="text-xs font-black text-slate-800 truncate uppercase leading-none">{user?.email?.split('@')[0] || 'Admin'}</div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">{user?.role || 'PROFESSIONAL'}</div>
-             </div>
-             <Settings className="w-4 h-4 text-slate-300 group-hover:rotate-90 transition-transform duration-500" />
-          </div>
-          
-          <button 
-            onClick={() => setIsLogoutConfirmOpen(true)}
-            className="w-full flex items-center gap-4 px-6 py-4 text-red-500 hover:text-white hover:bg-red-500 rounded-2xl transition-all font-bold uppercase tracking-widest text-[10px] shadow-sm hover:shadow-red-200"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Tizimdan Chiqish</span>
+          <button className="md:hidden" onClick={onToggle}>
+            <X className="w-5 h-5 text-slate-400" />
           </button>
         </div>
-      </div>
 
-      <ConfirmModal 
-        isOpen={isLogoutConfirmOpen}
-        onClose={() => setIsLogoutConfirmOpen(false)}
-        onConfirm={logout}
-        title="Tizimdan chiqish"
-        message="Rostdan ham tizimdan chiqmoqchimisiz?"
-        confirmText="CHIQISH"
-        type="danger"
-      />
+        {/* Nav */}
+        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto no-scrollbar">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={() => { if (window.innerWidth < 768) onToggle(); }}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all",
+                  isActive
+                    ? "bg-primary-50 text-primary-700"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-700",
+                  !isOpen && "md:justify-center md:px-0"
+                )
+              }
+            >
+              <item.icon className="w-[18px] h-[18px] shrink-0" />
+              <span className={cn("flex-1", !isOpen && "md:hidden")}>{item.label}</span>
+              {item.shortcut && isOpen && (
+                <span className="text-[9px] font-bold text-slate-300 bg-slate-50 px-1.5 py-0.5 rounded">{item.shortcut}</span>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Bottom */}
+        <div className="p-3 border-t border-slate-50 space-y-0.5">
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all",
+                isActive ? "bg-primary-50 text-primary-700" : "text-slate-500 hover:bg-slate-50",
+                !isOpen && "md:justify-center md:px-0"
+              )
+            }
+          >
+            <Settings className="w-[18px] h-[18px]" />
+            <span className={cn(!isOpen && "md:hidden")}>Sozlamalar</span>
+          </NavLink>
+          <button
+            onClick={handleLogout}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-red-500 hover:bg-red-50 transition-all w-full",
+              !isOpen && "md:justify-center md:px-0"
+            )}
+          >
+            <LogOut className="w-[18px] h-[18px]" />
+            <span className={cn(!isOpen && "md:hidden")}>Chiqish</span>
+          </button>
+        </div>
+      </aside>
     </>
   );
 };

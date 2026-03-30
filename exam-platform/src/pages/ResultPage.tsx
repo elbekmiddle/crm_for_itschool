@@ -1,78 +1,109 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useExamStore } from '../store/useExamStore';
-import { CheckCircle2, Home, BarChart3, Clock } from 'lucide-react';
+import { Trophy, Clock, CheckCircle2, XCircle, ArrowLeft, BookOpen, Loader2 } from 'lucide-react';
+import api from '../lib/api';
 
 const ResultPage: React.FC = () => {
-  const { results, reset } = useExamStore(); // I'll assume results contains { score, total, timeTaken }
-  
-  // Fake result data for preview if store not populated
-  const data = results || { score: 24, total: 30, timeTaken: '52 min' };
-  const percentage = (data.score / data.total) * 100;
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { attemptId, questions, answers } = useExamStore();
+  const [result, setResult] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const isHigh = percentage >= 80;
-  const isMed = percentage >= 50 && percentage < 80;
+  useEffect(() => {
+    const load = async () => {
+      // Try server result first
+      try {
+        const aid = attemptId || id;
+        if (aid) {
+          const { data } = await api.get(`/exams/result/${aid}`);
+          setResult(data);
+          setLoading(false);
+          return;
+        }
+      } catch {}
+      // Fallback: compute locally
+      if (questions && answers) {
+        const answered = Object.keys(answers).length;
+        setResult({ score: Math.round((answered / Math.max(questions.length, 1)) * 100), correct: answered, total: questions.length });
+      }
+      setLoading(false);
+    };
+    load();
+  }, [id, attemptId]);
+
+  const score = result?.score ?? 0;
+  const emoji = score >= 80 ? '😎' : score >= 50 ? '🙂' : '😢';
+  const badge = score >= 80 ? 'Ajoyib natija!' : score >= 50 ? 'Yaxshi harakat!' : 'Ko\'proq o\'rgan!';
+  const color = score >= 80 ? 'from-green-500 to-emerald-600' : score >= 50 ? 'from-amber-400 to-orange-500' : 'from-red-500 to-rose-600';
+
+  if (loading) return <div className="min-h-screen flex justify-center items-center"><Loader2 className="w-8 h-8 text-primary-400 animate-spin" /></div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8">
-      <div className="max-w-xl w-full text-center space-y-12">
-        
-        {/* Badge Section */}
-        <div className="flex flex-col items-center gap-6 animate-in fade-in slide-in-from-bottom-10 duration-700">
-          <div className={`p-8 rounded-full shadow-2xl relative ${isHigh ? 'bg-green-100' : isMed ? 'bg-indigo-100' : 'bg-red-100'}`}>
-            <span className="text-8xl scale-150 relative z-10">{isHigh ? '😎' : isMed ? '😐' : '😂'}</span>
-            <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${isHigh ? 'bg-green-500' : isMed ? 'bg-indigo-500' : 'bg-red-500'}`} />
-          </div>
-          <h1 className={`text-5xl font-black ${isHigh ? 'text-green-600' : isMed ? 'text-indigo-600' : 'text-red-600'}`}>
-            {isHigh ? 'Ajoyib Natija!' : isMed ? 'Yomon emas' : 'Yana harakat qiling'}
-          </h1>
-        </div>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="w-full max-w-sm animate-in space-y-5">
 
-        {/* Stats Card */}
-        <div className="glass-card p-10 rounded-[3rem] shadow-2xl space-y-8 relative overflow-hidden bg-white/80 border border-white">
-          <div className="grid grid-cols-2 gap-8 relative z-10">
-            <div className="p-6 bg-slate-50 rounded-3xl space-y-1">
-              <div className="text-slate-400 flex items-center justify-center gap-2 mb-2">
-                <BarChart3 className="w-4 h-4" /> <span className="text-xs font-bold uppercase tracking-widest">To'g'ri Javoblar</span>
-              </div>
-              <div className="text-4xl font-extrabold text-slate-800">{data.score} / {data.total}</div>
-            </div>
-            
-            <div className="p-6 bg-slate-50 rounded-3xl space-y-1">
-              <div className="text-slate-400 flex items-center justify-center gap-2 mb-2">
-                <Clock className="w-4 h-4" /> <span className="text-xs font-bold uppercase tracking-widest">Sarflandi</span>
-              </div>
-              <div className="text-4xl font-extrabold text-slate-800">{data.timeTaken}</div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden">
-              <div 
-                className={`h-full transition-all duration-1000 ease-out ${isHigh ? 'bg-green-500' : isMed ? 'bg-indigo-500' : 'bg-red-500'}`} 
-                style={{ width: `${percentage}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-xs font-bold text-slate-400 uppercase tracking-tighter">
-              <span>0%</span>
-              <span>Natija: {percentage.toFixed(0)}%</span>
-              <span>100%</span>
-            </div>
+        {/* Score card */}
+        <div className={`bg-gradient-to-br ${color} rounded-3xl p-8 text-white text-center relative overflow-hidden`}>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-12 -mt-12" />
+          <div className="relative z-10">
+            <div className="text-6xl mb-3">{emoji}</div>
+            <p className="text-white/80 text-sm font-bold uppercase tracking-widest">{badge}</p>
+            <div className="text-6xl font-black mt-3 mb-0.5">{score}%</div>
+            <p className="text-white/70 text-sm font-semibold">Umumiy ball</p>
           </div>
         </div>
 
-        {/* Navigation Buttons */}
-        <div className="flex flex-col gap-4 max-w-sm mx-auto">
-          <button className="flex items-center justify-center gap-3 bg-primary-600 hover:bg-primary-700 text-white font-bold py-5 rounded-2xl shadow-xl shadow-primary-200 transition-all active:scale-95 group">
-            <CheckCircle2 className="w-6 h-6 group-hover:scale-110 transition-transform" /> Javoblar Tahlili
-          </button>
-          
-          <button 
-            onClick={() => { reset(); window.location.href = '/dashboard'; }}
-            className="flex items-center justify-center gap-3 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 font-bold py-5 rounded-2xl transition-all"
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="card p-4">
+            <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center mb-2">
+              <CheckCircle2 className="w-4 h-4 text-green-500" />
+            </div>
+            <p className="label-subtle">To'g'ri</p>
+            <p className="text-2xl font-black text-green-600">{result?.correct ?? result?.correct_count ?? '—'}</p>
+          </div>
+          <div className="card p-4">
+            <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center mb-2">
+              <XCircle className="w-4 h-4 text-red-400" />
+            </div>
+            <p className="label-subtle">Noto'g'ri</p>
+            <p className="text-2xl font-black text-red-500">
+              {result?.incorrect ?? result?.incorrect_count ?? (result?.total && result?.correct ? result.total - result.correct : '—')}
+            </p>
+          </div>
+          <div className="card p-4">
+            <div className="w-9 h-9 bg-primary-50 rounded-xl flex items-center justify-center mb-2">
+              <Trophy className="w-4 h-4 text-primary-500" />
+            </div>
+            <p className="label-subtle">Jami savol</p>
+            <p className="text-2xl font-black text-slate-800">{result?.total ?? result?.total_questions ?? questions?.length ?? '—'}</p>
+          </div>
+          <div className="card p-4">
+            <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center mb-2">
+              <Clock className="w-4 h-4 text-amber-500" />
+            </div>
+            <p className="label-subtle">Sarflangan vaqt</p>
+            <p className="text-2xl font-black text-slate-800">{result?.time_taken ? `${result.time_taken}s` : '—'}</p>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="space-y-2">
+          <button
+            onClick={() => navigate(`/exams/${id}/review`)}
+            className="btn-secondary w-full py-3.5 flex items-center justify-center gap-2"
           >
-            <Home className="w-6 h-6" /> Asosiy Sahifa
+            <BookOpen className="w-4 h-4" /> Javoblarni ko'rish
+          </button>
+          <button
+            onClick={() => navigate('/exams')}
+            className="btn-primary w-full py-3.5 flex items-center justify-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" /> Imtihonlarga qaytish
           </button>
         </div>
-
       </div>
     </div>
   );

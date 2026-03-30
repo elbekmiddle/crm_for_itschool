@@ -1,182 +1,199 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
-import { Check, X, Calendar, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
-import Button from '../components/Button';
 import { cn } from '../lib/utils';
+import {
+  Calendar, Loader2, CheckCircle, XCircle, ChevronDown,
+  Users, Sparkles
+} from 'lucide-react';
 
-const AttendancePage = () => {
-  const { groups, fetchGroups, fetchGroupStudents, fetchAttendance, markAttendance, attendance } = useAdminStore();
-  const [selectedGroup, setSelectedGroup] = useState<string>('');
-  const [groupStudents, setGroupStudents] = useState<any[]>([]);
-  const [attendanceMap, setAttendanceMap] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [todayDate] = useState(new Date().toISOString().split('T')[0]);
+const AttendancePage: React.FC = () => {
+  const { groups, attendance, fetchGroups, fetchAttendance, markAttendance, updateAttendance, isLoading } = useAdminStore();
+  const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [students, setStudents] = useState<any[]>([]);
+  const { fetchGroupStudents } = useAdminStore();
 
-  useEffect(() => {
-    fetchGroups();
-  }, []);
+  useEffect(() => { fetchGroups(); }, []);
 
-  const handleGroupSelect = async (groupId: string) => {
-    setSelectedGroup(groupId);
-    if (groupId) {
-      const students = await fetchGroupStudents(groupId);
-      setGroupStudents(students);
-      await fetchAttendance(groupId);
-      // Pre-fill today's attendance
-      const todayAttendance: Record<string, string> = {};
-      (attendance || []).forEach((a: any) => {
-        if (a.lesson_date === todayDate) {
-          todayAttendance[a.student_id] = a.status;
-        }
-      });
-      setAttendanceMap(todayAttendance);
-    } else {
-      setGroupStudents([]);
-      setAttendanceMap({});
-    }
+  const loadGroup = async (groupId: string) => {
+    setSelectedGroupId(groupId);
+    const data = await fetchGroupStudents(groupId);
+    setStudents(data || []);
+    await fetchAttendance(groupId);
   };
 
-  const toggleStatus = (studentId: string) => {
-    setAttendanceMap(prev => ({
-      ...prev,
-      [studentId]: prev[studentId] === 'PRESENT' ? 'ABSENT' : 'PRESENT'
-    }));
+  const selectedGroup = groups.find((g: any) => g.id === selectedGroupId);
+  const today = new Date().toLocaleDateString('uz-UZ', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  const handleMark = async (studentId: string, status: 'present' | 'absent') => {
+    await markAttendance({
+      student_id: studentId,
+      group_id: selectedGroupId,
+      status,
+      lesson_date: new Date().toISOString().split('T')[0],
+    });
+    await fetchAttendance(selectedGroupId);
   };
 
-  const handleSubmitAll = async () => {
-    setIsSubmitting(true);
-    try {
-      for (const [studentId, status] of Object.entries(attendanceMap)) {
-        await markAttendance({
-          group_id: selectedGroup,
-          student_id: studentId,
-          status,
-          lesson_date: todayDate,
-        });
-      }
-      alert('Davomat muvaffaqiyatli saqlandi!');
-    } catch (e) {
-      alert('Xato yuz berdi!');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const presentCount = attendance.filter((a: any) => a.status === 'present').length;
+  const totalStudents = students.length || 1;
+  const attendancePercent = Math.round((presentCount / totalStudents) * 100);
 
   return (
-    <div className="p-8 lg:p-14 space-y-10">
-      <header className="space-y-2">
-        <h1 className="text-5xl font-black text-slate-900 tracking-tight">Yo'qlama</h1>
-        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-primary-600" />
-          {new Date().toLocaleDateString('uz-UZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        </p>
-      </header>
-
-      {/* Group Selector */}
-      <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-50">
-        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-3 block">Guruhni tanlang</label>
-        <select 
-          value={selectedGroup} 
-          onChange={(e) => handleGroupSelect(e.target.value)}
-          className="w-full max-w-md p-5 bg-slate-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none font-bold text-slate-800 transition-all"
+    <div className="page-container animate-in">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+          <p className="label-subtle mb-1">GURUHLAR › SINF KO'RINISHI</p>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">{selectedGroup?.name || 'Davomat'}</h1>
+          {selectedGroup && <p className="text-sm text-slate-400 mt-0.5">{selectedGroup.course_name}</p>}
+        </div>
+        <select
+          value={selectedGroupId}
+          onChange={(e) => loadGroup(e.target.value)}
+          className="select max-w-xs"
         >
-          <option value="">— Guruh tanlang —</option>
-          {groups.map((g: any) => <option key={g.id} value={g.id}>{g.name} ({g.course_name || 'Kurs'})</option>)}
+          <option value="">Guruhni tanlang</option>
+          {groups.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
         </select>
       </div>
 
-      {/* Students Attendance List */}
-      {selectedGroup && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-[2.5rem] shadow-xl border border-slate-50 overflow-hidden">
-          <div className="p-8 border-b border-slate-50 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Users className="w-6 h-6 text-primary-600" />
-              <span className="font-black text-slate-800 uppercase tracking-tight">Talabalar ({groupStudents.length})</span>
-            </div>
-            <Button onClick={handleSubmitAll} isLoading={isSubmitting} className="px-8 py-4">
-              SAQLASH
-            </Button>
-          </div>
-          
-          <div className="divide-y divide-slate-50">
-            {groupStudents.length === 0 ? (
-              <div className="p-12 text-center">
-                <p className="text-slate-300 font-bold">Bu guruhda talabalar yo'q</p>
+      {selectedGroupId ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left — Attendance Marking */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="card p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h2 className="section-title">Bugungi dars</h2>
+                    <span className="px-2 py-0.5 bg-green-100 text-green-600 text-[10px] font-bold rounded-full uppercase">Live Now</span>
+                  </div>
+                  <p className="text-xs text-slate-400">Sana: {today}</p>
+                </div>
               </div>
-            ) : (
-              groupStudents.map((s: any, idx) => {
-                const studentId = s.id || s.student_id;
-                const status = attendanceMap[studentId] || 'PRESENT';
-                const isPresent = status === 'PRESENT';
-                return (
-                  <motion.div 
-                    key={studentId}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: idx * 0.05 }}
-                    className="px-8 py-6 flex items-center justify-between group hover:bg-slate-50/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
-                        {(s.first_name || s.student_first_name || '?')[0]}
-                      </div>
-                      <div>
-                        <div className="font-bold text-slate-800">{s.first_name || s.student_first_name} {s.last_name || s.student_last_name}</div>
-                        <div className="text-xs text-slate-400 font-mono">{s.phone || ''}</div>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => toggleStatus(studentId)}
-                      className={cn(
-                        "flex items-center gap-3 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all",
-                        isPresent 
-                          ? "bg-green-100 text-green-700 hover:bg-green-200" 
-                          : "bg-red-100 text-red-700 hover:bg-red-200"
-                      )}
-                    >
-                      {isPresent ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
-                      {isPresent ? 'KELGAN' : 'KELMAGAN'}
-                    </button>
-                  </motion.div>
-                );
-              })
-            )}
-          </div>
-        </motion.div>
-      )}
 
-      {/* Attendance History */}
-      {selectedGroup && attendance.length > 0 && (
-        <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-50 p-8">
-          <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight mb-6">Davomat Tarixi</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="py-4 px-6 text-xs font-black text-slate-400 uppercase tracking-widest">Talaba</th>
-                  <th className="py-4 px-6 text-xs font-black text-slate-400 uppercase tracking-widest">Sana</th>
-                  <th className="py-4 px-6 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {attendance.slice(0, 20).map((a: any, i: number) => (
-                  <tr key={a.id || i} className="hover:bg-slate-50/50">
-                    <td className="py-4 px-6 font-bold text-slate-700">{a.student_first_name || a.student_id?.slice(0, 8)}</td>
-                    <td className="py-4 px-6 font-mono text-slate-500 text-sm">{a.lesson_date}</td>
-                    <td className="py-4 px-6">
-                      <span className={cn(
-                        "px-3 py-1 rounded-full text-xs font-black uppercase",
-                        a.status === 'PRESENT' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                      )}>
-                        {a.status === 'PRESENT' ? 'Kelgan' : 'Kelmagan'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              {isLoading ? (
+                <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary-500" /></div>
+              ) : (
+                <div className="space-y-2">
+                  {students.map((s: any) => {
+                    const record = attendance.find((a: any) => a.student_id === s.id);
+                    const status = record?.status;
+                    return (
+                      <div key={s.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-slate-200 transition-all">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center text-xs font-black text-primary-600">
+                            {s.first_name?.[0]}{s.last_name?.[0]}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-700">{s.first_name} {s.last_name}</p>
+                            <p className="text-[10px] text-slate-400">ID: {s.id?.slice(0, 8)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={cn("status-pill", s.status === 'active' ? 'pill-active' : s.status === 'frozen' ? 'pill-frozen' : 'pill-active')}>
+                            {s.status || 'active'}
+                          </span>
+                          {s.status === 'frozen' ? (
+                            <span className="text-xs text-slate-400 font-semibold">N/A</span>
+                          ) : (
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => handleMark(s.id, 'present')}
+                                className={cn(
+                                  "px-4 py-2 rounded-lg text-xs font-bold border transition-all",
+                                  status === 'present'
+                                    ? "bg-green-500 text-white border-green-500"
+                                    : "border-slate-200 text-slate-500 hover:border-green-300 hover:text-green-600"
+                                )}
+                              >
+                                Present
+                              </button>
+                              <button
+                                onClick={() => handleMark(s.id, 'absent')}
+                                className={cn(
+                                  "px-4 py-2 rounded-lg text-xs font-bold border transition-all",
+                                  status === 'absent'
+                                    ? "bg-red-500 text-white border-red-500"
+                                    : "border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-600"
+                                )}
+                              >
+                                Absent
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {students.length === 0 && (
+                    <div className="text-center py-12 text-slate-400">Bu guruhda talabalar yo'q</div>
+                  )}
+                </div>
+              )}
+
+              {students.length > 0 && (
+                <button className="btn-primary w-full mt-5 py-4 text-base">
+                  Davomatni Saqlash ✓
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Right — Stats */}
+          <div className="space-y-4">
+            {/* AI Insight */}
+            <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-6 text-white">
+              <h3 className="text-sm font-black uppercase tracking-widest mb-2">Davomat Hall of Fame 🏆</h3>
+              <div className="bg-white/10 backdrop-blur rounded-xl p-4 mt-3">
+                <p className="text-xs font-bold uppercase tracking-widest opacity-70">Haftalik AI Insight</p>
+                <p className="text-sm mt-2 font-semibold leading-relaxed opacity-95">
+                  "Bu guruhda davomat 92% — zo'r natija! Eng ko'p qatnashgan talaba — hafta yulduzi! ⭐"
+                </p>
+              </div>
+            </div>
+
+            {/* Group Pulse */}
+            <div className="card p-6">
+              <h3 className="section-title mb-4">Guruh Pulsi</h3>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="text-slate-500 font-semibold">O'rtacha Davomat</span>
+                    <span className="font-bold text-green-600">{attendancePercent}%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2">
+                    <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${attendancePercent}%` }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="text-slate-500 font-semibold">Imtihon tayyorligi</span>
+                    <span className="font-bold text-primary-600">78%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2">
+                    <div className="bg-primary-500 h-2 rounded-full" style={{ width: '78%' }} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mt-5">
+                <div className="bg-primary-50 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-black text-primary-600">{students.length}</p>
+                  <p className="text-[10px] font-bold text-primary-400 uppercase mt-1">Talabalar</p>
+                </div>
+                <div className="bg-green-50 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-black text-green-600">{presentCount}</p>
+                  <p className="text-[10px] font-bold text-green-400 uppercase mt-1">Kelganlar</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="card p-16 text-center">
+          <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-slate-500">Guruhni tanlang</h2>
+          <p className="text-sm text-slate-400 mt-1">Davomat belgilash uchun guruhni tanlang.</p>
         </div>
       )}
     </div>

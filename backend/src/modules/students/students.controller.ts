@@ -14,6 +14,33 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery, ApiParam }
 export class StudentsController {
   constructor(private readonly studentsService: StudentsService) {}
 
+  /** Student: get own profile */
+  @Roles('STUDENT', 'ADMIN', 'MANAGER', 'TEACHER')
+  @Get('me')
+  @ApiOperation({ summary: 'Get own profile (STUDENT self-access)' })
+  getMe(@Request() req) {
+    return this.studentsService.findOne(req.user.id);
+  }
+
+  /** Student: get own full dashboard (course, group, attendance, stats) */
+  @Roles('STUDENT', 'ADMIN', 'MANAGER', 'TEACHER')
+  @Get('me/dashboard')
+  @ApiOperation({ summary: 'Get own dashboard (STUDENT self-access)' })
+  getMyDashboard(@Request() req) {
+    return this.studentsService.getDashboard(req.user.id);
+  }
+
+  /** Student: get own attendance by student ID */
+  @Roles('STUDENT', 'ADMIN', 'MANAGER', 'TEACHER')
+  @Get(':id/attendance')
+  @ApiOperation({ summary: 'Get attendance records for a student' })
+  @ApiParam({ name: 'id', description: 'Student UUID' })
+  getAttendance(@Param('id') id: string, @Request() req) {
+    // Students can only access their own attendance
+    const studentId = req.user.role === 'STUDENT' ? req.user.id : id;
+    return this.studentsService.getAttendance(studentId);
+  }
+
   @Roles('MANAGER')
   @Post()
   @ApiOperation({ summary: 'Create a new student [MANAGER ONLY]' })
@@ -69,13 +96,13 @@ export class StudentsController {
     return this.studentsService.enroll(id, courseId);
   }
 
-  @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Roles('ADMIN', 'MANAGER', 'TEACHER', 'STUDENT')
   @Get(':id/dashboard')
   @ApiOperation({ summary: 'Get student dashboard with AI humor status and charts data' })
   @ApiParam({ name: 'id', description: 'Student UUID' })
-  @ApiResponse({ status: 200, description: 'Return student dashboard data.' })
-  getDashboard(@Param('id') id: string) {
-    return this.studentsService.getDashboard(id);
+  getDashboard(@Param('id') id: string, @Request() req) {
+    const studentId = req.user.role === 'STUDENT' ? req.user.id : id;
+    return this.studentsService.getDashboard(studentId);
   }
 
   @Roles('ADMIN', 'MANAGER')
