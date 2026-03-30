@@ -5,8 +5,10 @@ import { DbService } from '../../infrastructure/database/db.service';
 import { RedisService } from '../../infrastructure/redis/redis.service';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
+import { StudentLoginDto } from './dto/student-login.dto';
 import { get_user_by_email } from './queries/get_user_by_email';
 import { get_user_by_id_for_auth } from './queries/get_user_by_id_for_auth';
+import { get_student_by_phone } from './queries/get_student_by_phone';
 
 @Injectable()
 export class AuthService {
@@ -47,6 +49,24 @@ export class AuthService {
     }
 
     return this.generateTokens(user);
+  }
+
+  async studentLogin(studentLoginDto: StudentLoginDto) {
+    const students = await get_student_by_phone(this.dbService, studentLoginDto.phone);
+
+    if (!students.length) {
+      throw new NotFoundException('Student not found with this phone number');
+    }
+
+    const student = students[0];
+    
+    // Simple verification checking if first name matches
+    if (student.first_name.toLowerCase() !== studentLoginDto.first_name.toLowerCase()) {
+      throw new UnauthorizedException('Invalid first name for this phone number');
+    }
+
+    // Role will be set to 'STUDENT'
+    return this.generateTokens({ ...student, role: 'STUDENT' });
   }
 
   async refreshToken(refreshToken: string) {

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Profile Settings | Scholar Flow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-tint": "#4a40e0",
+              "surface-bright": "#f4f6ff",
+              "on-tertiary-fixed": "#2a1700",
+              "tertiary-container": "#f8a010",
+              "error": "#b41340",
+              "surface-dim": "#bdd6fc",
+              "inverse-surface": "#000f21",
+              "primary-dim": "#3d30d4",
+              "error-dim": "#a70138",
+              "surface-container-high": "#d2e4ff",
+              "surface-container-highest": "#c9deff",
+              "primary": "#4a40e0",
+              "surface": "#f4f6ff",
+              "on-secondary": "#c8ffe0",
+              "on-surface": "#203044",
+              "primary-fixed-dim": "#8885ff",
+              "surface-container-lowest": "#ffffff",
+              "on-primary": "#f4f1ff",
+              "error-container": "#f74b6d",
+              "on-tertiary": "#fff0e3",
+              "on-error-container": "#510017",
+              "inverse-on-surface": "#8e9eb7",
+              "on-secondary-fixed-variant": "#006544",
+              "on-primary-container": "#14007e",
+              "tertiary-dim": "#714600",
+              "secondary-fixed-dim": "#58e7ab",
+              "on-primary-fixed-variant": "#1a0099",
+              "secondary": "#006947",
+              "on-primary-fixed": "#000000",
+              "outline-variant": "#9eaec7",
+              "on-secondary-container": "#005a3c",
+              "inverse-primary": "#8582ff",
+              "primary-container": "#9795ff",
+              "tertiary-fixed-dim": "#e79400",
+              "on-tertiary-container": "#4a2c00",
+              "secondary-fixed": "#69f6b8",
+              "on-tertiary-fixed-variant": "#563400",
+              "on-background": "#203044",
+              "on-error": "#ffefef",
+              "primary-fixed": "#9795ff",
+              "outline": "#68788f",
+              "tertiary-fixed": "#f8a010",
+              "secondary-dim": "#005c3d",
+              "surface-container-low": "#eaf1ff",
+              "on-surface-variant": "#4d5d73",
+              "tertiary": "#815100",
+              "surface-container": "#dce9ff",
+              "secondary-container": "#69f6b8",
+              "background": "#f4f6ff",
+              "surface-variant": "#c9deff",
+              "on-secondary-fixed": "#00452d"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .font-headline { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar (Predicted) -->
+<aside class="h-screen w-64 fixed left-0 top-0 overflow-y-auto bg-slate-50 border-r border-slate-200/50 flex flex-col z-50">
+<div class="p-6 flex items-center gap-3">
+<div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+<span class="material-symbols-outlined" data-icon="school">school</span>
+</div>
+<div>
+<h1 class="text-lg font-black text-indigo-700 tracking-tighter">Scholar Flow</h1>
+<p class="text-[0.65rem] uppercase tracking-widest font-bold text-slate-400">Education CRM</p>
+</div>
+</div>
+<nav class="flex-1 px-4 py-4 space-y-1">
+<a class="flex items-center gap-3 py-3 px-4 text-slate-500 hover:bg-slate-100 transition-all rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span class="font-medium text-[0.875rem]">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 py-3 px-4 text-slate-500 hover:bg-slate-100 transition-all rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-medium text-[0.875rem]">Groups</span>
+</a>
+<a class="flex items-center gap-3 py-3 px-4 text-slate-500 hover:bg-slate-100 transition-all rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="event_available">event_available</span>
+<span class="font-medium text-[0.875rem]">Attendance</span>
+</a>
+<a class="flex items-center gap-3 py-3 px-4 text-slate-500 hover:bg-slate-100 transition-all rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="school">school</span>
+<span class="font-medium text-[0.875rem]">Students</span>
+</a>
+<a class="flex items-center gap-3 py-3 px-4 text-slate-500 hover:bg-slate-100 transition-all rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-medium text-[0.875rem]">Finances</span>
+</a>
+<!-- Active Navigation -->
+<a class="flex items-center gap-3 py-3 px-4 text-indigo-600 border-l-4 border-indigo-600 bg-indigo-50/50 font-bold text-[0.875rem]" href="#">
+<span class="material-symbols-outlined" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="p-4 mt-auto border-t border-slate-100">
+<a class="flex items-center gap-3 py-3 px-4 text-slate-500 hover:bg-slate-100 transition-all rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-medium text-[0.875rem]">Help Center</span>
+</a>
+<a class="flex items-center gap-3 py-3 px-4 text-error hover:bg-error/5 transition-all rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-medium text-[0.875rem]">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen">
+<!-- TopAppBar (Predicted) -->
+<header class="w-full sticky top-0 z-40 bg-white/70 backdrop-blur-xl flex justify-between items-center px-8 py-4 border-b border-slate-200/15 shadow-[0_20px_50px_-12px_rgba(32,48,68,0.08)]">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" data-icon="search">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-slate-100/50 border-none rounded-full text-sm focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Search for students, grades, or files..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="flex items-center gap-2 px-4 py-2 bg-error/10 text-error rounded-full text-xs font-bold active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-sm" data-icon="account_balance_wallet">account_balance_wallet</span>
+                    Unpaid Fees
+                </button>
+<div class="flex items-center gap-2">
+<button class="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-all relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-white"></span>
+</button>
+<div class="h-10 w-10 rounded-full overflow-hidden border-2 border-primary/20">
+<img alt="User" class="w-full h-full object-cover" data-alt="professional headshot of a female educator with a warm smile in a modern office environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2IvSyYzoNF8LKAzDG1Y7Ym9_MirGIFc3SNnJ_5q22V7rr7yQeGr68ockJBQNBRBf-6R6sDKlNOF2Kb60e2C2hGHsXNDDY3N_njBIAWmdynVASbCgLmA1Kf3snGQHhX5Aryw6Gsw4x3Jh91GiXtzj2P01J5Isf3DPSUwks0NFE63ZlkW69rMxItJBenPdob8DSPKFGpH_mMrRAb1VXt2KAMqN80x0ancCHTqR1el2wGy_3FLedm4JwP6Ab1Qpb454A5GaDS8chrGWO"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="p-8 max-w-6xl mx-auto">
+<!-- Breadcrumbs & Header -->
+<div class="mb-8">
+<nav class="flex items-center gap-2 text-xs font-medium text-slate-400 mb-2 uppercase tracking-widest">
+<span>Admin</span>
+<span class="material-symbols-outlined text-[10px]" data-icon="chevron_right">chevron_right</span>
+<span>Account</span>
+<span class="material-symbols-outlined text-[10px]" data-icon="chevron_right">chevron_right</span>
+<span class="text-primary">Profile Settings</span>
+</nav>
+<h2 class="text-4xl font-extrabold tracking-tight text-on-surface font-headline">Profile Settings</h2>
+</div>
+<!-- Profile Layout: Bento Style -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Navigation Tabs (Sidebar within Profile) -->
+<div class="col-span-12 lg:col-span-3">
+<div class="space-y-2 sticky top-28">
+<button class="w-full text-left px-5 py-4 rounded-2xl bg-white shadow-sm border-l-4 border-primary text-primary font-bold flex items-center gap-3 transition-all">
+<span class="material-symbols-outlined" data-icon="person" style="font-variation-settings: 'FILL' 1;">person</span>
+                            General
+                        </button>
+<button class="w-full text-left px-5 py-4 rounded-2xl hover:bg-white/60 text-slate-500 font-medium flex items-center gap-3 transition-all group">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" data-icon="shield">shield</span>
+                            Security
+                        </button>
+<button class="w-full text-left px-5 py-4 rounded-2xl hover:bg-white/60 text-slate-500 font-medium flex items-center gap-3 transition-all group">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" data-icon="badge">badge</span>
+                            Role &amp; Permissions
+                        </button>
+<button class="w-full text-left px-5 py-4 rounded-2xl hover:bg-white/60 text-slate-500 font-medium flex items-center gap-3 transition-all group">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" data-icon="notifications_active">notifications_active</span>
+                            Notifications
+                        </button>
+</div>
+</div>
+<!-- Main Form Area -->
+<div class="col-span-12 lg:col-span-9 space-y-8">
+<!-- General Section -->
+<section class="bg-surface-container-lowest p-8 rounded-3xl shadow-[0_20px_50px_-12px_rgba(32,48,68,0.06)]">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-xl font-bold font-headline">Personal Information</h3>
+<span class="px-3 py-1 bg-secondary/10 text-secondary text-[10px] font-black uppercase tracking-tighter rounded-full">Active Profile</span>
+</div>
+<div class="flex flex-col md:flex-row gap-10 items-start">
+<!-- Image Upload -->
+<div class="relative group">
+<div class="w-32 h-32 rounded-3xl overflow-hidden ring-4 ring-surface-container-low transition-all group-hover:ring-primary/20">
+<img alt="Profile" class="w-full h-full object-cover" data-alt="close-up of a smiling professional woman in a modern educational setting with soft bokeh background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmpPw8wtJEi-p09RyREEAoh5U0LJKy1jA-iepb0M0ARyiTPwquheXSKKC5acae3WCx9WpE4KKUYKsrneXsET_JQm7eOkP7IjqUfjkgG7OhiSLWXg-42ES-DF_UVlYeiv4OhkiKLAcLlXB2Ghl3F8ypFkJInS6KMCkmUcZH5SJmSTq7WMOys2gkuBc3qS6r8WcIsJgcWtu1X2bzWhZki0jU6-m7cfC6EKqRWXie88lsrm4IwNsXYcKMLKRetR4m3j8pOKXuTjH0J1l9"/>
+</div>
+<button class="absolute -bottom-2 -right-2 bg-primary text-white p-2 rounded-xl shadow-lg border-4 border-white active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-sm" data-icon="edit">edit</span>
+</button>
+</div>
+<!-- Fields -->
+<div class="flex-1 w-full space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="text-[0.6875rem] font-bold uppercase tracking-widest text-slate-400 px-1">Full Name</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl px-4 py-3 text-on-surface font-medium focus:ring-2 focus:ring-primary/40 transition-all" type="text" value="Dr. Sarah Jenkins"/>
+</div>
+<div class="space-y-2">
+<label class="text-[0.6875rem] font-bold uppercase tracking-widest text-slate-400 px-1">Specialization</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl px-4 py-3 text-on-surface font-medium focus:ring-2 focus:ring-primary/40 transition-all" type="text" value="Senior UI/UX Designer &amp; Lead Educator"/>
+</div>
+<div class="space-y-2">
+<label class="text-[0.6875rem] font-bold uppercase tracking-widest text-slate-400 px-1">Email Address</label>
+<div class="relative">
+<input class="w-full bg-surface-container-low border-none rounded-xl px-4 py-3 text-on-surface font-medium focus:ring-2 focus:ring-primary/40 transition-all" type="email" value="s.jenkins@scholarflow.edu"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-secondary text-sm" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-[0.6875rem] font-bold uppercase tracking-widest text-slate-400 px-1">Contact Number</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl px-4 py-3 text-on-surface font-medium focus:ring-2 focus:ring-primary/40 transition-all" type="text" value="+1 (555) 234-8901"/>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-[0.6875rem] font-bold uppercase tracking-widest text-slate-400 px-1">Professional Bio</label>
+<div class="relative">
+<textarea class="w-full bg-surface-container-low border-none rounded-xl px-4 py-3 text-on-surface font-medium focus:ring-2 focus:ring-primary/40 transition-all resize-none" rows="4">Passionate about bridging the gap between design theory and practical application. Over 10 years of experience in leading digital product teams and curriculum development for design-focused institutions. ✨</textarea>
+<span class="material-symbols-outlined absolute right-3 bottom-3 text-slate-300 cursor-pointer hover:text-primary transition-colors" data-icon="sentiment_satisfied">sentiment_satisfied</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Security & Preferences (Horizontal Split) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- Security Module -->
+<section class="bg-surface-container-lowest p-8 rounded-3xl shadow-[0_20px_50px_-12px_rgba(32,48,68,0.06)] flex flex-col">
+<h3 class="text-lg font-bold font-headline mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="lock_open">lock_open</span>
+                                Security
+                            </h3>
+<div class="space-y-5 flex-1">
+<div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+<div>
+<p class="text-sm font-bold">2-Factor Authentication</p>
+<p class="text-[0.7rem] text-slate-400">Add an extra layer of security</p>
+</div>
+<button class="w-12 h-6 bg-primary rounded-full relative p-1 flex items-center justify-end">
+<div class="w-4 h-4 bg-white rounded-full"></div>
+</button>
+</div>
+<button class="w-full py-3 px-4 border-2 border-slate-100 hover:border-primary/20 hover:bg-slate-50 rounded-2xl text-sm font-semibold transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-lg" data-icon="key">key</span>
+                                    Change Password
+                                </button>
+</div>
+</section>
+<!-- Preferences Module -->
+<section class="bg-surface-container-lowest p-8 rounded-3xl shadow-[0_20px_50px_-12px_rgba(32,48,68,0.06)]">
+<h3 class="text-lg font-bold font-headline mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="palette">palette</span>
+                                Preferences
+                            </h3>
+<div class="space-y-6">
+<div class="flex items-center justify-between">
+<label class="text-sm font-bold text-slate-600">Appearance</label>
+<div class="flex p-1 bg-slate-100 rounded-full gap-1">
+<button class="px-4 py-1.5 bg-white shadow-sm rounded-full text-xs font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="light_mode">light_mode</span>
+                                            Light
+                                        </button>
+<button class="px-4 py-1.5 rounded-full text-xs font-bold text-slate-400 flex items-center gap-2 hover:bg-slate-200/50 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="dark_mode">dark_mode</span>
+                                            Dark
+                                        </button>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-sm font-bold text-slate-600">Language</label>
+<select class="w-full bg-surface-container-low border-none rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-primary/40 appearance-none">
+<option>English (United States)</option>
+<option>Spanish (ES)</option>
+<option>French (FR)</option>
+</select>
+</div>
+</div>
+</section>
+</div>
+<!-- Action Bar -->
+<div class="flex items-center justify-end gap-4 pt-4">
+<button class="px-8 py-4 text-slate-500 font-bold text-sm hover:text-slate-800 transition-colors">
+                            Cancel
+                        </button>
+<button class="px-10 py-4 bg-gradient-to-br from-primary to-primary-container text-white font-black text-sm rounded-full shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
+                            Save Changes
+                        </button>
+</div>
+</div>
+</div>
+<!-- Footer-like Section: Activity Overview (Visual Polish) -->
+<div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="p-6 bg-indigo-50/50 rounded-3xl border border-indigo-100/50 flex items-center gap-4">
+<div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-primary shadow-sm">
+<span class="material-symbols-outlined" data-icon="history" style="font-variation-settings: 'FILL' 1;">history</span>
+</div>
+<div>
+<p class="text-[0.6rem] uppercase tracking-widest font-black text-indigo-400">Last Login</p>
+<p class="text-sm font-bold text-indigo-900">Today, 09:42 AM</p>
+</div>
+</div>
+<div class="p-6 bg-emerald-50/50 rounded-3xl border border-emerald-100/50 flex items-center gap-4">
+<div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-secondary shadow-sm">
+<span class="material-symbols-outlined" data-icon="task_alt" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+</div>
+<div>
+<p class="text-[0.6rem] uppercase tracking-widest font-black text-secondary">Profile Strength</p>
+<div class="flex items-center gap-2">
+<div class="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+<div class="w-4/5 h-full bg-secondary"></div>
+</div>
+<span class="text-xs font-black text-secondary">80%</span>
+</div>
+</div>
+</div>
+<div class="p-6 bg-slate-50 rounded-3xl border border-slate-200/30 flex items-center gap-4">
+<div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 shadow-sm">
+<span class="material-symbols-outlined" data-icon="device_hub">device_hub</span>
+</div>
+<div>
+<p class="text-[0.6rem] uppercase tracking-widest font-black text-slate-400">Connected Devices</p>
+<p class="text-sm font-bold text-slate-600">3 Active Sessions</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

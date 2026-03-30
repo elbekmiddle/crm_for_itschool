@@ -14,14 +14,17 @@ interface ExamState {
   attendance: any[];
   payments: any[];
   history: any[];
+  results: any;
   exams: any[];
   isLoading: boolean;
+  violations: number;
   
   // Actions
   fetchExams: () => Promise<void>;
   startExam: (examId: string) => Promise<void>;
   setAnswer: (questionId: string, answer: any) => Promise<void>;
   tick: () => void;
+  incrementViolations: () => void;
   nextQuestion: () => void;
   prevQuestion: () => void;
   jumpToQuestion: (index: number) => void;
@@ -43,8 +46,12 @@ export const useExamStore = create<ExamState>((set, get) => ({
   attendance: [],
   payments: [],
   history: [],
+  results: [],
   exams: [],
   isLoading: false,
+  violations: 0,
+
+  incrementViolations: () => set((state) => ({ violations: state.violations + 1 })),
 
   fetchExams: async () => {
     set({ isLoading: true });

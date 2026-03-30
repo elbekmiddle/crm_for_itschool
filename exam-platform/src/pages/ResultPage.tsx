@@ -1,6 +1,5 @@
-import React from 'react';
 import { useExamStore } from '../store/useExamStore';
-import { CheckCircle2, Home, BarChart3, Clock, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Home, BarChart3, Clock } from 'lucide-react';
 
 const ResultPage: React.FC = () => {
   const { results, reset } = useExamStore(); // I'll assume results contains { score, total, timeTaken }

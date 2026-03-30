@@ -1,16 +1,36 @@
-import React from 'react';
-import { useForm } from 'react-hook-form'; // I'll assume standard input
-import { LogIn, Phone, Lock, EyeOff, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { LogIn, Phone, User as UserIcon, Loader2, AlertCircle } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
 
 const LoginPage = () => {
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [phone, setPhone] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [error, setError] = useState('');
+  
+  const { login, isLoading } = useAuthStore();
+  const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setTimeout(() => {
-      window.location.href = '/dashboard';
-    }, 1500);
+    setError('');
+    
+    // Simple basic validation
+    if (!phone.trim() || !firstName.trim()) {
+      setError('Iltimos qatorlarni to\'ldiring');
+      return;
+    }
+
+    try {
+      await login(phone, firstName);
+      navigate('/dashboard');
+    } catch (err: any) {
+      if (err.response?.status === 401 || err.response?.status === 404) {
+        setError('Telefon raqami yoki ismingiz noto\'g\'ri');
+      } else {
+        setError('Tizim xatoligi, qaytadan urinib ko\'ring');
+      }
+    }
   };
 
   return (
@@ -27,17 +47,27 @@ const LoginPage = () => {
               <LogIn className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-4xl font-black text-slate-900 tracking-tight">Imtihon Portal</h1>
-            <p className="text-slate-400 font-semibold text-sm uppercase tracking-widest px-4">Talabalar uchun yagona kirish tizimi</p>
+            <p className="text-slate-400 font-semibold text-sm uppercase tracking-widest px-4">Talabalar uchun yagona platforma</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-8">
+          <form onSubmit={handleLogin} className="space-y-6">
+            
+            {error && (
+              <div className="p-4 bg-red-50 text-red-600 rounded-2xl flex items-center gap-3 text-sm font-bold animate-in fade-in">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <p>{error}</p>
+              </div>
+            )}
+
             <div className="space-y-6">
               <div className="space-y-2 group">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-2 group-focus-within:text-primary-600 transition-colors">Telefon yoki Email</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-2 group-focus-within:text-primary-600 transition-colors">Telefon</label>
                 <div className="relative">
                   <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"><Phone className="w-5 h-5" /></span>
                   <input 
                     required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                     placeholder="+998 00 000 00 00"
                     type="text" 
                     className="w-full bg-slate-100 border-2 border-transparent focus:border-primary-500 rounded-2xl py-5 pl-14 pr-6 text-lg font-bold text-slate-800 outline-none transition-all placeholder:text-slate-300 shadow-inner" 
@@ -46,25 +76,24 @@ const LoginPage = () => {
               </div>
 
               <div className="space-y-2 group">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-2 group-focus-within:text-primary-600 transition-colors">Maxfiy Parol</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-2 group-focus-within:text-primary-600 transition-colors">Ism (Tasdiqlash uchun)</label>
                 <div className="relative">
-                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"><Lock className="w-5 h-5" /></span>
+                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"><UserIcon className="w-5 h-5" /></span>
                   <input 
                     required
-                    placeholder="••••••••"
-                    type="password" 
-                    className="w-full bg-slate-100 border-2 border-transparent focus:border-primary-500 rounded-2xl py-5 pl-14 pr-14 text-lg font-bold text-slate-800 outline-none transition-all placeholder:text-slate-300 shadow-inner" 
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Masalan: Ali"
+                    type="text" 
+                    className="w-full bg-slate-100 border-2 border-transparent focus:border-primary-500 rounded-2xl py-5 pl-14 pr-6 text-lg font-bold text-slate-800 outline-none transition-all placeholder:text-slate-300 shadow-inner" 
                   />
-                  <button type="button" className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary-600 transition-colors">
-                    <EyeOff className="w-5 h-5" />
-                  </button>
                 </div>
               </div>
             </div>
 
             <button 
               disabled={isLoading}
-              className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-primary-300 text-white py-6 rounded-2xl text-xl font-black shadow-2xl shadow-primary-200 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+              className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-primary-300 text-white py-5 rounded-2xl text-xl font-black shadow-2xl shadow-primary-200 transition-all active:scale-[0.98] flex items-center justify-center gap-3 mt-4"
             >
               {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Tizimga Kirish'}
             </button>

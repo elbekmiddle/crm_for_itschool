@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Scholar Flow | Notifications &amp; Audit Log</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-fixed": "#f8a010",
+                        "surface-container-highest": "#c9deff",
+                        "on-primary": "#f4f1ff",
+                        "primary-container": "#9795ff",
+                        "surface-container": "#dce9ff",
+                        "surface": "#f4f6ff",
+                        "error": "#b41340",
+                        "error-dim": "#a70138",
+                        "error-container": "#f74b6d",
+                        "on-secondary-container": "#005a3c",
+                        "on-background": "#203044",
+                        "on-error-container": "#510017",
+                        "surface-bright": "#f4f6ff",
+                        "background": "#f4f6ff",
+                        "secondary-dim": "#005c3d",
+                        "secondary": "#006947",
+                        "on-secondary-fixed": "#00452d",
+                        "on-error": "#ffefef",
+                        "surface-tint": "#4a40e0",
+                        "secondary-fixed": "#69f6b8",
+                        "outline": "#68788f",
+                        "secondary-fixed-dim": "#58e7ab",
+                        "on-primary-container": "#14007e",
+                        "on-tertiary": "#fff0e3",
+                        "tertiary": "#815100",
+                        "tertiary-container": "#f8a010",
+                        "primary": "#4a40e0",
+                        "on-secondary": "#c8ffe0",
+                        "tertiary-fixed-dim": "#e79400",
+                        "tertiary-dim": "#714600",
+                        "inverse-primary": "#8582ff",
+                        "on-tertiary-container": "#4a2c00",
+                        "primary-fixed-dim": "#8885ff",
+                        "surface-container-high": "#d2e4ff",
+                        "surface-variant": "#c9deff",
+                        "surface-container-low": "#eaf1ff",
+                        "on-tertiary-fixed": "#2a1700",
+                        "secondary-container": "#69f6b8",
+                        "primary-dim": "#3d30d4",
+                        "inverse-on-surface": "#8e9eb7",
+                        "on-secondary-fixed-variant": "#006544",
+                        "on-surface-variant": "#4d5d73",
+                        "on-surface": "#203044",
+                        "on-primary-fixed": "#000000",
+                        "on-tertiary-fixed-variant": "#563400",
+                        "inverse-surface": "#000f21",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed": "#9795ff",
+                        "outline-variant": "#9eaec7",
+                        "surface-dim": "#bdd6fc",
+                        "on-primary-fixed-variant": "#1a0099"
+                    },
+                    fontFamily: {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bg-glass {
+            background: rgba(234, 241, 255, 0.7);
+            backdrop-filter: blur(12px);
+        }
+        .btn-elastic:hover {
+            transform: translateY(-2px);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .sidebar-active-indicator {
+            width: 4px;
+            height: 24px;
+            background-color: #4a40e0;
+            border-radius: 0 4px 4px 0;
+            position: absolute;
+            left: 0;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-slate-50 dark:bg-slate-900 flex flex-col z-50">
+<div class="px-6 py-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">school</span>
+</div>
+<div>
+<h1 class="text-xl font-bold text-indigo-600 dark:text-indigo-400 font-headline leading-none">Scholar Flow</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-semibold mt-1">Admin Console</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<!-- Dashboard Item -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-headline text-sm font-semibold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">school</span>
+<span class="font-headline text-sm font-semibold">Programs</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-headline text-sm font-semibold">Students</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">quiz</span>
+<span class="font-headline text-sm font-semibold">Exams</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">database</span>
+<span class="font-headline text-sm font-semibold">Question Bank</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-headline text-sm font-semibold">Analytics</span>
+</a>
+<!-- Active Navigation Context: Notifications falls under "Settings" or System Admin -->
+<a class="flex items-center gap-3 px-4 py-3 text-indigo-600 dark:text-indigo-400 border-l-4 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20 relative" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-headline text-sm font-semibold">Settings</span>
+</a>
+</nav>
+<div class="p-6 mt-auto border-t border-transparent space-y-4">
+<button class="w-full py-3 px-4 bg-gradient-to-br from-primary to-primary-container text-white rounded-full font-headline text-sm font-bold shadow-lg shadow-primary/20 flex items-center justify-center gap-2 btn-elastic">
+<span class="material-symbols-outlined text-sm">add</span>
+                New Course
+            </button>
+<div class="space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 hover:text-primary transition-colors text-xs font-semibold" href="#">
+<span class="material-symbols-outlined text-lg">help</span>
+                    Help
+                </a>
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 hover:text-error transition-colors text-xs font-semibold" href="#">
+<span class="material-symbols-outlined text-lg">logout</span>
+                    Logout
+                </a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen flex flex-col">
+<!-- TopNavBar Shell -->
+<header class="sticky top-0 z-40 h-16 w-full flex justify-between items-center px-8 bg-white/70 backdrop-blur-xl shadow-sm">
+<div class="flex items-center flex-1 max-w-md">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all" placeholder="Search system logs or alerts..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:bg-slate-100 rounded-full relative group">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-slate-100 rounded-full">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant/30"></div>
+<div class="flex items-center gap-3">
+<div class="text-right hidden sm:block">
+<p class="text-sm font-bold font-headline leading-none">Admin User</p>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-tighter">Super Admin</p>
+</div>
+<img alt="User Avatar" class="w-10 h-10 rounded-full object-cover ring-2 ring-primary/20" data-alt="professional portrait of a confident male executive in his 30s with short hair and clean-shaven look" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBhcnPtItnGalmFzdLSjtW2yFcNOVRvNM9p0r99nw6dyUNq0u3VWDDr8oubVvrZWJMMvxMMLL1wLKQuCu0iOgXMT_wWIiS7Fw2HZzFxnIf2bjwoP5wnIUaiyZX9467o1aYnBMGo5DQI9AHaO7TUr3MYAH3w9UJrq3T9L6bVi1fx1gdZJCnUjcdDxBP6WonMM9yJ1zAJcR-PtQiTjBq9X8Kfd4FC1YVLDVV5kPr9nTYyKp393DlKMS03Z7o1Pk7TyXg1Qp5TJcXKrDTg"/>
+</div>
+</div>
+</header>
+<!-- Page Canvas -->
+<section class="p-8 space-y-8 flex-1">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h2 class="text-3xl font-extrabold font-headline tracking-tight text-on-surface">System Monitoring 🧾</h2>
+<p class="text-on-surface-variant mt-1 text-sm">Stay updated with critical alerts and track administrative changes across the platform.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-6 py-2.5 bg-surface-container-high text-on-surface rounded-full font-headline text-sm font-bold flex items-center gap-2 btn-elastic">
+<span class="material-symbols-outlined text-lg">download</span>
+                        Export Logs
+                    </button>
+<button class="px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-white rounded-full font-headline text-sm font-bold shadow-lg shadow-primary/20 flex items-center gap-2 btn-elastic">
+<span class="material-symbols-outlined text-lg">refresh</span>
+                        Refresh
+                    </button>
+</div>
+</div>
+<!-- Bento Grid / Layout -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Left Column: Tabs & Navigation -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-container-lowest rounded-xl p-2 flex gap-1 shadow-sm">
+<button class="flex-1 py-3 px-4 rounded-lg bg-primary text-white font-headline text-sm font-bold flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">notifications_active</span>
+                            Notifications
+                        </button>
+<button class="flex-1 py-3 px-4 rounded-lg text-on-surface-variant hover:bg-surface-container-low font-headline text-sm font-bold flex items-center justify-center gap-2 transition-all">
+<span class="material-symbols-outlined text-lg">history</span>
+                            Audit Logs
+                        </button>
+</div>
+<!-- Filter Module -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm space-y-6">
+<div class="flex items-center justify-between">
+<h3 class="font-headline font-bold text-sm">Filter Alerts</h3>
+<button class="text-primary text-xs font-bold hover:underline">Clear all</button>
+</div>
+<div class="space-y-3">
+<label class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-error"></div>
+<span class="text-sm font-medium text-on-surface-variant group-hover:text-on-surface">Payments</span>
+</div>
+<input checked="" class="rounded-md border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</label>
+<label class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-tertiary"></div>
+<span class="text-sm font-medium text-on-surface-variant group-hover:text-on-surface">Attendance</span>
+</div>
+<input checked="" class="rounded-md border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</label>
+<label class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<span class="text-sm font-medium text-on-surface-variant group-hover:text-on-surface">System Updates</span>
+</div>
+<input checked="" class="rounded-md border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</label>
+</div>
+<div class="pt-4 border-t border-outline-variant/10">
+<h4 class="text-[10px] uppercase font-bold text-on-surface-variant tracking-widest mb-3">System Health</h4>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between items-center mb-1 text-xs">
+<span class="font-medium">Server Latency</span>
+<span class="text-secondary font-bold">24ms (Optimal)</span>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[15%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-1 text-xs">
+<span class="font-medium">Storage Usage</span>
+<span class="text-on-surface-variant font-bold">68%</span>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[68%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: List Content -->
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<!-- Notification List Section -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<div class="p-6 flex items-center justify-between bg-white border-b border-surface-container">
+<h3 class="font-headline font-bold text-lg flex items-center gap-2">
+                                Recent Alerts 🔔
+                                <span class="px-2 py-0.5 bg-error text-white text-[10px] rounded-full uppercase font-extrabold tracking-tighter">4 New</span>
+</h3>
+<div class="flex gap-2">
+<button class="text-xs font-bold px-4 py-2 hover:bg-surface-container text-on-surface-variant rounded-full transition-all">Dismiss All</button>
+<button class="text-xs font-bold px-4 py-2 hover:bg-surface-container text-primary rounded-full transition-all">Mark as Read</button>
+</div>
+</div>
+<div class="divide-y divide-surface-container">
+<!-- Alert 1 -->
+<div class="p-6 flex items-start gap-4 hover:bg-surface-container-low transition-colors group">
+<div class="w-12 h-12 flex-shrink-0 bg-error-container/20 rounded-2xl flex items-center justify-center text-error">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<h4 class="font-headline font-bold text-on-surface group-hover:text-primary transition-colors">Payment Overdue</h4>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">2 min ago</span>
+</div>
+<p class="text-sm text-on-surface-variant mt-1 leading-relaxed">Invoice #SF-4920 for student <span class="font-semibold text-on-surface">Marcus Aurelius</span> is 3 days overdue. Total amount: <span class="font-semibold">$240.00</span>.</p>
+<div class="mt-3 flex gap-2">
+<button class="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded-full btn-elastic">Send Reminder</button>
+<button class="px-4 py-1.5 bg-surface-container text-on-surface-variant text-xs font-bold rounded-full btn-elastic">View Invoice</button>
+</div>
+</div>
+</div>
+<!-- Alert 2 -->
+<div class="p-6 flex items-start gap-4 hover:bg-surface-container-low transition-colors group">
+<div class="w-12 h-12 flex-shrink-0 bg-secondary-container/20 rounded-2xl flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person_add</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<h4 class="font-headline font-bold text-on-surface group-hover:text-primary transition-colors">New Student Enrolled</h4>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">45 min ago</span>
+</div>
+<p class="text-sm text-on-surface-variant mt-1 leading-relaxed"><span class="font-semibold text-on-surface">Elena Gilbert</span> just registered for the 'Advanced Biochemistry' program.</p>
+<div class="mt-3 flex gap-2">
+<button class="px-4 py-1.5 bg-surface-container text-on-surface-variant text-xs font-bold rounded-full btn-elastic">Assign Mentor</button>
+</div>
+</div>
+</div>
+<!-- Alert 3 -->
+<div class="p-6 flex items-start gap-4 hover:bg-surface-container-low transition-colors group">
+<div class="w-12 h-12 flex-shrink-0 bg-tertiary-container/20 rounded-2xl flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">quiz</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<h4 class="font-headline font-bold text-on-surface group-hover:text-primary transition-colors">Exam Completed</h4>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">3 hours ago</span>
+</div>
+<p class="text-sm text-on-surface-variant mt-1 leading-relaxed">24 students have completed the <span class="font-semibold text-on-surface">Python Fundamentals</span> mid-term. Average score: <span class="font-semibold text-secondary">82%</span>.</p>
+<div class="mt-3 flex gap-2">
+<button class="px-4 py-1.5 bg-surface-container text-on-surface-variant text-xs font-bold rounded-full btn-elastic">Generate Report</button>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 bg-surface-container-low/50 text-center">
+<button class="text-sm font-bold text-primary hover:text-primary-dim transition-colors">View All Notifications</button>
+</div>
+</div>
+<!-- Audit Log Section -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<div class="p-6 bg-white border-b border-surface-container">
+<div class="flex items-center justify-between">
+<h3 class="font-headline font-bold text-lg flex items-center gap-2">
+                                    System Audit Logs 📜
+                                </h3>
+<div class="relative">
+<select class="pl-4 pr-10 py-1.5 bg-surface-container-low border-none rounded-full text-xs font-bold text-on-surface appearance-none focus:ring-primary/20">
+<option>Last 24 Hours</option>
+<option>Last 7 Days</option>
+<option>Last 30 Days</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container/30">
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Timestamp</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">User</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Action</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Location</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container/50">
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<p class="text-xs font-medium text-on-surface">Oct 24, 2023</p>
+<p class="text-[10px] text-on-surface-variant">14:22:10</p>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-primary-container text-[10px] font-bold text-primary flex items-center justify-center">JD</div>
+<span class="text-sm font-semibold text-on-surface">John Doe</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<p class="text-sm text-on-surface-variant truncate max-w-[200px]">Updated group <span class="text-on-surface font-medium">'React Native Masters'</span> settings.</p>
+</td>
+<td class="px-6 py-4 text-xs text-on-surface-variant">
+                                            192.168.1.45 <br/>
+<span class="text-[9px] font-bold uppercase">London, UK</span>
+</td>
+<td class="px-6 py-4">
+<div class="inline-flex items-center px-3 py-1 rounded-full bg-secondary-container/20 text-secondary text-[10px] font-extrabold uppercase tracking-tighter">
+<div class="w-1.5 h-1.5 rounded-full bg-secondary mr-2"></div>
+                                                Success
+                                            </div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<p class="text-xs font-medium text-on-surface">Oct 24, 2023</p>
+<p class="text-[10px] text-on-surface-variant">12:05:44</p>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-variant text-[10px] font-bold text-on-surface-variant flex items-center justify-center">?</div>
+<span class="text-sm font-semibold text-on-surface">Unknown</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<p class="text-sm text-on-surface-variant">Failed login attempt on account <span class="text-on-surface font-medium">'admin_root'</span>.</p>
+</td>
+<td class="px-6 py-4 text-xs text-on-surface-variant">
+                                            45.22.102.1 <br/>
+<span class="text-[9px] font-bold uppercase">Moscow, RU</span>
+</td>
+<td class="px-6 py-4">
+<div class="inline-flex items-center px-3 py-1 rounded-full bg-error-container/20 text-error text-[10px] font-extrabold uppercase tracking-tighter">
+<div class="w-1.5 h-1.5 rounded-full bg-error mr-2"></div>
+                                                Failed
+                                            </div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<p class="text-xs font-medium text-on-surface">Oct 24, 2023</p>
+<p class="text-[10px] text-on-surface-variant">09:12:00</p>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-secondary-container text-[10px] font-bold text-on-secondary-container flex items-center justify-center">SM</div>
+<span class="text-sm font-semibold text-on-surface">Sarah Miller</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<p class="text-sm text-on-surface-variant">Deleted course module <span class="text-on-surface font-medium">'Legacy PHP Docs'</span>.</p>
+</td>
+<td class="px-6 py-4 text-xs text-on-surface-variant">
+                                            12.44.55.90 <br/>
+<span class="text-[9px] font-bold uppercase">Austin, US</span>
+</td>
+<td class="px-6 py-4">
+<div class="inline-flex items-center px-3 py-1 rounded-full bg-secondary-container/20 text-secondary text-[10px] font-extrabold uppercase tracking-tighter">
+<div class="w-1.5 h-1.5 rounded-full bg-secondary mr-2"></div>
+                                                Success
+                                            </div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer / Credits -->
+<footer class="p-8 mt-auto flex justify-between items-center text-on-surface-variant/60 text-xs font-semibold">
+<p>© 2023 Scholar Flow EdTech Solutions. All rights reserved.</p>
+<div class="flex gap-6">
+<a class="hover:text-primary transition-colors" href="#">Security Policy</a>
+<a class="hover:text-primary transition-colors" href="#">API Docs</a>
+<a class="hover:text-primary transition-colors" href="#">Privacy</a>
+</div>
+</footer>
+</main>
+<!-- Contextual FAB - Suppression Logic: Hidden on Detail/Transactional pages, visible here for quick creation if needed, but per mandate we can suppress to prioritize canvas. Let's keep a floating support help instead. -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-white shadow-2xl rounded-full flex items-center justify-center text-primary hover:scale-110 transition-transform btn-elastic border border-surface-container-high z-50">
+<span class="material-symbols-outlined text-3xl">contact_support</span>
+</button>
+</body></html>

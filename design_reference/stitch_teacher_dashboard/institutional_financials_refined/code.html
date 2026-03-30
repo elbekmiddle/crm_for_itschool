@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Scholar Flow | Financial Analytics</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "error-dim": "#a70138",
+              "tertiary-fixed": "#f8a010",
+              "on-secondary-fixed-variant": "#006544",
+              "on-primary": "#f4f1ff",
+              "primary-dim": "#3d30d4",
+              "on-error": "#ffefef",
+              "surface-variant": "#c9deff",
+              "on-tertiary": "#fff0e3",
+              "surface-dim": "#bdd6fc",
+              "surface-container-high": "#d2e4ff",
+              "primary-container": "#9795ff",
+              "secondary-dim": "#005c3d",
+              "on-tertiary-fixed-variant": "#563400",
+              "on-tertiary-container": "#4a2c00",
+              "on-secondary-fixed": "#00452d",
+              "surface-container-low": "#eaf1ff",
+              "tertiary": "#815100",
+              "primary": "#4a40e0",
+              "surface-tint": "#4a40e0",
+              "on-background": "#203044",
+              "surface": "#f8f9fc",
+              "secondary": "#006947",
+              "on-error-container": "#510017",
+              "secondary-fixed": "#69f6b8",
+              "on-surface": "#1a1f36",
+              "inverse-primary": "#8582ff",
+              "surface-container": "#dce9ff",
+              "secondary-container": "#69f6b8",
+              "outline": "#a3acb9",
+              "surface-container-highest": "#c9deff",
+              "on-surface-variant": "#4f566b",
+              "primary-fixed-dim": "#8885ff",
+              "error": "#b41340",
+              "surface-container-lowest": "#ffffff",
+              "secondary-fixed-dim": "#58e7ab",
+              "surface-bright": "#f8f9fc",
+              "primary-fixed": "#9795ff",
+              "inverse-surface": "#000f21",
+              "error-container": "#f74b6d",
+              "tertiary-container": "#f8a010",
+              "outline-variant": "#e3e8ee",
+              "background": "#f8f9fc",
+              "on-primary-container": "#14007e",
+              "on-secondary-container": "#005a3c",
+              "on-tertiary-fixed": "#2a1700",
+              "on-primary-fixed": "#000000",
+              "on-secondary": "#c8ffe0"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Plus Jakarta Sans", "Inter"],
+              "label": ["Plus Jakarta Sans", "Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .fintech-card {
+        background: #ffffff;
+        border: 1px solid #e3e8ee;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.04);
+      }
+      .segment-control {
+        background: #f6f9fc;
+        padding: 4px;
+        border-radius: 8px;
+        border: 1px solid #e3e8ee;
+      }
+      .segment-item {
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #4f566b;
+        transition: all 0.2s;
+      }
+      .segment-item.active {
+        background: #ffffff;
+        color: #4a40e0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      .area-gradient {
+        background: linear-gradient(180deg, rgba(74, 64, 224, 0.1) 0%, rgba(74, 64, 224, 0) 100%);
+      }
+      .ghost-track {
+        background: #f6f9fc;
+      }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-full flex flex-col w-64 border-r border-outline-variant/60 bg-white font-medium text-sm z-50">
+<div class="px-6 py-8">
+<div class="flex items-center gap-3 mb-10">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-lg" data-icon="account_balance">account_balance</span>
+</div>
+<div>
+<h1 class="text-lg font-extrabold tracking-tight text-on-surface">Scholar Flow</h1>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="dashboard">dashboard</span>
+<span class="font-semibold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="school">school</span>
+<span class="font-semibold">Programs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="group">group</span>
+<span class="font-semibold">Students</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-primary bg-primary/5 rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="analytics">analytics</span>
+<span class="font-bold">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="settings">settings</span>
+<span class="font-semibold">Settings</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-6 space-y-6">
+<button class="w-full py-2.5 px-4 rounded-lg bg-primary text-on-primary font-bold shadow-sm flex items-center justify-center gap-2 hover:bg-primary-dim transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+            New Enrollment
+        </button>
+<div class="pt-6 border-t border-outline-variant">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="help">help</span>
+<span class="font-semibold text-xs">Help Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-error-dim hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="logout">logout</span>
+<span class="font-semibold text-xs">Sign Out</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- TopNavBar Shell -->
+<header class="sticky top-0 z-40 flex justify-between items-center px-8 w-full ml-64 max-w-[calc(100%-16rem)] h-14 bg-white/80 backdrop-blur-md border-b border-outline-variant">
+<div class="flex items-center gap-3 text-on-surface-variant">
+<span class="material-symbols-outlined text-lg" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-80 font-medium placeholder:text-outline" placeholder="Search data..." type="text"/>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-container-low rounded-md transition-colors relative">
+<span class="material-symbols-outlined text-xl" data-icon="notifications">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full border-2 border-white"></span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-container-low rounded-md transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="command">command</span>
+</button>
+</div>
+<div class="h-6 w-px bg-outline-variant"></div>
+<div class="flex items-center gap-3">
+<div class="text-right">
+<p class="text-xs font-bold leading-none">Dr. Aris Thorne</p>
+<p class="text-[10px] text-outline font-semibold tracking-wide">Financial Dean</p>
+</div>
+<img alt="User Profile" class="w-8 h-8 rounded-full border border-outline-variant object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCK7pueUHrp3CtMR26xiBaoOJ9NU53cof_EEk_-ObgwufWz-1ec7nbIsowpHxGnNmJHF3rbDZ0HrvxOOLRsmQOcJwnKdu8w34zm_9BFljXhc-XCSuD5Zw-uVr2o7Rmqj4AgbBHn0pwmRcijUfaI4uqJfvfYdJMHmjG5me1AHC2_CishO6P4WaXYX0R_7wfr9j8R3AdmSaZ1YOLfUmDDisZCKfPp4JTWc_7XJkI5fOMF2MVg4IKBN5NL7JwjBJ_gxpV_CARqv7cbCOq"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 p-8 min-h-screen">
+<!-- Header & Quick Actions -->
+<div class="flex justify-between items-start mb-8">
+<div>
+<h2 class="text-2xl font-extrabold tracking-tight text-on-surface">Financial Analytics</h2>
+<p class="text-on-surface-variant font-medium text-sm mt-0.5">Real-time revenue metrics and performance indicators.</p>
+</div>
+<div class="flex gap-2">
+<div class="segment-control flex mr-2">
+<button class="segment-item">7D</button>
+<button class="segment-item">1M</button>
+<button class="segment-item active">3M</button>
+<button class="segment-item">1Y</button>
+<button class="segment-item">ALL</button>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant bg-white text-on-surface font-bold text-xs hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-base" data-icon="download">download</span>
+                Export
+            </button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Revenue Line Chart Container -->
+<div class="col-span-12 lg:col-span-8 fintech-card rounded-xl p-6">
+<div class="flex justify-between items-start mb-8">
+<div>
+<h3 class="text-sm font-bold text-on-surface">Total Revenue</h3>
+<p class="text-2xl font-extrabold text-on-surface mt-1">$142,400.00</p>
+</div>
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="trending_up">trending_up</span>
+<span class="text-xs font-bold">12.5%</span>
+</div>
+</div>
+<!-- Thin Line Chart with Area Gradient Mockup -->
+<div class="relative h-60 w-full">
+<!-- SVG Chart Mockup -->
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 100 100">
+<defs>
+<lineargradient id="areaGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#4a40e0" stop-opacity="0.12"></stop>
+<stop offset="100%" stop-color="#4a40e0" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<!-- Area -->
+<path d="M0 80 Q 20 70, 40 75 T 60 40 T 80 50 T 100 20 V 100 H 0 Z" fill="url(#areaGrad)"></path>
+<!-- Line -->
+<path d="M0 80 Q 20 70, 40 75 T 60 40 T 80 50 T 100 20" fill="none" stroke="#4a40e0" stroke-width="1.5"></path>
+<!-- Data points -->
+<circle cx="100" cy="20" fill="#4a40e0" r="3" stroke="white" stroke-width="1.5"></circle>
+</svg>
+<!-- Tooltip Mock -->
+<div class="absolute top-[5%] right-0 bg-on-surface text-white px-2 py-1 rounded-md text-[10px] font-bold shadow-lg -translate-x-4">
+                    $48.2k
+                </div>
+</div>
+<div class="flex justify-between mt-4 border-t border-outline-variant/30 pt-4 text-[10px] font-bold text-outline uppercase tracking-wider">
+<span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span>
+</div>
+</div>
+<!-- Collection Rate Circular Gauge -->
+<div class="col-span-12 lg:col-span-4 fintech-card rounded-xl p-6 flex flex-col items-center">
+<div class="w-full text-left mb-6">
+<h3 class="text-sm font-bold text-on-surface">Payment Collection</h3>
+</div>
+<div class="relative w-40 h-40 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90">
+<circle class="text-surface-container-low" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-width="6"></circle>
+<circle cx="80" cy="80" fill="transparent" r="70" stroke="#4a40e0" stroke-dasharray="439.8" stroke-dashoffset="52.7" stroke-linecap="round" stroke-width="6"></circle>
+</svg>
+<div class="absolute flex flex-col items-center">
+<span class="text-3xl font-extrabold text-on-surface">88%</span>
+<span class="text-[10px] font-bold text-secondary uppercase tracking-widest mt-0.5">Healthy</span>
+</div>
+</div>
+<div class="mt-8 space-y-3 w-full">
+<div class="flex justify-between items-center text-xs">
+<span class="text-on-surface-variant font-medium">Collected</span>
+<span class="font-bold text-on-surface">$142,000</span>
+</div>
+<div class="h-1 w-full ghost-track rounded-full overflow-hidden">
+<div class="h-full bg-secondary rounded-full w-[88%]"></div>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span class="text-on-surface-variant font-medium">Pending</span>
+<span class="font-bold text-on-surface">$19,000</span>
+</div>
+<div class="h-1 w-full ghost-track rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full w-[12%]"></div>
+</div>
+</div>
+</div>
+<!-- Revenue by Course (Bar Chart with horizontal bars) -->
+<div class="col-span-12 lg:col-span-7 fintech-card rounded-xl p-6">
+<div class="flex justify-between items-center mb-8">
+<h3 class="text-sm font-bold text-on-surface">Revenue by Program</h3>
+<button class="text-xs font-bold text-primary hover:underline">Full Breakdown</button>
+</div>
+<div class="space-y-6">
+<div>
+<div class="flex justify-between mb-2">
+<span class="text-xs font-bold text-on-surface">Computer Science (Advanced)</span>
+<span class="text-xs font-extrabold text-on-surface">$84,000</span>
+</div>
+<div class="h-2 w-full ghost-track rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full w-[85%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between mb-2">
+<span class="text-xs font-bold text-on-surface">Business Administration</span>
+<span class="text-xs font-extrabold text-on-surface">$62,500</span>
+</div>
+<div class="h-2 w-full ghost-track rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full opacity-60 w-[65%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between mb-2">
+<span class="text-xs font-bold text-on-surface">Digital Arts &amp; Design</span>
+<span class="text-xs font-extrabold text-on-surface">$41,200</span>
+</div>
+<div class="h-2 w-full ghost-track rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full opacity-30 w-[45%]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- AI Insight Panel - Integrated Look -->
+<div class="col-span-12 lg:col-span-5 bg-primary/[0.03] border border-primary/10 rounded-xl p-6">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="magic_button">magic_button</span>
+<h3 class="text-sm font-bold text-on-surface">Smart Insights</h3>
+</div>
+<div class="space-y-4">
+<div class="p-4 bg-white rounded-lg border border-primary/10 shadow-sm">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[10px] font-extrabold uppercase tracking-widest text-primary">Opportunity</span>
+<span class="text-[10px] font-bold text-secondary bg-secondary/5 px-1.5 py-0.5 rounded">High impact</span>
+</div>
+<p class="text-xs text-on-surface-variant font-medium leading-relaxed">
+                        Projected <span class="font-bold text-primary">15% surge</span> in next term revenue. Adjust early-bird pricing by <span class="font-bold text-on-surface">+2.5%</span> to maximize yield.
+                    </p>
+</div>
+<div class="p-4 bg-white rounded-lg border border-error-dim/10 shadow-sm">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[10px] font-extrabold uppercase tracking-widest text-error-dim">Attention Required</span>
+<span class="material-symbols-outlined text-sm text-error" data-icon="priority_high">priority_high</span>
+</div>
+<p class="text-xs text-on-surface-variant font-medium leading-relaxed">
+<span class="font-bold text-on-surface">8 student accounts</span> have payments &gt;30 days late. Total exposure is <span class="text-error-dim font-bold">$4,200</span>.
+                    </p>
+</div>
+</div>
+</div>
+<!-- Recent Invoices Table -->
+<div class="col-span-12 fintech-card rounded-xl overflow-hidden">
+<div class="px-6 py-4 flex justify-between items-center border-b border-outline-variant">
+<h3 class="text-sm font-bold text-on-surface">Recent Invoices</h3>
+<button class="text-xs font-bold text-primary hover:underline">View All</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/30 border-b border-outline-variant">
+<th class="px-6 py-3 text-[10px] font-extrabold text-outline uppercase tracking-wider">Student</th>
+<th class="px-6 py-3 text-[10px] font-extrabold text-outline uppercase tracking-wider">Program</th>
+<th class="px-6 py-3 text-[10px] font-extrabold text-outline uppercase tracking-wider">Date</th>
+<th class="px-6 py-3 text-[10px] font-extrabold text-outline uppercase tracking-wider">Amount</th>
+<th class="px-6 py-3 text-[10px] font-extrabold text-outline uppercase tracking-wider">Status</th>
+<th class="px-6 py-3 text-[10px] font-extrabold text-outline uppercase tracking-wider"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/60">
+<tr class="hover:bg-surface-container-low/20 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Student" class="w-7 h-7 rounded-full bg-surface-container-low border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDk3EWNr3md1d5Q15LBBjYql6Y9-lE0iFkc6su8xzZ1v0aMFOo0z-b17yus3Z-83fpCPq9qGoFdqQDhcQBtqVfeZbFO7mxbNvjbQTqyXKBBAbxRao5mhlkTb7ymDl8sfM15G2dDO6LMtcWmJ82kOSQzAx2qg-bQv4w8THW2wGCokAeYwdXzDiU88W-oEsz6FICmAWUUBYimuQNfgEznsXFQlXFEVvB7UjlG84xHN9fn97I7Ns9HxvrtikM3ehvGyqTz-LuTKL-b4f-l"/>
+<div>
+<p class="text-xs font-bold text-on-surface">Liam H. Vance</p>
+<p class="text-[10px] text-outline font-medium">#SF-8802</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-xs font-bold text-on-surface-variant">Computer Science</td>
+<td class="px-6 py-4 text-xs font-medium text-on-surface-variant">Oct 12, 2023</td>
+<td class="px-6 py-4 text-xs font-extrabold text-on-surface">$5,200.00</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-secondary/10 text-secondary text-[10px] font-extrabold">
+                                    Paid
+                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="p-1 hover:bg-surface-container-low rounded text-outline-variant"><span class="material-symbols-outlined text-lg" data-icon="more_horiz">more_horiz</span></button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/20 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Student" class="w-7 h-7 rounded-full bg-surface-container-low border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDAorVEnn4-gTViXb-3fuqzq7g8t-igUw3oHOt7iPoku9rlMg13khjIwYej8Qk6wsBZoltIhBBHl9L8s7exhotpFWNllPGRWe46htxlsknJXLY-qUKee8uDoO7p-1n94C5HOZNbaW2NVqKV-6xOK9GT3DpQOs-Bk6qEh_wFAQihaY9x5ORMTxKsy-fD84GgLdJb1jYO3vxFhourDS4hFgis51Lhf_d9lmm0mKUeIBkwwyjGGtcjrGnvWKRmqsNU8RWjIeDioZ13f6N"/>
+<div>
+<p class="text-xs font-bold text-on-surface">Elena Rodriguez</p>
+<p class="text-[10px] text-outline font-medium">#SF-8805</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-xs font-bold text-on-surface-variant">Digital Arts</td>
+<td class="px-6 py-4 text-xs font-medium text-on-surface-variant">Oct 14, 2023</td>
+<td class="px-6 py-4 text-xs font-extrabold text-on-surface">$3,850.00</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-tertiary-fixed/10 text-tertiary text-[10px] font-extrabold">
+                                    Pending
+                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="p-1 hover:bg-surface-container-low rounded text-outline-variant"><span class="material-symbols-outlined text-lg" data-icon="more_horiz">more_horiz</span></button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/20 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Student" class="w-7 h-7 rounded-full bg-surface-container-low border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAk50ENv6aSxWe6hFVRT36Vfm-ai2FIqyhK9ZHn-mWMG3gmtsRLv0_hhZdlyMq79mn9gj7AdVkvmjw3iGSjXvszeRskNzOwzhHad2wtiIqvDTW0je4EDo1jRNcwh6W1yvlIM5kfUyqYw-IM5fYy3pfi-kJMwxKPAe7oOt_8udD4f8a1lp8-C7NN8GworuOsFGfq8qFoHmaTsoFef2UNIoWOYcZHgCGjgza2FS8ouWUfRZL81mbKv-PQ_4gMtHLkhdFI3-ShpZa9tRUN"/>
+<div>
+<p class="text-xs font-bold text-on-surface">Julian Kwok</p>
+<p class="text-[10px] text-outline font-medium">#SF-8810</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-xs font-bold text-on-surface-variant">Business Admin</td>
+<td class="px-6 py-4 text-xs font-medium text-on-surface-variant">Sep 30, 2023</td>
+<td class="px-6 py-4 text-xs font-extrabold text-on-surface">$4,100.00</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-error/10 text-error-dim text-[10px] font-extrabold">
+                                    Overdue
+                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="p-1 hover:bg-surface-container-low rounded text-outline-variant"><span class="material-symbols-outlined text-lg" data-icon="more_horiz">more_horiz</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+</body></html>

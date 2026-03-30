@@ -1,18 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
 import { 
-  Plus, 
-  Trash2, 
-  BookOpen, 
-  DollarSign, 
-  ChevronRight,
-  Loader2
+  Plus, Trash2, DollarSign, ChevronRight, Loader2, Edit2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
+import ConfirmModal from '../components/ConfirmModal';
 
-const CourseCard = ({ course, onDelete }: any) => (
+const CourseCard = ({ course, onEdit, onDelete }: any) => (
   <motion.div 
     layout
     initial={{ opacity: 0, scale: 0.9 }}
@@ -24,47 +20,59 @@ const CourseCard = ({ course, onDelete }: any) => (
         <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-600 font-black text-xl group-hover:bg-primary-600 group-hover:text-white transition-all">
           {course.name[0]}
         </div>
-        <button onClick={() => onDelete(course.id)} className="p-3 text-slate-300 hover:text-red-500 transition-colors">
-          <Trash2 className="w-5 h-5" />
-        </button>
+        <div className="flex gap-1">
+          <button onClick={() => onEdit(course)} className="p-3 text-slate-300 hover:text-blue-600 transition-colors">
+            <Edit2 className="w-5 h-5" />
+          </button>
+          <button onClick={() => onDelete(course.id)} className="p-3 text-slate-300 hover:text-red-500 transition-colors">
+            <Trash2 className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       <div className="space-y-1">
         <h3 className="text-2xl font-black text-slate-900 leading-tight uppercase tracking-tighter">{course.name}</h3>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">Yo'nalish: Dasturlash</p>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">{course.description || "Yo'nalish: Dasturlash"}</p>
       </div>
 
       <div className="flex items-center gap-2 bg-slate-50 p-4 rounded-2xl">
          <DollarSign className="w-5 h-5 text-green-500" />
-         <span className="text-xl font-black text-slate-800">{course.price?.toLocaleString()} SO'M</span>
+         <span className="text-xl font-black text-slate-800">{Number(course.price)?.toLocaleString()} SO'M</span>
       </div>
     </div>
 
     <div className="mt-8 border-t border-slate-50 pt-6">
        <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
           <span>{course.students_count || 0} Talaba</span>
-          <button className="text-primary-600 hover:translate-x-1 transition-transform flex items-center gap-1">
+          <span className="text-primary-600 flex items-center gap-1">
             Batafsil <ChevronRight className="w-4 h-4" />
-          </button>
+          </span>
        </div>
     </div>
   </motion.div>
 );
 
 const CoursesPage = () => {
-  const { courses, fetchCourses, createCourse, isLoading } = useAdminStore();
+  const { courses, fetchCourses, createCourse, updateCourse, deleteCourse, isLoading } = useAdminStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<any>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchCourses();
-  }, [fetchCourses]);
+  useEffect(() => { fetchCourses(); }, [fetchCourses]);
 
-  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
-    await createCourse({ ...data, price: Number(data.price) });
+    const payload = { ...data, price: Number(data.price) };
+    if (editingCourse) {
+      await updateCourse(editingCourse.id, payload);
+    } else {
+      await createCourse(payload);
+    }
     setIsModalOpen(false);
+    setEditingCourse(null);
   };
 
   return (
@@ -82,7 +90,12 @@ const CoursesPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
         <AnimatePresence>
           {courses.map((course) => (
-             <CourseCard key={course.id} course={course} onDelete={() => {}} />
+             <CourseCard 
+               key={course.id} 
+               course={course} 
+               onEdit={(c: any) => { setEditingCourse(c); setIsModalOpen(true); }}
+               onDelete={(id: string) => { setDeletingId(id); setIsConfirmOpen(true); }} 
+             />
           ))}
         </AnimatePresence>
       </div>
@@ -94,24 +107,32 @@ const CoursesPage = () => {
          </div>
       )}
 
-      {/* New Course Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Yangi Kurs Qo'shish">
-         <form onSubmit={handleCreate} className="space-y-8">
+      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingCourse(null); }} title={editingCourse ? "Kursni Tahrirlash" : "Yangi Kurs Qo'shish"}>
+         <form onSubmit={handleSave} className="space-y-8">
             <div className="space-y-2">
                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Kurs Nomi</label>
-               <input name="name" required placeholder="Masalan: Full-Stack Bootcamp" className="w-full p-6 bg-slate-50 rounded-3xl outline-none font-bold text-slate-800" />
+               <input name="name" required defaultValue={editingCourse?.name} placeholder="Masalan: Full-Stack Bootcamp" className="w-full p-6 bg-slate-50 rounded-3xl outline-none font-bold text-slate-800" />
             </div>
             <div className="space-y-2">
                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Narxi (SO'M)</label>
-               <input name="price" type="number" required placeholder="1,200,000" className="w-full p-6 bg-slate-50 rounded-3xl outline-none font-bold text-green-600" />
+               <input name="price" type="number" required defaultValue={editingCourse?.price} placeholder="1,200,000" className="w-full p-6 bg-slate-50 rounded-3xl outline-none font-bold text-green-600" />
             </div>
             <div className="space-y-2">
                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Tavsif (Majburiy emas)</label>
-               <textarea name="description" className="w-full p-6 bg-slate-50 rounded-3xl outline-none font-bold text-slate-800 h-32" />
+               <textarea name="description" defaultValue={editingCourse?.description} className="w-full p-6 bg-slate-50 rounded-3xl outline-none font-bold text-slate-800 h-32" />
             </div>
-            <Button type="submit" className="w-full py-8 text-lg">DAVOM ETISH</Button>
+            <Button type="submit" className="w-full py-8 text-lg">SAQLASH</Button>
          </form>
       </Modal>
+
+      <ConfirmModal 
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={() => { if (deletingId) { deleteCourse(deletingId); setDeletingId(null); } }}
+        title="Kursni o'chirish"
+        message="Rostdan ham bu kursni o'chirasizmi? Barcha bog'liq ma'lumotlar ham o'chiriladi."
+        confirmText="O'CHIRISH"
+      />
     </div>
   );
 };

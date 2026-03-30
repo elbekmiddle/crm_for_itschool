@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useExamStore } from '../store/useExamStore';
 import { 
   Trophy, 
@@ -16,7 +16,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import api from '../lib/api';
+import ConfirmModal from '../components/ConfirmModal';
 
 const StatCard = ({ icon: Icon, label, value, color }: any) => (
   <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-50 flex flex-col items-center text-center space-y-6 group hover:shadow-2xl transition-all">
@@ -31,9 +31,11 @@ const StatCard = ({ icon: Icon, label, value, color }: any) => (
 );
 
 const UserDashboard = () => {
-  const { exams, fetchExams, history, fetchHistory, isLoading } = useExamStore();
+  const { exams, fetchExams, fetchHistory, isLoading } = useExamStore();
   const navigate = useNavigate();
   const studentEmail = localStorage.getItem('exam_student_email') || 'O`quvchi';
+
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   useEffect(() => {
     fetchExams();
@@ -73,7 +75,7 @@ const UserDashboard = () => {
            <button onClick={() => navigate('/history')} className="px-10 py-5 bg-white shadow-xl rounded-[2rem] border border-slate-50 font-black text-xs uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-all flex items-center gap-2">
               <Activity className="w-5 h-5" /> To'lov/Davomat
            </button>
-           <button onClick={handleLogout} className="p-5 bg-red-50 text-red-500 rounded-[2rem] hover:bg-red-500 hover:text-white transition-all shadow-lg border border-red-100">
+           <button onClick={() => setIsLogoutModalOpen(true)} className="p-5 bg-red-50 text-red-500 rounded-[2rem] hover:bg-red-500 hover:text-white transition-all shadow-lg border border-red-100">
               <LogOut className="w-6 h-6" />
            </button>
         </div>
@@ -138,6 +140,16 @@ const UserDashboard = () => {
           )}
         </div>
       </section>
+
+      <ConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={handleLogout}
+        title="Tizimdan chiqish"
+        message="Rostdan ham tizimdan chiqmoqchimisiz?"
+        confirmText="Chiqish"
+        variant="danger"
+      />
 
     </div>
   );

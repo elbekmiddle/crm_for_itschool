@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login | The Academic Edge</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed-variant": "#563400",
+              "secondary-dim": "#005c3d",
+              "on-secondary": "#c8ffe0",
+              "on-surface": "#203044",
+              "surface-container": "#dce9ff",
+              "surface-container-lowest": "#ffffff",
+              "secondary-fixed-dim": "#58e7ab",
+              "on-primary-fixed": "#000000",
+              "on-tertiary": "#fff0e3",
+              "surface-variant": "#c9deff",
+              "on-secondary-fixed": "#00452d",
+              "primary": "#4a40e0",
+              "tertiary-dim": "#714600",
+              "on-surface-variant": "#4d5d73",
+              "error-dim": "#a70138",
+              "error": "#b41340",
+              "inverse-on-surface": "#8e9eb7",
+              "primary-container": "#9795ff",
+              "surface-bright": "#f4f6ff",
+              "primary-fixed": "#9795ff",
+              "on-secondary-container": "#005a3c",
+              "on-background": "#203044",
+              "on-primary": "#f4f1ff",
+              "on-error": "#ffefef",
+              "inverse-surface": "#000f21",
+              "tertiary-container": "#f8a010",
+              "surface-tint": "#4a40e0",
+              "surface-container-highest": "#c9deff",
+              "on-primary-fixed-variant": "#1a0099",
+              "surface-container-low": "#eaf1ff",
+              "primary-dim": "#3d30d4",
+              "secondary": "#006947",
+              "inverse-primary": "#8582ff",
+              "surface-container-high": "#d2e4ff",
+              "secondary-fixed": "#69f6b8",
+              "on-secondary-fixed-variant": "#006544",
+              "tertiary-fixed-dim": "#e79400",
+              "on-tertiary-container": "#4a2c00",
+              "error-container": "#f74b6d",
+              "on-error-container": "#510017",
+              "surface": "#f4f6ff",
+              "tertiary": "#815100",
+              "on-primary-container": "#14007e",
+              "tertiary-fixed": "#f8a010",
+              "background": "#f4f6ff",
+              "outline-variant": "#9eaec7",
+              "primary-fixed-dim": "#8885ff",
+              "surface-dim": "#bdd6fc",
+              "secondary-container": "#69f6b8",
+              "outline": "#68788f",
+              "on-tertiary-fixed": "#2a1700"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+      .bouncy-hover {
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .bouncy-hover:active {
+        transform: scale(0.98);
+      }
+      .custom-shadow {
+        box-shadow: 0 20px 50px -12px rgba(32, 48, 68, 0.08);
+      }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface min-h-screen flex items-center justify-center p-6 selection:bg-primary-container selection:text-on-primary-container">
+<!-- Background Elements -->
+<div class="fixed inset-0 overflow-hidden -z-10 pointer-events-none">
+<div class="absolute -top-[10%] -left-[5%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-[5%] right-[0%] w-[35%] h-[35%] bg-secondary/5 rounded-full blur-[100px]"></div>
+</div>
+<!-- Main Login Container -->
+<main class="w-full max-w-[1100px] grid md:grid-cols-2 bg-surface-container-lowest rounded-xl custom-shadow overflow-hidden">
+<!-- Left Side: Visual/Branding Section -->
+<section class="hidden md:flex flex-col justify-between p-12 bg-surface-container-low relative overflow-hidden">
+<div class="relative z-10">
+<div class="flex items-center gap-3 mb-12">
+<div class="w-10 h-10 bg-gradient-to-br from-primary to-primary-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">school</span>
+</div>
+<span class="font-headline font-extrabold text-xl tracking-tighter text-on-surface">Academic Edge</span>
+</div>
+<h1 class="font-headline text-4xl font-bold text-on-surface leading-tight mb-6">
+                    Unlock your <br/>
+<span class="text-primary">intellectual potential.</span>
+</h1>
+<p class="text-on-surface-variant text-lg max-w-sm font-medium">
+                    Empowering Education through Intelligence. One dashboard to rule your campus ecosystem.
+                </p>
+</div>
+<!-- Graphic Component: Floating Data Points -->
+<div class="relative z-10 mt-auto">
+<div class="glass-card p-6 rounded-xl border border-white/40 shadow-sm max-w-[280px]">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="trending_up">trending_up</span>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest font-label font-bold text-on-surface-variant">Global Progress</p>
+<p class="font-headline font-bold text-lg">+24.8%</p>
+</div>
+</div>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary to-secondary w-[72%] rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Abstract Background Decorative Element -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/4 -translate-y-1/2 w-[120%] h-full opacity-10 pointer-events-none">
+<img class="w-full h-full object-cover" data-alt="abstract flowing 3d gradients in shades of indigo and emerald green with soft organic shapes and high-end tech aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3ivAH1_awdjeK3cwIVt13RfoofnF8-tKwfGAeKnGa1H_vL8jghh4ey2ACrgADuzKCVYdXnv4cHi883EZ1WcZ4rpkyzKSbd6BWRbg42NoQ4DAT2dHd4gIQrdvLyowcSJtpq7x6Teku5u6XU-KrGvXvRkPcIdXfDrKWS8vfp_mxvFyOhDYDYoZif2cpXBXd4n-Pe3F2PGdj07744jol6xDVWMVdiousJiFedIFluBJhzzq7mO0XNjWURvRCuzZQKufKSJ0AVJ7h4zcE"/>
+</div>
+</section>
+<!-- Right Side: Login Form -->
+<section class="p-8 md:p-16 flex flex-col justify-center bg-white">
+<div class="md:hidden flex items-center gap-3 mb-10">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-sm" style="font-variation-settings: 'FILL' 1;">school</span>
+</div>
+<span class="font-headline font-extrabold text-lg tracking-tighter">Academic Edge</span>
+</div>
+<div class="mb-10">
+<h2 class="font-headline text-3xl font-bold text-on-surface mb-2">Welcome Back</h2>
+<p class="text-on-surface-variant font-medium">Please enter your credentials to access the portal.</p>
+</div>
+<form class="space-y-6">
+<!-- ID/Email Field -->
+<div class="space-y-2">
+<label class="block font-label text-[11px] font-bold uppercase tracking-wider text-on-surface-variant ml-1" for="id-input">
+                        Institutional ID or Email
+                    </label>
+<div class="relative">
+<div class="absolute inset-y-0 left-4 flex items-center pointer-events-none text-outline">
+<span class="material-symbols-outlined text-[20px]" data-icon="alternate_email">alternate_email</span>
+</div>
+<input class="w-full pl-12 pr-4 py-4 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary/40 text-on-surface placeholder:text-outline transition-all" id="id-input" placeholder="e.g. j.doe@academicedge.edu" type="text"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="space-y-2">
+<div class="flex justify-between items-center px-1">
+<label class="block font-label text-[11px] font-bold uppercase tracking-wider text-on-surface-variant" for="password-input">
+                            Password
+                        </label>
+<a class="text-[11px] font-bold text-primary hover:text-primary-dim uppercase tracking-wider transition-colors" href="#">
+                            Forgot Password?
+                        </a>
+</div>
+<div class="relative">
+<div class="absolute inset-y-0 left-4 flex items-center pointer-events-none text-outline">
+<span class="material-symbols-outlined text-[20px]" data-icon="lock">lock</span>
+</div>
+<input class="w-full pl-12 pr-12 py-4 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary/40 text-on-surface placeholder:text-outline transition-all" id="password-input" placeholder="••••••••••••" type="password"/>
+<button class="absolute inset-y-0 right-4 flex items-center text-outline hover:text-on-surface-variant transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+<!-- Remember Me Toggle -->
+<div class="flex items-center gap-3 px-1">
+<input class="w-5 h-5 rounded-lg border-outline-variant text-primary focus:ring-primary cursor-pointer" id="remember" type="checkbox"/>
+<label class="text-sm font-medium text-on-surface-variant cursor-pointer select-none" for="remember">Keep me signed in for 30 days</label>
+</div>
+<!-- Action Button -->
+<button class="w-full py-4 bg-gradient-to-r from-primary to-primary-container text-white font-headline font-bold rounded-full shadow-lg shadow-primary/20 bouncy-hover hover:-translate-y-0.5 mt-4" type="submit">
+                    Sign In to Portal
+                </button>
+</form>
+<!-- SSO Options -->
+<div class="mt-10">
+<div class="relative flex items-center mb-8">
+<div class="flex-grow border-t border-surface-container-highest"></div>
+<span class="flex-shrink mx-4 text-[10px] font-label font-bold uppercase tracking-[0.2em] text-outline">Or secure login with</span>
+<div class="flex-grow border-t border-surface-container-highest"></div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<button class="flex items-center justify-center gap-3 py-3 border border-outline-variant/30 rounded-full hover:bg-surface-container-low transition-colors bouncy-hover">
+<img alt="Google Logo" class="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAikUHCBCGvADWAJPZPlsoxqYk8DrT9ph3jSG-cozHdQmNZP1QM1aUep8l4Sp5x-05xF6NC1UFTRJsjT7wAeFIz9MS8Hc8Iv-741MTkiagdIH3F42wxjo0ZKSJ0TCN6eTlHQHCVhyQ7XDhaoTq9M2YPeznZkAnmetDFBgkkL1ab2DssE04DvQ20wg0Ylzk5GbSAxSvOjSV6E4HJkPCEKSR4s6VgvnTVVmbPSBpMlCtR19tcwL4dhh-QP3grShtqwmm1zNs7EQH3uFOE"/>
+<span class="text-sm font-semibold text-on-surface">Google Workspace</span>
+</button>
+<button class="flex items-center justify-center gap-3 py-3 border border-outline-variant/30 rounded-full hover:bg-surface-container-low transition-colors bouncy-hover">
+<span class="material-symbols-outlined text-blue-600 text-[20px]" data-icon="hub">hub</span>
+<span class="text-sm font-semibold text-on-surface">Microsoft 365</span>
+</button>
+</div>
+</div>
+<!-- Footer Meta -->
+<footer class="mt-12 text-center">
+<p class="text-xs text-on-surface-variant font-medium">
+                    New to Academic Edge? 
+                    <a class="text-primary font-bold hover:underline" href="#">Request access from your registrar.</a>
+</p>
+<div class="mt-8 flex justify-center gap-6 text-[10px] font-label font-bold uppercase tracking-widest text-outline">
+<a class="hover:text-primary transition-colors" href="#">Privacy</a>
+<a class="hover:text-primary transition-colors" href="#">Terms</a>
+<a class="hover:text-primary transition-colors" href="#">Support</a>
+</div>
+</footer>
+</section>
+</main>
+<!-- Support Floating Badge (Task Suppression: No FAB on Login) -->
+</body></html>

@@ -62,7 +62,7 @@ const ExamPage: React.FC = () => {
 
             <div className="space-y-4 mt-8">
               {currentQuestion.type === 'multiple_choice' ? (
-                currentQuestion.options.map((opt) => (
+                currentQuestion.options.map((opt: { id: string, text: string }) => (
                   <label 
                     key={opt.id}
                     className={cn(

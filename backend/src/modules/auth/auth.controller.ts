@@ -1,6 +1,7 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Request, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { StudentLoginDto } from './dto/student-login.dto';
 import { RefreshTokenDto } from './dto/refresh.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -16,6 +17,14 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Return access and refresh tokens.' })
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @Post('student-login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login student and get tokens' })
+  @ApiResponse({ status: 200, description: 'Return access and refresh tokens.' })
+  studentLogin(@Body() studentLoginDto: StudentLoginDto) {
+    return this.authService.studentLogin(studentLoginDto);
   }
 
   @Post('refresh')

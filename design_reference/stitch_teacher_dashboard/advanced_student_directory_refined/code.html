@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Student Directory | Scholar Flow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .font-mono-ui { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+        .scale-98:active { transform: scale(0.98); }
+        .stripe-table-row:hover { background-color: rgba(0, 0, 0, 0.015); }
+        .bulk-action-bar { transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .bulk-action-bar.active { transform: translateY(0); }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error-dim": "#a70138",
+                        "tertiary-fixed": "#f8a010",
+                        "on-secondary-fixed-variant": "#006544",
+                        "on-primary": "#ffffff",
+                        "primary-dim": "#3d30d4",
+                        "on-error": "#ffefef",
+                        "surface-variant": "#f1f3f5",
+                        "on-tertiary": "#fff0e3",
+                        "surface-dim": "#f8f9fa",
+                        "primary-container": "#e8e8ff",
+                        "secondary-dim": "#005c3d",
+                        "surface-container-low": "#ffffff",
+                        "tertiary": "#815100",
+                        "primary": "#635bff", /* Stripe-inspired primary */
+                        "surface-tint": "#635bff",
+                        "on-background": "#1a1f36",
+                        "surface": "#ffffff",
+                        "secondary": "#006947",
+                        "secondary-fixed": "#69f6b8",
+                        "on-surface": "#1a1f36",
+                        "inverse-primary": "#8582ff",
+                        "surface-container": "#ffffff",
+                        "outline": "#e3e8ee",
+                        "on-surface-variant": "#4f566b",
+                        "error": "#df1b41",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#ffffff",
+                        "primary-fixed": "#9795ff",
+                        "inverse-surface": "#000f21",
+                        "error-container": "#f74b6d",
+                        "tertiary-container": "#f8a010",
+                        "outline-variant": "#e3e8ee",
+                        "background": "#f7f9fc",
+                        "on-primary-container": "#14007e",
+                    },
+                    fontFamily: {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: { "DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background font-body text-on-surface selection:bg-primary-container">
+<aside class="fixed left-0 top-0 h-full flex flex-col w-64 border-r border-outline bg-white z-50">
+<div class="px-6 py-8 flex flex-col gap-1">
+<span class="text-xl font-bold text-primary font-headline tracking-tight">Scholar Flow</span>
+<span class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/60 font-semibold">Academic Edge</span>
+</div>
+<nav class="flex-1 flex flex-col gap-0.5 px-3">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-variant rounded-md transition-all text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="dashboard">dashboard</span> Dashboard
+        </a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-variant rounded-md transition-all text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="school">school</span> Programs
+        </a>
+<a class="flex items-center gap-3 px-3 py-2 text-primary bg-primary-container/30 rounded-md transition-all text-sm font-semibold" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="group">group</span> Students
+        </a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-variant rounded-md transition-all text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="person_add">person_add</span> Admissions
+        </a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-variant rounded-md transition-all text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="analytics">analytics</span> Analytics
+        </a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-variant rounded-md transition-all text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="settings">settings</span> Settings
+        </a>
+</nav>
+</aside>
+<header class="fixed top-0 right-0 left-64 z-40 flex justify-between items-center px-8 h-14 bg-white/80 backdrop-blur-md border-b border-outline">
+<div class="flex items-center flex-1 max-w-xl">
+<div class="relative w-full group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-on-surface-variant/40 text-lg" data-icon="search">search</span>
+</div>
+<input class="block w-full pl-10 pr-12 py-1.5 bg-transparent border border-transparent focus:border-primary/20 focus:ring-4 focus:ring-primary/5 rounded-lg text-sm transition-all placeholder:text-on-surface-variant/40" placeholder="Search students... (⌘K)" type="text"/>
+<div class="absolute inset-y-0 right-2 flex items-center">
+<kbd class="hidden sm:inline-flex items-center px-1.5 py-0.5 border border-outline rounded bg-surface-variant text-[10px] font-mono-ui text-on-surface-variant/60">⌘K</kbd>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex gap-1">
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-variant rounded transition-all">
+<span class="material-symbols-outlined text-xl" data-icon="notifications">notifications</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-variant rounded transition-all">
+<span class="material-symbols-outlined text-xl" data-icon="help_outline">help_outline</span>
+</button>
+</div>
+<div class="w-px h-5 bg-outline mx-1"></div>
+<div class="flex items-center gap-2">
+<img alt="User Profile" class="w-7 h-7 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhw5FIQ5Uu75GJNRDEukjkRtabughjP-0s6U4Kv_CrqkDtip6sqFy_xFaJ1_aIZSrxG2X87NYsUBE1OTOqV2Rj71899EyYgD2XS1T_JiKfDMktoglxneZtXTsftEQs6xbqzZXWZ6MZ8F64hDoPez-cX0mB1kn3z-l8f2-ABNuo8oyeCfTOL5ZiJLl-AVx_abejFuMmCtt3aMcV4cTrEBJ6RhOI5ShEMvJZMJIUQpJfR3gDOKlOWyP9qVmKAbpyJCCqz3Px61_VCjxT"/>
+<span class="text-xs font-semibold text-on-surface hidden lg:block">Dr. Julian Vance</span>
+</div>
+</div>
+</header>
+<main class="ml-64 pt-14 p-8 min-h-screen">
+<div class="max-w-[1400px] mx-auto space-y-8">
+<div class="flex justify-between items-center">
+<div>
+<h1 class="text-2xl font-bold font-headline text-on-surface tracking-tight">Students</h1>
+<p class="text-sm text-on-surface-variant font-body mt-1">1,284 students enrolled in current academic year</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 text-sm font-semibold border border-outline rounded-md bg-white hover:bg-surface-variant transition-all flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-lg" data-icon="file_download">file_download</span> Export
+                </button>
+<button class="px-4 py-1.5 text-sm font-semibold text-white bg-primary hover:bg-primary-dim rounded-md transition-all flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span> Create Student
+                </button>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-6">
+<div class="bg-white border border-outline p-5 rounded-lg">
+<p class="text-[11px] font-bold text-on-surface-variant/60 uppercase tracking-widest mb-1">Total Enrollments</p>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-mono-ui font-bold text-on-surface">1,284</span>
+<span class="text-xs font-bold text-secondary">+12%</span>
+</div>
+</div>
+<div class="bg-white border border-outline p-5 rounded-lg">
+<p class="text-[11px] font-bold text-on-surface-variant/60 uppercase tracking-widest mb-1">Active Now</p>
+<span class="text-2xl font-mono-ui font-bold text-on-surface">842</span>
+</div>
+<div class="bg-white border border-outline p-5 rounded-lg">
+<p class="text-[11px] font-bold text-on-surface-variant/60 uppercase tracking-widest mb-1">Pending Reviews</p>
+<span class="text-2xl font-mono-ui font-bold text-on-surface">14</span>
+</div>
+</div>
+<div class="bg-white border border-outline rounded-lg shadow-sm">
+<div class="px-4 py-3 border-b border-outline flex items-center justify-between">
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium border border-outline rounded hover:bg-surface-variant transition-all text-on-surface-variant">
+<span class="material-symbols-outlined text-lg" data-icon="filter_list">filter_list</span> Filter
+                    </button>
+<button class="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium border border-outline rounded hover:bg-surface-variant transition-all text-on-surface-variant">
+<span class="material-symbols-outlined text-lg" data-icon="view_column">view_column</span> View
+                    </button>
+<div class="w-px h-4 bg-outline mx-1"></div>
+<span class="text-xs text-on-surface-variant/50 font-medium">1,284 total</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-1.5 text-on-surface-variant/40 hover:text-on-surface hover:bg-surface-variant rounded transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="sort">sort</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline bg-surface-variant/30">
+<th class="pl-4 pr-0 py-3 w-10">
+<input class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/20" type="checkbox"/>
+</th>
+<th class="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant/70">Student</th>
+<th class="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant/70">Student ID</th>
+<th class="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant/70">Course</th>
+<th class="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant/70">Group</th>
+<th class="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant/70">Enrolled</th>
+<th class="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant/70 text-center">Status</th>
+<th class="px-4 py-3"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline">
+<!-- Row 1 -->
+<tr class="stripe-table-row transition-colors group">
+<td class="pl-4 pr-0 py-3.5">
+<input class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/20" type="checkbox"/>
+</td>
+<td class="px-4 py-3.5">
+<div class="flex items-center gap-3">
+<img alt="Avatar" class="w-8 h-8 rounded-full border border-outline object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEY-817TyfGbUL6GQ6qxyK_2eSsthPXZoYFq-aWqdevrzm8e4DVHFmIuX1NGHo_Lf_Rpj9iNARqTcv57dOF4TcFIBHTBeCLYnC-DIpNxZhRo98UfEQE0N1HG9i8q8k_lYZ2q4DdIuRkEy8Q5Vywm3s8RKnbLaNY_PcfAzE6X2okGpbQxNkVQska0xpHiwPRjme8Cz-mgQXQmc2LOLJsnGIgw2P5Yb8KQbK3ZRwCBmMCqJngf-2HqQwiAgHAlzvPFsSketu40861YpB"/>
+<div>
+<p class="text-sm font-semibold text-on-surface leading-none">Alexandria Bennett</p>
+<p class="text-xs text-on-surface-variant/70 mt-1">a.bennett@scholar.edu</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-3.5 font-mono-ui text-[13px] text-on-surface-variant">#STU-9821</td>
+<td class="px-4 py-3.5 text-sm text-on-surface-variant">Computer Science</td>
+<td class="px-4 py-3.5">
+<span class="font-mono-ui text-[12px] px-2 py-0.5 bg-surface-variant border border-outline rounded text-on-surface-variant font-medium">ALPHA-24</span>
+</td>
+<td class="px-4 py-3.5 font-mono-ui text-[13px] text-on-surface-variant">Oct 12, 2023</td>
+<td class="px-4 py-3.5 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-secondary/10 text-secondary border border-secondary/20">Active</span>
+</td>
+<td class="px-4 py-3.5 text-right">
+<button class="p-1 text-on-surface-variant/40 hover:text-on-surface transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="more_horiz">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="stripe-table-row transition-colors group">
+<td class="pl-4 pr-0 py-3.5">
+<input class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/20" type="checkbox"/>
+</td>
+<td class="px-4 py-3.5">
+<div class="flex items-center gap-3">
+<img alt="Avatar" class="w-8 h-8 rounded-full border border-outline object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyDccuu3SOSGhWSKq3aKoM9oMehnMG8pUDlFPgcA7FIkNouu1xutQzKOZHAj20j-srEtQmtReOrcAjieUWKdK-s28oyVhX09vmZYQtN4WvOfV2MTFR68yVm-HMJOl1QmpnHGeqNerbBuC_rd_aXPmK2RbqbjgP2uKXkJXPxMmZ0PPPi5ikqEcZGrXSUawxQnOFpD2W0aZ1Vh5JDh2D2nB8Vdhj3AlxtvATYyziQDkUdfw55Txv1zGTZH3usAP7pOcFXG-yKPXQUX8N"/>
+<div>
+<p class="text-sm font-semibold text-on-surface leading-none">Marcus Holloway</p>
+<p class="text-xs text-on-surface-variant/70 mt-1">m.holloway@scholar.edu</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-3.5 font-mono-ui text-[13px] text-on-surface-variant">#STU-4562</td>
+<td class="px-4 py-3.5 text-sm text-on-surface-variant">Business Admin</td>
+<td class="px-4 py-3.5">
+<span class="font-mono-ui text-[12px] px-2 py-0.5 bg-surface-variant border border-outline rounded text-on-surface-variant font-medium">BETA-09</span>
+</td>
+<td class="px-4 py-3.5 font-mono-ui text-[13px] text-on-surface-variant">Sep 05, 2023</td>
+<td class="px-4 py-3.5 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-tertiary/10 text-tertiary border border-tertiary/20">Frozen</span>
+</td>
+<td class="px-4 py-3.5 text-right">
+<button class="p-1 text-on-surface-variant/40 hover:text-on-surface transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="more_horiz">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="stripe-table-row transition-colors group">
+<td class="pl-4 pr-0 py-3.5">
+<input class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/20" type="checkbox"/>
+</td>
+<td class="px-4 py-3.5">
+<div class="flex items-center gap-3">
+<img alt="Avatar" class="w-8 h-8 rounded-full border border-outline object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3Jny0_xyKn6z_wX5aEBZAPmkLENc2BpTDL47zOogFLngf7wTXDZPPydZfhUKdQ1NwmZ17CWXD4TGsHUcUn2SbkV3_4jHQL5yWz5KGYCEGqN70v78Uqz9tgHE96KV2EElEm6aeg8oGra60KQOj6MhWe9hjqcFWOhZ8r9AAvNus17Ax8GW2DJ3hO_12Yv3ImCj-7JhBaC2MPhzfePgOhbfArJBcGcTUgQtBNuYtWo8Fi8syh4S4AYSQUzfAlTRGhGVXfVbJ4pjdgwr8"/>
+<div>
+<p class="text-sm font-semibold text-on-surface leading-none">Elena Rodriguez</p>
+<p class="text-xs text-on-surface-variant/70 mt-1">e.rodriguez@scholar.edu</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-3.5 font-mono-ui text-[13px] text-on-surface-variant">#STU-1120</td>
+<td class="px-4 py-3.5 text-sm text-on-surface-variant">Graphic Design</td>
+<td class="px-4 py-3.5">
+<span class="font-mono-ui text-[12px] px-2 py-0.5 bg-surface-variant border border-outline rounded text-on-surface-variant font-medium">ALPHA-24</span>
+</td>
+<td class="px-4 py-3.5 font-mono-ui text-[13px] text-on-surface-variant">Nov 20, 2023</td>
+<td class="px-4 py-3.5 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-secondary/10 text-secondary border border-secondary/20">Active</span>
+</td>
+<td class="px-4 py-3.5 text-right">
+<button class="p-1 text-on-surface-variant/40 hover:text-on-surface transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="more_horiz">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="stripe-table-row transition-colors group">
+<td class="pl-4 pr-0 py-3.5">
+<input class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/20" type="checkbox"/>
+</td>
+<td class="px-4 py-3.5">
+<div class="flex items-center gap-3">
+<img alt="Avatar" class="w-8 h-8 rounded-full border border-outline object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNoYnEKbJJHoIeuYT5wd1hDYqrmM1i67ecK5RhCPCrcT8QeVDywnK1X1p_f11FIUP6RtuPvk53LM8in9B57FgIfGLcOMgj4hOY0__k7vwPE5VyG27a2sFWZh8f8gXCHOgRdSpPVoVVYeVn9cNaT_PwKXEbbH47KP1nKfjfwURpVjGKALpNcH5xPfrpuNe2qoBIyxpciGScHfPLJQdhDFUjmaEfxhQpHNAs-q09kd1gWZRtWNy4DAh48-sWmsMb89p7qvKgsYq2GUWs"/>
+<div>
+<p class="text-sm font-semibold text-on-surface leading-none">Simon Peters</p>
+<p class="text-xs text-on-surface-variant/70 mt-1">s.peters@scholar.edu</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-3.5 font-mono-ui text-[13px] text-on-surface-variant">#STU-0043</td>
+<td class="px-4 py-3.5 text-sm text-on-surface-variant">Civil Engineering</td>
+<td class="px-4 py-3.5">
+<span class="font-mono-ui text-[12px] px-2 py-0.5 bg-surface-variant border border-outline rounded text-on-surface-variant font-medium">GAMMA-01</span>
+</td>
+<td class="px-4 py-3.5 font-mono-ui text-[13px] text-on-surface-variant">Aug 18, 2023</td>
+<td class="px-4 py-3.5 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-error/10 text-error border border-error/20">Dropped</span>
+</td>
+<td class="px-4 py-3.5 text-right">
+<button class="p-1 text-on-surface-variant/40 hover:text-on-surface transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="more_horiz">more_horiz</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-4 py-3 border-t border-outline flex items-center justify-between">
+<div class="flex items-center gap-1">
+<button class="p-1 text-on-surface-variant/40 disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined text-lg" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="px-2 py-0.5 bg-primary text-white text-xs font-bold rounded">1</button>
+<button class="px-2 py-0.5 hover:bg-surface-variant text-on-surface-variant text-xs font-medium rounded">2</button>
+<button class="px-2 py-0.5 hover:bg-surface-variant text-on-surface-variant text-xs font-medium rounded">3</button>
+<span class="px-1 text-on-surface-variant/40 text-[10px]">...</span>
+<button class="px-2 py-0.5 hover:bg-surface-variant text-on-surface-variant text-xs font-medium rounded">128</button>
+<button class="p-1 text-on-surface-variant/40 hover:text-on-surface transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+<p class="text-xs text-on-surface-variant/60 font-medium">Viewing 1-4 of 1,284 entries</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Bulk Action Bar -->
+<div class="bulk-action-bar fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-on-background text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-6 border border-white/10 active">
+<span class="text-xs font-bold font-mono-ui bg-primary px-2 py-0.5 rounded">2 students selected</span>
+<div class="h-4 w-px bg-white/20"></div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-1.5 text-xs font-semibold hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="edit">edit</span> Edit
+        </button>
+<button class="flex items-center gap-1.5 text-xs font-semibold hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="move_to_inbox">move_to_inbox</span> Reassign
+        </button>
+<button class="flex items-center gap-1.5 text-xs font-semibold text-error hover:text-error-dim transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="delete">delete</span> Delete
+        </button>
+</div>
+<div class="h-4 w-px bg-white/20"></div>
+<button class="p-1 hover:bg-white/10 rounded transition-all" onclick="this.closest('.bulk-action-bar').classList.remove('active')">
+<span class="material-symbols-outlined text-lg" data-icon="close">close</span>
+</button>
+</div>
+</body></html>

@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useExamStore } from '../store/useExamStore';
 import { Wallet, Calendar, ChevronLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 
 const HistoryPage = () => {
-  const { payments, attendance, fetchHistory, isLoading } = useExamStore();
+  const { payments, attendance, fetchHistory } = useExamStore();
   const studentId = localStorage.getItem('exam_student_id') || '';
 
   useEffect(() => {

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Financial Monitoring | Scholar Flow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-tint": "#4a40e0",
+              "surface-bright": "#f4f6ff",
+              "on-tertiary-fixed": "#2a1700",
+              "tertiary-container": "#f8a010",
+              "error": "#b41340",
+              "surface-dim": "#bdd6fc",
+              "inverse-surface": "#000f21",
+              "primary-dim": "#3d30d4",
+              "error-dim": "#a70138",
+              "surface-container-high": "#d2e4ff",
+              "surface-container-highest": "#c9deff",
+              "primary": "#4a40e0",
+              "surface": "#f4f6ff",
+              "on-secondary": "#c8ffe0",
+              "on-surface": "#203044",
+              "primary-fixed-dim": "#8885ff",
+              "surface-container-lowest": "#ffffff",
+              "on-primary": "#f4f1ff",
+              "error-container": "#f74b6d",
+              "on-tertiary": "#fff0e3",
+              "on-error-container": "#510017",
+              "inverse-on-surface": "#8e9eb7",
+              "on-secondary-fixed-variant": "#006544",
+              "on-primary-container": "#14007e",
+              "tertiary-dim": "#714600",
+              "secondary-fixed-dim": "#58e7ab",
+              "on-primary-fixed-variant": "#1a0099",
+              "secondary": "#006947",
+              "on-primary-fixed": "#000000",
+              "outline-variant": "#9eaec7",
+              "on-secondary-container": "#005a3c",
+              "inverse-primary": "#8582ff",
+              "primary-container": "#9795ff",
+              "tertiary-fixed-dim": "#e79400",
+              "on-tertiary-container": "#4a2c00",
+              "secondary-fixed": "#69f6b8",
+              "on-tertiary-fixed-variant": "#563400",
+              "on-background": "#203044",
+              "on-error": "#ffefef",
+              "primary-fixed": "#9795ff",
+              "outline": "#68788f",
+              "tertiary-fixed": "#f8a010",
+              "secondary-dim": "#005c3d",
+              "surface-container-low": "#eaf1ff",
+              "on-surface-variant": "#4d5d73",
+              "tertiary": "#815100",
+              "surface-container": "#dce9ff",
+              "secondary-container": "#69f6b8",
+              "background": "#f4f6ff",
+              "surface-variant": "#c9deff",
+              "on-secondary-fixed": "#00452d"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body { font-family: 'Inter', sans-serif; }
+      h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif; }
+      .glass-effect {
+        background: rgba(234, 241, 255, 0.7);
+        backdrop-filter: blur(12px);
+      }
+      .bento-card {
+        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .bento-card:hover {
+        transform: translateY(-4px);
+      }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- Sidebar Navigation -->
+<aside class="h-screen w-64 fixed left-0 top-0 overflow-y-auto bg-slate-50 dark:bg-slate-950 flex flex-col border-r border-slate-200/50 dark:border-slate-800/50 z-50">
+<div class="p-6">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-lg">
+<span class="material-symbols-outlined">school</span>
+</div>
+<div>
+<h1 class="text-lg font-black text-indigo-700 dark:text-indigo-400 leading-none">Scholar Flow</h1>
+<p class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 mt-1">Education CRM</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 mt-4 px-2 space-y-1">
+<a class="flex items-center gap-3 py-3 px-4 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all rounded-xl hover:translate-x-1" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-medium text-[0.875rem]">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 py-3 px-4 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all rounded-xl hover:translate-x-1" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-medium text-[0.875rem]">Groups</span>
+</a>
+<a class="flex items-center gap-3 py-3 px-4 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all rounded-xl hover:translate-x-1" href="#">
+<span class="material-symbols-outlined">event_available</span>
+<span class="font-medium text-[0.875rem]">Attendance</span>
+</a>
+<a class="flex items-center gap-3 py-3 px-4 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all rounded-xl hover:translate-x-1" href="#">
+<span class="material-symbols-outlined">school</span>
+<span class="font-medium text-[0.875rem]">Students</span>
+</a>
+<a class="flex items-center gap-3 py-3 px-4 text-indigo-600 dark:text-indigo-400 border-l-4 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20 transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="font-medium text-[0.875rem]">Finances</span>
+</a>
+<a class="flex items-center gap-3 py-3 px-4 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all rounded-xl hover:translate-x-1" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-medium text-[0.875rem]">Settings</span>
+</a>
+</nav>
+<div class="p-4 mt-auto border-t border-slate-100/50">
+<button class="w-full py-3 px-4 rounded-full bg-gradient-to-br from-primary to-primary-container text-white font-semibold text-sm shadow-md hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">add</span>
+                Quick Action
+            </button>
+<div class="mt-4 space-y-1">
+<a class="flex items-center gap-3 py-2 px-4 text-slate-400 hover:text-on-surface text-xs transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">help</span>
+                    Help Center
+                </a>
+<a class="flex items-center gap-3 py-2 px-4 text-error opacity-70 hover:opacity-100 text-xs transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">logout</span>
+                    Logout
+                </a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen">
+<!-- Top App Bar -->
+<header class="w-full sticky top-0 z-40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl shadow-[0_20px_50px_-12px_rgba(32,48,68,0.08)] px-8 py-4 flex justify-between items-center">
+<div class="flex items-center gap-6 flex-1">
+<h2 class="text-xl font-bold tracking-tighter text-indigo-700 dark:text-indigo-300">Financial Monitoring</h2>
+<div class="relative max-w-md w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary/40 placeholder:text-outline-variant" placeholder="Search Transaction ID or Student ID..." type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant text-lg cursor-pointer">mood</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 px-4 py-2 rounded-full bg-error-container/10 text-error text-xs font-bold transition-all active:scale-95">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">warning</span>
+                    Unpaid Fees
+                </button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-slate-100 transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden border-2 border-white shadow-sm cursor-pointer active:scale-95 transition-transform">
+<img alt="Manager profile photo" class="w-full h-full object-cover" data-alt="close up portrait of professional young female manager with friendly expression in bright corporate office" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAYJOiOY2Ry1rcK_xtYaF7u5W85r32iI-oGm17ZZ7_14-fW9oL-R8X01_N4Xz9Wt7PMNEsqH9TO7i34h0s__Y_zXLlF2qqhva8LqBi4jp7plJhW3CvWSWCpyjkiWR8iM9nhD3k4LVh2wA0Wsi5PcwAfvQ3hYttjEY5PpfMdBRjx1JgFZRt5G-OYNEMEpAWJenmKoymOGg0ZclqPdRlVwoOUnjw4X-WDG6Nunyjp1TcDeR21iy01Y_q49GcPHzL07NdzmL024heTahRk"/>
+</div>
+</div>
+</header>
+<div class="p-8 max-w-[1400px] mx-auto grid grid-cols-12 gap-8">
+<!-- Financial Tabs and Table Area -->
+<div class="col-span-12 lg:col-span-8 space-y-8">
+<!-- Tab Navigation -->
+<div class="flex items-center gap-8 border-b border-slate-200/50">
+<button class="pb-4 text-indigo-600 dark:text-indigo-400 font-bold border-b-2 border-indigo-600 text-sm tracking-tight transition-all">Recent Payments</button>
+<button class="pb-4 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 text-sm font-semibold tracking-tight transition-all flex items-center gap-2">
+                        Debt Students
+                        <span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[0.65rem] font-black">8</span>
+</button>
+<button class="pb-4 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 text-sm font-semibold tracking-tight transition-all">Monthly Reports</button>
+</div>
+<!-- Payment History Card -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/30">
+<th class="px-6 py-4 text-[0.6875rem] uppercase tracking-[0.05em] font-bold text-on-surface-variant font-label">Transaction ID</th>
+<th class="px-6 py-4 text-[0.6875rem] uppercase tracking-[0.05em] font-bold text-on-surface-variant font-label">Student</th>
+<th class="px-6 py-4 text-[0.6875rem] uppercase tracking-[0.05em] font-bold text-on-surface-variant font-label">Date</th>
+<th class="px-6 py-4 text-[0.6875rem] uppercase tracking-[0.05em] font-bold text-on-surface-variant font-label">Amount</th>
+<th class="px-6 py-4 text-[0.6875rem] uppercase tracking-[0.05em] font-bold text-on-surface-variant font-label">Method</th>
+<th class="px-6 py-4 text-[0.6875rem] uppercase tracking-[0.05em] font-bold text-on-surface-variant font-label">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100/50">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50/50 transition-colors group">
+<td class="px-6 py-4 font-mono text-xs text-on-surface-variant">#TXN-88214</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-bold">AL</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Amara Lawson</p>
+<p class="text-[0.65rem] text-outline">ID: SF-2024-001</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-xs text-on-surface">Oct 24, 2023</td>
+<td class="px-6 py-4 font-bold text-sm text-on-surface">$1,250.00</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full bg-surface-variant/40 text-[0.65rem] font-bold text-on-surface-variant uppercase tracking-wider">Card</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="text-xs font-medium text-secondary">Successful</span>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-50/50 transition-colors group">
+<td class="px-6 py-4 font-mono text-xs text-on-surface-variant">#TXN-88213</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 text-xs font-bold">JS</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Julian Smith</p>
+<p class="text-[0.65rem] text-outline">ID: SF-2024-042</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-xs text-on-surface">Oct 23, 2023</td>
+<td class="px-6 py-4 font-bold text-sm text-on-surface">$850.00</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full bg-surface-variant/40 text-[0.65rem] font-bold text-on-surface-variant uppercase tracking-wider">Cash</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="text-xs font-medium text-secondary">Successful</span>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50/50 transition-colors group">
+<td class="px-6 py-4 font-mono text-xs text-on-surface-variant">#TXN-88212</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-700 text-xs font-bold">EM</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Elena Morales</p>
+<p class="text-[0.65rem] text-outline">ID: SF-2023-118</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-xs text-on-surface">Oct 22, 2023</td>
+<td class="px-6 py-4 font-bold text-sm text-on-surface">$2,100.00</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full bg-surface-variant/40 text-[0.65rem] font-bold text-on-surface-variant uppercase tracking-wider">Card</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary-container animate-pulse"></span>
+<span class="text-xs font-medium text-tertiary">Pending</span>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-slate-50/50 transition-colors group">
+<td class="px-6 py-4 font-mono text-xs text-on-surface-variant">#TXN-88211</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 text-xs font-bold">TK</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Tobias Klein</p>
+<p class="text-[0.65rem] text-outline">ID: SF-2024-009</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-xs text-on-surface">Oct 21, 2023</td>
+<td class="px-6 py-4 font-bold text-sm text-on-surface">$1,250.00</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full bg-surface-variant/40 text-[0.65rem] font-bold text-on-surface-variant uppercase tracking-wider">Card</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="text-xs font-medium text-secondary">Successful</span>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-6 py-4 bg-slate-50/30 flex justify-between items-center">
+<p class="text-xs text-outline font-medium">Showing 4 of 128 transactions</p>
+<div class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant/20 hover:bg-white text-outline-variant transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-white font-bold text-xs shadow-sm">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant/20 hover:bg-white text-on-surface transition-colors font-bold text-xs">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant/20 hover:bg-white text-outline-variant transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Side Panel: AI Risk Insights -->
+<div class="col-span-12 lg:col-span-4 space-y-6">
+<section class="glass-effect rounded-xl p-6 border border-white/40 shadow-[0_20px_50px_-12px_rgba(32,48,68,0.08)] relative overflow-hidden group bento-card">
+<div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl transition-all group-hover:bg-primary/20"></div>
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-lg font-extrabold tracking-tight">Debt Risk Summary</h3>
+<div class="px-3 py-1 bg-primary text-on-primary rounded-full text-[0.65rem] font-black uppercase tracking-widest">AI Insights</div>
+</div>
+<div class="space-y-6">
+<div class="bg-surface-container-lowest/80 p-5 rounded-xl border border-white shadow-sm">
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 rounded-full bg-error-container/20 flex items-center justify-center flex-shrink-0 text-error">
+<span class="material-symbols-outlined">analytics</span>
+</div>
+<div>
+<p class="text-on-surface font-bold text-sm leading-tight">8 student accounts have payments &gt;30 days late.</p>
+<p class="text-xs text-outline-variant mt-2 leading-relaxed">Estimated cashflow impact: <span class="text-error font-bold">$9,420.00</span> in outstanding tuition fees for Q4.</p>
+</div>
+</div>
+</div>
+<div class="space-y-3">
+<h4 class="text-[0.6875rem] font-bold text-outline-variant uppercase tracking-widest px-1">Top Debt Profiles</h4>
+<div class="space-y-2">
+<div class="flex items-center justify-between bg-white/40 p-3 rounded-xl border border-white/60">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-error"></div>
+<span class="text-xs font-bold">Liam Henderson</span>
+</div>
+<span class="text-xs font-black text-on-surface">$2,400.00</span>
+</div>
+<div class="flex items-center justify-between bg-white/40 p-3 rounded-xl border border-white/60">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-error"></div>
+<span class="text-xs font-bold">Sarah Jenkins</span>
+</div>
+<span class="text-xs font-black text-on-surface">$1,150.00</span>
+</div>
+</div>
+</div>
+<div class="pt-4 border-t border-slate-200/50">
+<button class="w-full py-4 bg-primary text-on-primary rounded-full font-bold text-sm flex items-center justify-center gap-3 shadow-lg shadow-primary/20 active:scale-95 transition-all hover:translate-y-[-2px]">
+<span class="material-symbols-outlined text-lg">forward_to_inbox</span>
+                                Send Bulk Reminder
+                            </button>
+<p class="text-[0.65rem] text-center text-outline mt-3 font-medium">Auto-generated reminders include secure payment links.</p>
+</div>
+</div>
+</section>
+<section class="bg-indigo-900 rounded-xl p-6 text-white overflow-hidden relative group bento-card">
+<img alt="Abstract finance texture" class="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-overlay group-hover:scale-110 transition-transform duration-700" data-alt="close up of gold coins and professional financial documents with soft bokeh of lights and professional dark atmosphere" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1HKhCbkqS4o3d2YoX_4wJEK2JeBUuKA-auCwiUK92j9vYe_I3K8QDRidUZGGwm4fawoGg_ySLgjHBtJxFuFpBrF52T0UMRE_v4FxbhVS-zMwjgbgTXsOMrSbvrf_fccBXuRg-pyDQQ4XTV-q7-soFhEUnmyZK4y-4jQ1NRGydhZhWQeMm0MCr16bTvHpHb3nH8ZZ91sIQivxQATDyQ_sRZ3uqjhnPIvmFb6k3B7maJ7vkcXM3V5eUSwbMOQtYmhWIcy5XJ8LqtgHz"/>
+<div class="relative z-10">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-secondary-container">trending_up</span>
+<span class="text-[0.65rem] font-black uppercase tracking-[0.2em] text-secondary-container">Revenue Health</span>
+</div>
+<h4 class="text-2xl font-black mb-1">+12.4%</h4>
+<p class="text-xs text-indigo-200 mb-6">Growth compared to last semester</p>
+<div class="w-full bg-white/10 h-2 rounded-full mb-2 overflow-hidden">
+<div class="bg-secondary-container h-full w-[82%] rounded-full shadow-[0_0_15px_rgba(105,246,184,0.4)]"></div>
+</div>
+<div class="flex justify-between items-center text-[0.65rem] font-bold text-indigo-100">
+<span>$128k Collected</span>
+<span>Target: $150k</span>
+</div>
+</div>
+</section>
+<div class="bg-surface-container-high rounded-xl p-4 flex items-center justify-between group cursor-pointer hover:bg-surface-container-highest transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-on-surface shadow-sm group-hover:rotate-12 transition-transform">
+<span class="material-symbols-outlined text-xl">file_download</span>
+</div>
+<div>
+<p class="text-xs font-black text-on-surface uppercase tracking-tight">Q3 Summary.pdf</p>
+<p class="text-[0.65rem] text-outline">Ready for download • 4.2 MB</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Contextual FAB (Suppressed on Detail Screens as per rules, but shown here as it is a dashboard-level management page) -->
+<button class="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-primary text-on-primary shadow-2xl flex items-center justify-center active:scale-95 transition-all z-50 hover:rotate-90">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</body></html>

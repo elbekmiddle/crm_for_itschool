@@ -5,11 +5,9 @@ import {
   CheckCircle2, 
   XCircle, 
   ArrowLeft, 
-  Info,
-  Clock,
   Target,
-  Trophy,
-  Loader2
+  Loader2,
+  Trophy
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
@@ -87,7 +85,7 @@ const ReviewPage: React.FC = () => {
            </div>
         </div>
         
-        <target className="absolute -right-10 -bottom-10 w-64 h-64 text-slate-50 opacity-10 rotate-12" />
+        <Target className="absolute -right-10 -bottom-10 w-64 h-64 text-slate-50 opacity-10 rotate-12" />
       </motion.div>
 
       {/* Questions Review */}

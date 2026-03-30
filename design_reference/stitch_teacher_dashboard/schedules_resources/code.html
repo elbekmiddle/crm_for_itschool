@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Schedules &amp; Resources | Scholar Flow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary-fixed": "#9795ff",
+              "surface-variant": "#c9deff",
+              "primary-dim": "#3d30d4",
+              "surface-container": "#dce9ff",
+              "secondary-fixed": "#69f6b8",
+              "surface-container-lowest": "#ffffff",
+              "inverse-primary": "#8582ff",
+              "on-surface-variant": "#4d5d73",
+              "on-error-container": "#510017",
+              "error-container": "#f74b6d",
+              "on-error": "#ffefef",
+              "tertiary-fixed": "#f8a010",
+              "surface-tint": "#4a40e0",
+              "on-tertiary-fixed": "#2a1700",
+              "on-tertiary": "#fff0e3",
+              "on-primary": "#f4f1ff",
+              "primary": "#4a40e0",
+              "on-secondary-fixed": "#00452d",
+              "outline-variant": "#9eaec7",
+              "error-dim": "#a70138",
+              "tertiary-container": "#f8a010",
+              "background": "#f4f6ff",
+              "tertiary": "#815100",
+              "surface-container-high": "#d2e4ff",
+              "on-secondary-container": "#005a3c",
+              "on-tertiary-fixed-variant": "#563400",
+              "secondary-fixed-dim": "#58e7ab",
+              "on-tertiary-container": "#4a2c00",
+              "primary-container": "#9795ff",
+              "on-secondary": "#c8ffe0",
+              "surface-dim": "#bdd6fc",
+              "on-primary-fixed": "#000000",
+              "secondary-container": "#69f6b8",
+              "tertiary-dim": "#714600",
+              "on-primary-fixed-variant": "#1a0099",
+              "outline": "#68788f",
+              "surface-bright": "#f4f6ff",
+              "inverse-on-surface": "#8e9eb7",
+              "error": "#b41340",
+              "secondary-dim": "#005c3d",
+              "primary-fixed-dim": "#8885ff",
+              "tertiary-fixed-dim": "#e79400",
+              "surface": "#f4f6ff",
+              "secondary": "#006947",
+              "inverse-surface": "#000f21",
+              "on-surface": "#203044",
+              "on-background": "#203044",
+              "on-primary-container": "#14007e",
+              "surface-container-low": "#eaf1ff",
+              "surface-container-highest": "#c9deff",
+              "on-secondary-fixed-variant": "#006544"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-panel {
+            background: rgba(234, 241, 255, 0.7);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+<!-- Top Navigation Bar -->
+<nav class="bg-slate-50/70 dark:bg-slate-950/70 backdrop-blur-xl docked full-width top-0 sticky z-50 no-border tonal-shift surface-container-low shadow-xl shadow-slate-900/5">
+<div class="flex justify-between items-center w-full px-6 py-4 max-w-screen-2xl mx-auto">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter font-['Plus_Jakarta_Sans']">Scholar Flow</span>
+<div class="hidden md:flex gap-6 items-center">
+<a class="text-slate-500 dark:text-slate-400 hover:text-indigo-500 transition-colors font-['Plus_Jakarta_Sans'] font-bold tracking-tight" href="#">Dashboard</a>
+<a class="text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 pb-1 font-['Plus_Jakarta_Sans'] font-bold tracking-tight" href="#">Schedules</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-indigo-500 transition-colors font-['Plus_Jakarta_Sans'] font-bold tracking-tight" href="#">Analytics</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-indigo-500 transition-colors font-['Plus_Jakarta_Sans'] font-bold tracking-tight" href="#">Resources</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-full transition-all duration-300 scale-95 active:scale-90">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-full transition-all duration-300 scale-95 active:scale-90">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+<img alt="User profile avatar" data-alt="professional portrait of a smiling female educator in a bright office setting with soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2Gi4FLaCnoMpov9sZt2l9vu6NQF4Omargb7u8QK19FSU9-Zv-7PnGXE7xr8uz9rKxUTYi0EvZgtzEpA-zaH9xa2GAlb4v5_wz6zXiwBQ3JcFafAO6NCfc5OMQtuiXCltyiaqxsFgKmo10QgmhPRFr0qo3w6-KgWfVZzaZJq2Bt4tElCKUcIENr93jC4Ugu_S1PF13HtnzMHQRRu0E0d27rpDB6IzRG-SzDUreoJzfmC_hCAxdNEicd5NfZffdKG3sCyDPfoZi5fSH"/>
+</div>
+</div>
+</div>
+</nav>
+<main class="max-w-screen-2xl mx-auto p-6 md:p-10 flex flex-col gap-10">
+<!-- Header & Quick Actions -->
+<header class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+<div>
+<h1 class="text-4xl font-extrabold tracking-tight text-on-surface mb-2">Schedules &amp; Resources</h1>
+<p class="text-on-surface-variant font-medium">Manage your academic week and educational assets in one canvas. 🎓</p>
+</div>
+<div class="flex gap-4">
+<button class="bg-surface-container-high text-on-surface px-6 py-3 rounded-full font-semibold flex items-center gap-2 hover:translate-y-[-2px] transition-transform shadow-lg shadow-on-surface/5">
+<span class="material-symbols-outlined">upload_file</span>
+                    Upload Materials
+                </button>
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary px-8 py-3 rounded-full font-bold flex items-center gap-2 hover:translate-y-[-2px] transition-transform shadow-xl shadow-primary/20">
+<span class="material-symbols-outlined">add</span>
+                    Create Lesson Plan
+                </button>
+</div>
+</header>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Weekly Calendar View (8 cols) -->
+<section class="lg:col-span-8 space-y-6">
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-sm">
+<div class="flex justify-between items-center mb-8">
+<div class="flex items-center gap-4">
+<h2 class="text-xl font-bold">Weekly Schedule</h2>
+<div class="flex bg-surface-container-low rounded-full p-1">
+<button class="px-4 py-1 rounded-full text-xs font-bold bg-white text-primary shadow-sm">Week</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold text-on-surface-variant">Month</button>
+</div>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<button class="p-2 hover:bg-surface-container rounded-full"><span class="material-symbols-outlined">chevron_left</span></button>
+<span class="font-bold text-sm">Oct 23 - Oct 29</span>
+<button class="p-2 hover:bg-surface-container rounded-full"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</div>
+<!-- Calendar Grid -->
+<div class="grid grid-cols-5 gap-4">
+<!-- Monday -->
+<div class="space-y-4">
+<div class="text-center pb-4">
+<span class="block text-[0.6875rem] uppercase tracking-widest font-bold text-on-surface-variant">Mon</span>
+<span class="text-lg font-bold">23</span>
+</div>
+<div class="p-3 rounded-xl bg-primary/5 border-l-4 border-primary space-y-2">
+<span class="text-[10px] font-bold text-primary uppercase">09:00 AM</span>
+<h4 class="text-sm font-bold leading-tight">Advanced Calculus</h4>
+<p class="text-[11px] text-on-surface-variant">Room 402 • Hall A</p>
+</div>
+</div>
+<!-- Tuesday -->
+<div class="space-y-4">
+<div class="text-center pb-4">
+<span class="block text-[0.6875rem] uppercase tracking-widest font-bold text-on-surface-variant">Tue</span>
+<span class="text-lg font-bold">24</span>
+</div>
+<div class="p-3 rounded-xl bg-secondary/5 border-l-4 border-secondary space-y-2">
+<span class="text-[10px] font-bold text-secondary uppercase">11:30 AM</span>
+<h4 class="text-sm font-bold leading-tight">Linear Algebra</h4>
+<p class="text-[11px] text-on-surface-variant">Lab 01 • Zoom</p>
+</div>
+<div class="p-3 rounded-xl bg-tertiary/5 border-l-4 border-tertiary space-y-2">
+<span class="text-[10px] font-bold text-tertiary uppercase">02:00 PM</span>
+<h4 class="text-sm font-bold leading-tight">Faculty Sync</h4>
+<p class="text-[11px] text-on-surface-variant">Boardroom</p>
+</div>
+</div>
+<!-- Wednesday -->
+<div class="space-y-4">
+<div class="text-center pb-4">
+<span class="block text-[0.6875rem] uppercase tracking-widest font-bold text-on-surface-variant">Wed</span>
+<span class="text-lg font-bold">25</span>
+</div>
+<div class="p-3 rounded-xl bg-surface-container-high border-l-4 border-outline space-y-2 opacity-60">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">All Day</span>
+<h4 class="text-sm font-bold leading-tight">Research Day</h4>
+<p class="text-[11px] text-on-surface-variant">Library</p>
+</div>
+</div>
+<!-- Thursday -->
+<div class="space-y-4">
+<div class="text-center pb-4">
+<span class="block text-[0.6875rem] uppercase tracking-widest font-bold text-on-surface-variant">Thu</span>
+<span class="text-lg font-bold text-primary">26</span>
+</div>
+<div class="p-3 rounded-xl bg-primary/10 border-l-4 border-primary space-y-2 relative ring-2 ring-primary/20 shadow-lg">
+<span class="text-[10px] font-bold text-primary uppercase">10:00 AM</span>
+<h4 class="text-sm font-bold leading-tight">Complex Analysis</h4>
+<p class="text-[11px] text-on-surface-variant">Room 201 • Online</p>
+<div class="absolute -top-2 -right-2 bg-secondary text-white text-[8px] font-black px-2 py-0.5 rounded-full">LIVE</div>
+</div>
+</div>
+<!-- Friday -->
+<div class="space-y-4">
+<div class="text-center pb-4">
+<span class="block text-[0.6875rem] uppercase tracking-widest font-bold text-on-surface-variant">Fri</span>
+<span class="text-lg font-bold">27</span>
+</div>
+<div class="p-3 rounded-xl bg-error/5 border-l-4 border-error space-y-2">
+<span class="text-[10px] font-bold text-error uppercase">04:00 PM</span>
+<h4 class="text-sm font-bold leading-tight">Peer Review</h4>
+<p class="text-[11px] text-on-surface-variant">Shared Drive</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Resource Library Section -->
+<div class="bg-surface-container-low rounded-xl p-8">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-xl font-bold flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">folder_open</span>
+                            Resource Library
+                        </h2>
+<button class="text-primary text-sm font-bold hover:underline">View All Files</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Folder 1 -->
+<div class="bg-surface-container-lowest p-5 rounded-xl flex items-start gap-4 hover:shadow-md transition-shadow cursor-pointer group">
+<div class="bg-amber-100 p-3 rounded-lg group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-amber-600">folder</span>
+</div>
+<div>
+<h5 class="font-bold text-sm">Lecture Slides</h5>
+<p class="text-xs text-on-surface-variant">24 Items • 1.2 GB</p>
+</div>
+</div>
+<!-- Folder 2 -->
+<div class="bg-surface-container-lowest p-5 rounded-xl flex items-start gap-4 hover:shadow-md transition-shadow cursor-pointer group">
+<div class="bg-blue-100 p-3 rounded-lg group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-blue-600">description</span>
+</div>
+<div>
+<h5 class="font-bold text-sm">Syllabus 2024</h5>
+<p class="text-xs text-on-surface-variant">12 Items • 450 MB</p>
+</div>
+</div>
+<!-- Folder 3 -->
+<div class="bg-surface-container-lowest p-5 rounded-xl flex items-start gap-4 hover:shadow-md transition-shadow cursor-pointer group">
+<div class="bg-green-100 p-3 rounded-lg group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-green-600">video_library</span>
+</div>
+<div>
+<h5 class="font-bold text-sm">Video Tutorials</h5>
+<p class="text-xs text-on-surface-variant">8 Items • 4.8 GB</p>
+</div>
+</div>
+</div>
+<div class="mt-8 overflow-hidden rounded-xl bg-surface-container-lowest border border-outline-variant/15">
+<table class="w-full text-left">
+<thead class="bg-surface-container-high/30">
+<tr>
+<th class="px-6 py-4 text-[0.6875rem] uppercase tracking-widest font-bold text-on-surface-variant">File Name</th>
+<th class="px-6 py-4 text-[0.6875rem] uppercase tracking-widest font-bold text-on-surface-variant">Last Modified</th>
+<th class="px-6 py-4 text-[0.6875rem] uppercase tracking-widest font-bold text-on-surface-variant">Size</th>
+<th class="px-6 py-4"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-xl">picture_as_pdf</span>
+<span class="text-sm font-semibold">Calculus_Final_Notes.pdf</span>
+</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">2 hours ago</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">4.2 MB</td>
+<td class="px-6 py-4 text-right">
+<button class="p-2 hover:bg-surface-container rounded-full"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary text-xl">table_chart</span>
+<span class="text-sm font-semibold">Student_Grades_Draft.xlsx</span>
+</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">Yesterday</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">1.8 MB</td>
+<td class="px-6 py-4 text-right">
+<button class="p-2 hover:bg-surface-container rounded-full"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<!-- Sidebar: Tasks & Stats (4 cols) -->
+<aside class="lg:col-span-4 space-y-8">
+<!-- Upcoming Tasks -->
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-xl shadow-slate-900/5">
+<h3 class="text-lg font-bold mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+                        Upcoming Tasks
+                    </h3>
+<div class="space-y-6">
+<div class="flex gap-4">
+<div class="w-1 h-12 bg-primary rounded-full"></div>
+<div>
+<h6 class="text-sm font-bold">Grade Midterm Papers</h6>
+<p class="text-xs text-on-surface-variant mb-2">Due in 2 days • Calculus 101</p>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[65%]"></div>
+</div>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="w-1 h-12 bg-secondary rounded-full"></div>
+<div>
+<h6 class="text-sm font-bold">Update Curriculum V2</h6>
+<p class="text-xs text-on-surface-variant mb-2">Due in 5 days • Admin</p>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-secondary h-full w-[30%]"></div>
+</div>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="w-1 h-12 bg-tertiary rounded-full"></div>
+<div>
+<h6 class="text-sm font-bold">Prepare Quiz Assets</h6>
+<p class="text-xs text-on-surface-variant mb-2">Due tomorrow • Statistics</p>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-tertiary h-full w-[90%]"></div>
+</div>
+</div>
+</div>
+</div>
+<button class="w-full mt-8 py-3 rounded-xl border-2 border-dashed border-outline-variant text-on-surface-variant text-sm font-bold hover:bg-surface-container-low transition-colors">
+                        + Add New Task
+                    </button>
+</div>
+<!-- Quick Insight Card -->
+<div class="relative overflow-hidden rounded-xl p-8 text-on-primary bg-primary">
+<div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+<div class="relative z-10">
+<span class="material-symbols-outlined mb-4 text-3xl">psychology</span>
+<h3 class="text-xl font-bold mb-2">AI Teaching Assistant</h3>
+<p class="text-sm text-on-primary/80 mb-6 leading-relaxed">I've noticed you have a gap on Thursday afternoon. Should I schedule your office hours there?</p>
+<button class="bg-white text-primary px-6 py-2 rounded-full text-xs font-bold hover:shadow-lg transition-shadow">
+                            Sure, suggest times
+                        </button>
+</div>
+</div>
+<!-- Storage Usage -->
+<div class="bg-surface-container-low rounded-xl p-8">
+<h3 class="text-sm font-bold uppercase tracking-widest text-on-surface-variant mb-6">Cloud Storage</h3>
+<div class="flex items-center gap-6">
+<div class="relative w-20 h-20">
+<svg class="w-20 h-20 transform -rotate-90">
+<circle class="text-surface-container-high" cx="40" cy="40" fill="transparent" r="34" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary" cx="40" cy="40" fill="transparent" r="34" stroke="currentColor" stroke-dasharray="213.6" stroke-dashoffset="64" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="text-xs font-black">70%</span>
+</div>
+</div>
+<div>
+<p class="text-sm font-bold">14.2 GB used</p>
+<p class="text-xs text-on-surface-variant">of 20 GB available</p>
+<button class="mt-2 text-xs font-bold text-primary">Upgrade Plan</button>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</main>
+<!-- Side Navigation Shell (Hidden on Mobile) -->
+<aside class="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 overflow-y-auto bg-slate-100 dark:bg-slate-900 py-8 z-40 transform -translate-x-full transition-transform">
+<div class="px-6 mb-10">
+<span class="text-lg font-bold text-slate-900 dark:text-slate-100 font-['Inter']">Scholar Flow</span>
+<p class="text-[10px] text-slate-500 font-medium">Academic Edge Admin</p>
+</div>
+<nav class="flex-1 space-y-1 px-4">
+<a class="flex items-center gap-3 text-slate-500 dark:text-slate-400 py-3 px-4 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-transform hover:translate-x-1" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium font-['Inter']">Overview</span>
+</a>
+<a class="flex items-center gap-3 text-indigo-600 dark:text-indigo-400 border-l-4 border-indigo-600 dark:border-indigo-400 bg-white dark:bg-slate-800 py-3 px-4 rounded-r-lg" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="text-sm font-medium font-['Inter']">Schedules</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 dark:text-slate-400 py-3 px-4 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-transform hover:translate-x-1" href="#">
+<span class="material-symbols-outlined">import_contacts</span>
+<span class="text-sm font-medium font-['Inter']">Curriculum</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 dark:text-slate-400 py-3 px-4 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-transform hover:translate-x-1" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-sm font-medium font-['Inter']">Analytics</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 dark:text-slate-400 py-3 px-4 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-transform hover:translate-x-1" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium font-['Inter']">Settings</span>
+</a>
+</nav>
+<div class="mt-auto px-4 py-6 border-t border-slate-200/50 dark:border-slate-800/50">
+<a class="flex items-center gap-3 text-slate-500 py-3 px-4 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">contact_support</span>
+<span class="text-sm font-medium">Support</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 py-3 px-4 hover:text-error transition-colors" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="text-sm font-medium">Logout</span>
+</a>
+</div>
+</aside>
+</body></html>

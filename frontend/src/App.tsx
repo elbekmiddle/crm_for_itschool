@@ -11,6 +11,7 @@ import CoursesPage from './pages/Courses';
 import AttendancePage from './pages/Attendance';
 import UsersPage from './pages/Users';
 import QuestionsPage from './pages/Questions';
+import PaymentsPage from './pages/Payments';
 import { Loader2 } from 'lucide-react';
 
 const AnalyticsPage = () => (
@@ -46,6 +47,7 @@ const App: React.FC = () => {
               <Route path="/exams" element={<ExamsPage />} />
               <Route path="/questions" element={<QuestionsPage />} />
               <Route path="/users" element={<UsersPage />} />
+              <Route path="/payments" element={<PaymentsPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
             </Route>
 

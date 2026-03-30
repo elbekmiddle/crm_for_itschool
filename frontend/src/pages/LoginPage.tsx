@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminStore } from '../store/useAdminStore';
 import api from '../lib/api';
-import { LogIn, Lock, Mail, Loader2, Target } from 'lucide-react';
+import { Lock, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Button from '../components/Button';
 
@@ -24,13 +24,14 @@ const LoginPage = () => {
     try {
       const { data } = await api.post('/auth/login', { email, password });
       
-      // Store token in localStorage
-      localStorage.setItem('token', data.accessToken);
+      // Backend returns { access_token, refresh_token }
+      localStorage.setItem('token', data.access_token);
+      if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
       
-      // Update store and sessionStorage via setUser
-      setUser(data.user);
+      // Decode JWT to extract user info
+      const payload = JSON.parse(atob(data.access_token.split('.')[1]));
+      setUser({ id: payload.sub, email: payload.email, role: payload.role });
       
-      // Clear timeout and navigate
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
       console.error('Login error:', err);
