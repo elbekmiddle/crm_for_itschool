@@ -17,7 +17,7 @@ const ResultPage: React.FC = () => {
       try {
         const aid = attemptId || id;
         if (aid) {
-          const { data } = await api.get(`/exams/result/${aid}`);
+          const { data } = await api.get(`/exams/attempt/${aid}/result`);
           setResult(data);
           setLoading(false);
           return;

@@ -11,10 +11,8 @@ const AnalyticsPage: React.FC = () => {
 
   useEffect(() => { fetchStats(); fetchStudents(); fetchCourses(); }, []);
 
-  const totalRevenue = 42500000;
-  const enrollmentGrowth = [20, 35, 42, 48, 58, 65, 72, 88];
-  const completionGrowth = [15, 22, 30, 38, 42, 50, 58, 65];
-  const months = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg'];
+  const growthTrend = stats?.growthTrend || [];
+  const topStudents = stats?.topStudents || [];
 
   return (
     <div className="page-container animate-in">
@@ -34,33 +32,33 @@ const AnalyticsPage: React.FC = () => {
         <div className="card p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-11 h-11 bg-primary-50 rounded-xl flex items-center justify-center"><Users className="w-5 h-5 text-primary-600" /></div>
-            <span className="stat-badge bg-green-50 text-green-600">+18%</span>
+            <span className="stat-badge bg-green-50 text-green-600">Active</span>
           </div>
           <p className="label-subtle">Jami ro'yxat</p>
-          <p className="text-3xl font-black text-slate-800 mt-1">{stats?.totalStudents || students.length}</p>
+          <p className="text-3xl font-black text-slate-800 mt-1">{stats?.totalStudents || 0}</p>
         </div>
         <div className="card p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-11 h-11 bg-green-50 rounded-xl flex items-center justify-center"><GraduationCap className="w-5 h-5 text-green-600" /></div>
-            <span className="stat-badge bg-green-50 text-green-600">+5.2%</span>
+            <span className="stat-badge bg-green-50 text-green-600">Stable</span>
           </div>
-          <p className="label-subtle">Tugatish darajasi</p>
-          <p className="text-3xl font-black text-slate-800 mt-1">78.4%</p>
+          <p className="label-subtle">O'rtacha Davomat</p>
+          <p className="text-3xl font-black text-slate-800 mt-1">{stats?.attendanceAvg || 0}%</p>
         </div>
         <div className="card p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-11 h-11 bg-emerald-50 rounded-xl flex items-center justify-center"><DollarSign className="w-5 h-5 text-emerald-600" /></div>
-            <span className="stat-badge bg-green-50 text-green-600">+24%</span>
+            <span className="stat-badge bg-green-50 text-green-600">Real-time</span>
           </div>
           <p className="label-subtle">Jami Daromad</p>
-          <p className="text-3xl font-black text-slate-800 mt-1">{(totalRevenue / 1e6).toFixed(1)}M</p>
+          <p className="text-3xl font-black text-slate-800 mt-1">{((stats?.totalRevenue || 0) / 1e6).toFixed(1)}M</p>
         </div>
         <div className="card p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-11 h-11 bg-red-50 rounded-xl flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-red-500" /></div>
           </div>
-          <p className="label-subtle">Chiqib ketish xavfi</p>
-          <p className="text-3xl font-black text-red-500 mt-1">{Math.ceil((stats?.totalStudents || students.length) * 0.08)}</p>
+          <p className="label-subtle">Kutilayotgan to'lovlar</p>
+          <p className="text-3xl font-black text-red-500 mt-1">{stats?.pendingPayments || 0}</p>
         </div>
       </div>
 
@@ -70,49 +68,42 @@ const AnalyticsPage: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="section-title">O'sish Tendentsiyasi</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Yangi ro'yxatga olish va tugatish</p>
+              <p className="text-xs text-slate-400 mt-0.5">Yangi ro'yxatga olishlar (so'nggi 6 oy)</p>
             </div>
-            <div className="flex bg-slate-100 rounded-xl p-1">
-              <button className="px-4 py-2 rounded-lg text-xs font-bold bg-white shadow-sm text-slate-700">8 oy</button>
-              <button className="px-4 py-2 rounded-lg text-xs font-bold text-slate-400">1 yil</button>
-            </div>
+            <div className="bg-slate-100 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Internal Data</div>
           </div>
 
           <div className="flex items-end gap-3 h-40">
-            {months.map((m, i) => (
-              <div key={m} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full flex gap-1 items-end h-full">
-                  <div className="flex-1 bg-primary-200 rounded-t-md" style={{ height: `${enrollmentGrowth[i]}%` }} />
-                  <div className="flex-1 bg-green-300 rounded-t-md" style={{ height: `${completionGrowth[i]}%` }} />
+            {growthTrend.map((g: any, i: number) => {
+              const maxCount = Math.max(...growthTrend.map((t: any) => t.count), 1);
+              const h = (g.count / maxCount) * 100;
+              return (
+                <div key={g.month + i} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full relative overflow-hidden bg-primary-100 rounded-t-lg" style={{ height: `${Math.max(h, 5)}%` }}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-primary-500/40 to-primary-300/20" />
+                  </div>
+                  <span className="text-[9px] font-bold text-slate-400">{g.month}</span>
                 </div>
-                <span className="text-[9px] font-bold text-slate-400">{m}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex gap-6 mt-4">
-            <div className="flex items-center gap-2 text-xs">
-              <div className="w-3 h-3 rounded bg-primary-200" />
-              <span className="text-slate-500 font-semibold">Ro'yxatga olish</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              <div className="w-3 h-3 rounded bg-green-300" />
-              <span className="text-slate-500 font-semibold">Tugatish</span>
-            </div>
+              );
+            })}
+            {growthTrend.length === 0 && (
+              <div className="w-full h-full flex items-center justify-center text-slate-300 text-xs font-bold">Ma'lumot yetarli emas</div>
+            )}
           </div>
         </div>
 
-        {/* Revenue by Course */}
+        {/* Top Courses */}
         <div className="card p-6">
-          <h2 className="section-title mb-4">Kurs bo'yicha daromad</h2>
+          <h2 className="section-title mb-4">Eng mashhur kurslar</h2>
           <div className="space-y-4">
-            {courses.slice(0, 5).map((c: any, i: number) => {
-              const rev = [38, 28, 18, 10, 6][i] || 5;
+            {(stats?.topCourses || []).map((c: any, i: number) => {
+              const maxCount = stats?.topCourses?.[0]?.student_count || 1;
+              const rev = Math.round((Number(c.student_count) / maxCount) * 100) || 5;
               return (
-                <div key={c.id}>
+                <div key={c.id || i}>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <span className="font-semibold text-slate-600 truncate flex-1">{c.name}</span>
-                    <span className="font-bold text-slate-700 ml-2">{rev}%</span>
+                    <span className="font-bold text-slate-700 ml-2">{c.student_count || 0} ta</span>
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-2">
                     <div className={cn("h-2 rounded-full", i === 0 ? "bg-primary-500" : i === 1 ? "bg-green-500" : i === 2 ? "bg-amber-500" : i === 3 ? "bg-pink-500" : "bg-slate-400")} style={{ width: `${rev}%` }} />
@@ -120,11 +111,12 @@ const AnalyticsPage: React.FC = () => {
                 </div>
               );
             })}
+            {(stats?.topCourses || []).length === 0 && <p className="text-center py-4 text-xs text-slate-400">Kurslar bo'yicha ma'lumot yo'q</p>}
           </div>
 
           <div className="mt-6 p-4 bg-primary-50 rounded-xl flex items-center gap-3">
             <Sparkles className="w-5 h-5 text-primary-600" />
-            <p className="text-xs text-primary-700 font-semibold">AI: Web Dasturlash eng yuqori ROI ko'rsatmoqda.</p>
+            <p className="text-xs text-primary-700 font-semibold">AI: {stats?.topCourses?.[0]?.name || 'Kurslar'} eng faol rivojlanmoqda.</p>
           </div>
         </div>
       </div>
@@ -132,25 +124,20 @@ const AnalyticsPage: React.FC = () => {
       {/* Top Students */}
       <div className="card overflow-hidden mt-6">
         <div className="p-6 border-b border-slate-50">
-          <h2 className="section-title">Top Talabalar — Ishlashi</h2>
+          <h2 className="section-title">Akademik Reyting — Eng yaxshi talabalar</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="data-table">
             <thead>
               <tr>
                 <th>Talaba</th>
-                <th>Kurs</th>
-                <th>GPA</th>
+                <th>O'rtacha Ball</th>
                 <th>Davomat</th>
-                <th>Progress</th>
+                <th>Reyting Status</th>
               </tr>
             </thead>
             <tbody>
-              {students.slice(0, 5).map((s: any, i: number) => {
-                const gpa = [4.8, 4.6, 4.5, 4.3, 4.1][i] || 4.0;
-                const att = [98, 96, 95, 92, 90][i] || 88;
-                const prog = [95, 88, 82, 78, 72][i] || 70;
-                return (
+              {topStudents.map((s: any, i: number) => (
                   <tr key={s.id}>
                     <td>
                       <div className="flex items-center gap-3">
@@ -163,21 +150,16 @@ const AnalyticsPage: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td><span className="course-badge bg-primary-50 text-primary-600">{s.course_name || 'Web Dev'}</span></td>
-                    <td className="font-bold text-slate-800">{gpa}</td>
-                    <td className="font-bold text-slate-800">{att}%</td>
+                    <td className="font-bold text-primary-600">{s.avg_score}%</td>
+                    <td className="font-bold text-slate-800">{s.attendance_pct}%</td>
                     <td>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-slate-100 rounded-full h-2">
-                          <div className="bg-primary-500 h-2 rounded-full" style={{ width: `${prog}%` }} />
-                        </div>
-                        <span className="text-xs font-bold text-primary-600 w-10 text-right">{prog}%</span>
-                      </div>
+                      <span className={cn("status-pill", i === 0 ? "pill-published" : i < 3 ? "pill-active" : "pill-frozen")}>
+                        {i === 0 ? "🏆 OLTIN" : i < 3 ? "⭐ TOP" : "● FAOLLAR"}
+                      </span>
                     </td>
                   </tr>
-                );
-              })}
-              {students.length === 0 && <tr><td colSpan={5} className="text-center py-12 text-slate-400">Talabalar topilmadi</td></tr>}
+                ))}
+              {topStudents.length === 0 && <tr><td colSpan={4} className="text-center py-12 text-slate-400">Talabalar topilmadi</td></tr>}
             </tbody>
           </table>
         </div>

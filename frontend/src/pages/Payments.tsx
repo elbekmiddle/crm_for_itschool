@@ -7,16 +7,16 @@ import {
 } from 'lucide-react';
 
 const PaymentsPage: React.FC = () => {
-  const { payments, students, courses, fetchPayments, fetchStudents, fetchCourses, createPayment, deletePayment, isLoading } = useAdminStore();
+  const { payments, students, courses, stats, fetchPayments, fetchStudents, fetchCourses, fetchStats, createPayment, deletePayment, isLoading } = useAdminStore();
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ student_id: '', amount: '', payment_method: 'cash', description: '' });
   const [tab, setTab] = useState<'all' | 'debt'>('all');
   const [page, setPage] = useState(1);
   const perPage = 10;
 
-  useEffect(() => { fetchPayments(); fetchStudents(); fetchCourses(); }, []);
+  useEffect(() => { fetchPayments(); fetchStudents(); fetchCourses(); fetchStats(); }, []);
 
-  const totalRevenue = payments.reduce((a: number, p: any) => a + (Number(p.amount) || 0), 0);
+  const totalRevenue = stats?.totalRevenue || payments.reduce((a: number, p: any) => a + (Number(p.amount) || 0), 0);
   const list = tab === 'all' ? payments : payments.filter((p: any) => p.status === 'pending' || p.status === 'overdue');
   const totalPages = Math.ceil(list.length / perPage);
   const paginated = list.slice((page - 1) * perPage, page * perPage);
@@ -24,6 +24,7 @@ const PaymentsPage: React.FC = () => {
   const handleCreate = async () => {
     await createPayment({ ...form, amount: Number(form.amount) });
     setModal(false);
+    fetchStats();
   };
 
   return (
@@ -52,16 +53,17 @@ const PaymentsPage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-end gap-2 h-32">
-            {['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg'].map((m, i) => {
-              const h = [40, 55, 70, 85, 60, 90, 78, 65][i];
-              return (
-                <div key={m} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full bg-primary-100 rounded-lg relative overflow-hidden" style={{ height: `${h}%` }}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-primary-500/50 to-primary-300/20 rounded-lg" />
+            {(stats?.growthTrend || []).map((g: any, i: number) => {
+                const maxCount = Math.max(...(stats?.growthTrend?.map((t: any) => t.count) || [1]), 1);
+                const h = (g.count / maxCount) * 100;
+                return (
+                  <div key={g.month + i} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="w-full bg-primary-100 rounded-lg relative overflow-hidden" style={{ height: `${Math.max(h, 10)}%` }}>
+                      <div className="absolute inset-0 bg-gradient-to-t from-primary-500/50 to-primary-300/20 rounded-lg" />
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-400">{g.month}</span>
                   </div>
-                  <span className="text-[9px] font-bold text-slate-400">{m}</span>
-                </div>
-              );
+                );
             })}
           </div>
         </div>
@@ -70,7 +72,7 @@ const PaymentsPage: React.FC = () => {
         <div className="space-y-4">
           <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl p-5 text-white">
             <p className="text-xs font-bold uppercase tracking-widest opacity-80">Kutilayotgan to'lovlar</p>
-            <p className="text-3xl font-black mt-2">{(totalRevenue * 0.15).toLocaleString()} <span className="text-sm">so'm</span></p>
+            <p className="text-3xl font-black mt-2">{(stats?.pendingAmount || 0).toLocaleString()} <span className="text-sm">so'm</span></p>
             <div className="flex items-center gap-1 mt-2 text-xs opacity-80">
               <TrendingUp className="w-3 h-3" /> +12% o'tgan oydan
             </div>
@@ -80,14 +82,14 @@ const PaymentsPage: React.FC = () => {
               <p className="text-xs font-bold uppercase tracking-widest opacity-80">Muzlatilgan hisoblar</p>
               <Snowflake className="w-5 h-5 opacity-80" />
             </div>
-            <p className="text-3xl font-black mt-2">{Math.floor(students.length * 0.05)}</p>
+            <p className="text-3xl font-black mt-2">{stats?.frozenAccounts || 0}</p>
             <p className="text-xs mt-1 opacity-70">2+ oy muddat o'tgan</p>
           </div>
           <div className="card p-5">
             <p className="label-subtle mb-1">Undirish darajasi</p>
-            <p className="text-3xl font-black text-green-600">94.2%</p>
+            <p className="text-3xl font-black text-green-600">{stats?.collectionRate || 0}%</p>
             <div className="w-full bg-slate-100 rounded-full h-2 mt-2">
-              <div className="bg-green-500 h-2 rounded-full" style={{ width: '94.2%' }} />
+              <div className="bg-green-500 h-2 rounded-full" style={{ width: `${stats?.collectionRate || 0}%` }} />
             </div>
           </div>
         </div>

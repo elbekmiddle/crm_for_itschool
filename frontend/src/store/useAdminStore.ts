@@ -16,6 +16,7 @@ interface AdminState {
   payments: any[];
   lessons: any[];
   questions: any[];
+  questionStats: any | null;
   attendance: any[];
   
   // Actions
@@ -77,9 +78,11 @@ interface AdminState {
   createLesson: (data: any) => Promise<void>;
   fetchQuestions: (lessonId: string) => Promise<void>;
   createQuestion: (data: any) => Promise<void>;
+  fetchQuestionStats: () => Promise<void>;
   
   // Analytics
   fetchTeacherDashboard: () => Promise<any>;
+  fetchMe: () => Promise<void>;
   
   logout: () => void;
 }
@@ -98,6 +101,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   payments: [],
   lessons: [],
   questions: [],
+  questionStats: null,
   attendance: [],
 
   setUser: (user) => {
@@ -228,7 +232,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   fetchExams: async (courseId?: string) => {
     set({ isLoading: true });
     try {
-      const url = courseId ? `/exams/course/${courseId}` : '/exams/course/all';
+      const url = courseId ? `/exams/course/${courseId}` : '/exams';
       const { data } = await api.get(url);
       set({ exams: Array.isArray(data) ? data : [], isLoading: false });
     } catch (e: any) { set({ exams: [], isLoading: false }); }
@@ -367,9 +371,25 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     } catch (e) { set({ questions: [] }); }
   },
 
-  createQuestion: async (data) => {
-    try { await api.post('/questions', data); }
+  createQuestion: async (data: any) => {
+    try { await api.post('/questions', data); await get().fetchQuestionStats(); }
     catch (e: any) { alert(e.response?.data?.message || 'Savol yaratishda xato'); }
+  },
+
+  fetchQuestionStats: async () => {
+    try {
+      const { data } = await api.get('/questions/stats');
+      set({ questionStats: data });
+    } catch (e) { set({ questionStats: null }); }
+  },
+
+  fetchMe: async () => {
+    try {
+      const { data } = await api.get('/auth/me');
+      get().setUser(data);
+    } catch (e) {
+      get().logout();
+    }
   },
 
   // ──── Auth ────

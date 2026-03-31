@@ -8,12 +8,29 @@ import { create_exam } from './commands/create_exam';
 import { add_questions_to_exam } from './commands/add_questions_to_exam';
 import * as dayjs from 'dayjs';
 
+import { TelegramService } from '../../infrastructure/notifications/telegram.service';
+
 @Injectable()
 export class ExamsService {
   constructor(
     private readonly dbService: DbService, 
-    private readonly queueService: QueueService
+    private readonly queueService: QueueService,
+    private readonly telegramService: TelegramService
   ) {}
+
+  async findAll() {
+    return this.dbService.query(`
+      SELECT 
+        e.*, 
+        c.name as course_name,
+        (SELECT COUNT(*) FROM exam_questions WHERE exam_id = e.id) as question_count,
+        (SELECT ROUND(AVG(score)) FROM exam_results WHERE exam_id = e.id) as avg_score
+      FROM exams e 
+      JOIN courses c ON e.course_id = c.id 
+      WHERE e.deleted_at IS NULL
+      ORDER BY e.created_at DESC
+    `);
+  }
 
   async create(createExamDto: CreateExamDto, teacherId: string) {
     return create_exam(this.dbService, createExamDto, teacherId);
@@ -58,28 +75,37 @@ export class ExamsService {
 
   // --- Student Logic ---
 
-  async getAvailableExams(studentUserId: string) {
-    // Student belongs to groups, groups belong to courses.
+  async getAvailableExams(studentId: string) {
     return this.dbService.query(`
-      SELECT e.*, c.name as course_name 
+      SELECT 
+        e.*, 
+        c.name as course_name,
+        e.duration_minutes as duration,
+        (SELECT COUNT(*) FROM exam_questions WHERE exam_id = e.id) as questions_count,
+        ea.status as attempt_status,
+        ea.score,
+        CASE 
+          WHEN ea.status = 'submitted' THEN 'COMPLETED'
+          WHEN ea.status = 'in_progress' THEN 'IN_PROGRESS'
+          ELSE 'UPCOMING'
+        END as status
       FROM exams e
       JOIN courses c ON e.course_id = c.id
       JOIN groups g ON g.course_id = c.id
       JOIN group_students gs ON gs.group_id = g.id
-      WHERE gs.student_id = (SELECT id FROM students WHERE id = $1)
+      LEFT JOIN exam_attempts ea ON ea.exam_id = e.id AND ea.student_id = gs.student_id
+      WHERE gs.student_id = $1
       AND e.status = 'published'
       AND e.deleted_at IS NULL
-    `, [studentUserId]);
+    `, [studentId]);
   }
 
   async startExamAttempt(examId: string, studentUserId: string) {
     const exam = await this.dbService.query(`SELECT id, time_limit FROM exams WHERE id = $1 AND status = 'published'`, [examId]);
     if (!exam.length) throw new NotFoundException('Exam not found or not published.');
 
-    // 1. Get the actual student record ID
-    const student = await this.dbService.query(`SELECT id FROM students WHERE id = $1`, [studentUserId]);
-    if (!student.length) throw new NotFoundException('Student record not found.');
-    const studentId = student[0].id;
+    // 1. In this system, req.user.id for students matches students.id
+    const studentId = studentUserId;
 
     // 2. Check for active attempt
     const activeAttempt = await this.dbService.query(`
@@ -180,6 +206,23 @@ export class ExamsService {
        ON CONFLICT (exam_id, student_id) DO UPDATE SET score = EXCLUDED.score
     `, [exam_id, student_id, finalScore]);
 
+    // Send Telegram Notification
+    try {
+      const student = await this.dbService.query(`SELECT first_name, telegram_chat_id FROM students WHERE id = $1`, [student_id]);
+      const exam = await this.dbService.query(`SELECT title FROM exams WHERE id = $1`, [exam_id]);
+      if (student.length && student[0].telegram_chat_id) {
+        await this.telegramService.notifyExamResult(
+          student[0].telegram_chat_id, 
+          student[0].first_name, 
+          exam[0].title, 
+          finalScore,
+          student_id
+        );
+      }
+    } catch (e) {
+      // Non-blocking
+    }
+
     return result[0];
   }
 
@@ -207,5 +250,15 @@ export class ExamsService {
 
   async getExamResults(examId: string) {
     return get_exam_results(this.dbService, examId);
+  }
+
+  async getStudentResults(studentId: string) {
+    return this.dbService.query(`
+      SELECT er.*, e.title as exam_title, e.total_points
+      FROM exam_results er
+      JOIN exams e ON er.exam_id = e.id
+      WHERE er.student_id = $1
+      ORDER BY er.submitted_at DESC
+    `, [studentId]);
   }
 }

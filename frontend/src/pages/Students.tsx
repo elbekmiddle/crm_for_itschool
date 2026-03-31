@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
 import {
   GraduationCap, Plus, Download, Search, Loader2,
-  Pencil, Trash2, X, UserPlus, ChevronLeft, ChevronRight
+  Pencil, Trash2, X, UserPlus, ChevronLeft, ChevronRight, Send, Eye
 } from 'lucide-react';
 
 const statusPill = (s: string) => {
@@ -14,6 +15,7 @@ const statusPill = (s: string) => {
 };
 
 const StudentsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { students, courses, fetchStudents, fetchCourses, createStudent, updateStudent, deleteStudent, enrollStudent, isLoading } = useAdminStore();
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
@@ -22,13 +24,16 @@ const StudentsPage: React.FC = () => {
   const [form, setForm] = useState({ first_name: '', last_name: '', phone: '', email: '', parent_name: '', parent_phone: '' });
   const [enrollCourseId, setEnrollCourseId] = useState('');
   const [page, setPage] = useState(1);
+  const [courseFilter, setCourseFilter] = useState('');
   const perPage = 10;
 
   useEffect(() => { fetchStudents(); fetchCourses(); }, []);
 
-  const filtered = students.filter((s: any) =>
-    `${s.first_name} ${s.last_name} ${s.phone}`.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = students.filter((s: any) => {
+    const matchesSearch = `${s.first_name} ${s.last_name} ${s.phone}`.toLowerCase().includes(search.toLowerCase());
+    const matchesCourse = courseFilter ? s.course_id === courseFilter : true;
+    return matchesSearch && matchesCourse;
+  });
   const totalPages = Math.ceil(filtered.length / perPage);
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
@@ -95,7 +100,7 @@ const StudentsPage: React.FC = () => {
       </div>
 
       {/* Search & Filter */}
-      <div className="card p-4 mb-4 flex items-center gap-4">
+      <div className="card p-4 mb-4 flex flex-col md:flex-row items-center gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
           <input
@@ -105,7 +110,15 @@ const StudentsPage: React.FC = () => {
             className="input pl-10"
           />
         </div>
-        <span className="text-xs font-bold text-slate-400">{filtered.length} ta natija</span>
+        <select 
+          value={courseFilter} 
+          onChange={(e) => { setCourseFilter(e.target.value); setPage(1); }}
+          className="select md:w-64"
+        >
+          <option value="">Barcha kurslar</option>
+          {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <span className="text-xs font-bold text-slate-400 whitespace-nowrap">{filtered.length} ta natija</span>
       </div>
 
       {/* Table */}
@@ -130,8 +143,13 @@ const StudentsPage: React.FC = () => {
                   <tr key={s.id}>
                     <td>
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-primary-100 rounded-lg flex items-center justify-center text-xs font-black text-primary-600">
+                        <div className="w-9 h-9 bg-primary-100 rounded-lg flex items-center justify-center text-xs font-black text-primary-600 relative">
                           {s.first_name?.[0]}{s.last_name?.[0]}
+                          {s.telegram_chat_id && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#0088cc] rounded-full flex items-center justify-center border-2 border-white shadow-sm" title={`Telegram: @${s.telegram_username || s.telegram_chat_id}`}>
+                              <Send className="w-2 h-2 text-white fill-current" />
+                            </div>
+                          )}
                         </div>
                         <div>
                           <p className="font-bold text-slate-700">{s.first_name} {s.last_name}</p>
@@ -149,6 +167,9 @@ const StudentsPage: React.FC = () => {
                     <td><span className={cn("status-pill", statusPill(s.status))}>{s.status || 'active'}</span></td>
                     <td>
                       <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => navigate(`/student/${s.id}`)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-all" title="Ko'rish">
+                          <Eye className="w-4 h-4" />
+                        </button>
                         <button onClick={() => { setEnrollModal(s); setEnrollCourseId(''); }} className="p-2 rounded-lg hover:bg-primary-50 text-primary-600 transition-all" title="Kursga yozish">
                           <UserPlus className="w-4 h-4" />
                         </button>

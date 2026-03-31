@@ -10,23 +10,21 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'it_school_crm',
 });
 
-const migration = `
-  ALTER TABLE students
-    ADD COLUMN IF NOT EXISTS password TEXT,
-    ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    ADD COLUMN IF NOT EXISTS telegram_chat_id TEXT;
+const fs = require('fs');
+const path = require('path');
 
-  CREATE INDEX IF NOT EXISTS idx_students_phone ON students(phone) WHERE deleted_at IS NULL;
-`;
+const runMigration = async () => {
+  const sqlFile = path.join(__dirname, 'database', 'fix_missing_cols.sql');
+  const migrationSql = fs.readFileSync(sqlFile, 'utf8');
 
-(async () => {
-  console.log('🔄 Running migration...');
+  console.log('🔄 Running migration from:', sqlFile);
   try {
-    await pool.query(migration);
-    console.log('✅ Migration applied: password, is_verified, telegram_chat_id columns added to students table.');
+    await pool.query(migrationSql);
+    console.log('✅ Migration applied successfully!');
   } catch (err) {
     console.error('❌ Migration failed:', err.message);
   } finally {
     await pool.end();
   }
-})();
+};
+runMigration();

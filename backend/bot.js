@@ -225,6 +225,7 @@ async function handleMessage(msg) {
     await sendMessage(chatId,
       `✅ Hisobingiz ulandi!\n\n` +
       `👤 <b>${student.first_name} ${student.last_name}</b>\n` +
+      `🆔 ID: <code>${student.id}</code>\n` +
       (msg.from?.username ? `🔗 @${msg.from.username}\n` : '') +
       `\n🔐 <b>Tasdiqlash kodingiz:</b>\n<b><code>${code}</code></b>\n\n` +
       `⏰ Kod 5 daqiqa amal qiladi.\n` +

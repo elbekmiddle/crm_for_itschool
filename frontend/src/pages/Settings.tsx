@@ -27,8 +27,16 @@ const SettingsPage: React.FC = () => {
   ];
 
   const handleSave = async () => {
+    if (!user?.id) return;
     setSaving(true);
-    setTimeout(() => setSaving(false), 1000);
+    try {
+      await useAdminStore.getState().updateUser(user.id, form);
+      alert("Profil muvaffaqiyatli saqlandi! ✨");
+    } catch (e) {
+      alert("Saqlashda xato yuz berdi.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

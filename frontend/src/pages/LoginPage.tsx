@@ -10,8 +10,8 @@ const LoginPage: React.FC = () => {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { fetchMe } = useAdminStore();
   const navigate = useNavigate();
-  const { setUser } = useAdminStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,9 +19,23 @@ const LoginPage: React.FC = () => {
     setError('');
     try {
       const { data } = await api.post('/auth/login', { email, password });
-      localStorage.setItem('token', data.token);
-      setUser(data.user);
-      navigate('/dashboard');
+      console.log('Login response:', data);
+
+      const token = data.access_token || data.token; // Handle both just in case
+      if (!token) {
+        throw new Error('Serverdan token kelmadi. Response: ' + JSON.stringify(data));
+      }
+
+      localStorage.setItem('token', token);
+      await fetchMe();
+      
+      // Role-based redirection
+      const user = useAdminStore.getState().user;
+      if (user?.role === 'ADMIN') navigate('/admin/dashboard');
+      else if (user?.role === 'MANAGER') navigate('/manager/dashboard');
+      else if (user?.role === 'TEACHER') navigate('/teacher/dashboard');
+      else if (user?.role === 'STUDENT') navigate('/student/dashboard');
+      else navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Kirish amalga oshmadi');
     } finally {

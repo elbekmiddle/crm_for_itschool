@@ -30,6 +30,14 @@ export class StudentsController {
     return this.studentsService.getDashboard(req.user.id);
   }
 
+  /** Student: get own stats (compatibility) */
+  @Roles('STUDENT', 'ADMIN', 'MANAGER', 'TEACHER')
+  @Get('me/stats')
+  @ApiOperation({ summary: 'Get own stats summary (compatibility)' })
+  getMyStats(@Request() req) {
+    return this.studentsService.getStats(req.user.id);
+  }
+
   /** Student: get own attendance by student ID */
   @Roles('STUDENT', 'ADMIN', 'MANAGER', 'TEACHER')
   @Get(':id/attendance')
@@ -39,6 +47,22 @@ export class StudentsController {
     // Students can only access their own attendance
     const studentId = req.user.role === 'STUDENT' ? req.user.id : id;
     return this.studentsService.getAttendance(studentId);
+  }
+
+  /** Student: get own notifications */
+  @Roles('STUDENT', 'ADMIN', 'MANAGER', 'TEACHER')
+  @Get('me/notifications')
+  @ApiOperation({ summary: 'Get notifications for current student (STUDENT self-access)' })
+  getNotifications(@Request() req) {
+    return this.studentsService.getNotifications(req.user.id);
+  }
+
+  /** Student: mark notification as read */
+  @Roles('STUDENT', 'ADMIN', 'MANAGER', 'TEACHER')
+  @Patch('me/notifications/:id/read')
+  @ApiOperation({ summary: 'Mark notification as read' })
+  markNotificationRead(@Param('id') id: string, @Request() req) {
+    return this.studentsService.markNotificationRead(id, req.user.id);
   }
 
   @Roles('MANAGER')

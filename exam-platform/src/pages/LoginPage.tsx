@@ -55,6 +55,7 @@ export default function LoginPage() {
   // ─── Step 1: Phone + Password login ──────────────────────────────────────────
   const handleMainLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setError('');
     const normalizedPhone = normalizePhone(phone);
     if (!password) { setError("Parolni kiriting"); return; }
@@ -101,6 +102,7 @@ export default function LoginPage() {
   // ─── Step 3: Verify code ──────────────────────────────────────────────────────
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setError('');
     if (code.length < 6) { setError("6 ta raqamli kodni kiriting"); return; }
     setLoading(true);
@@ -123,6 +125,7 @@ export default function LoginPage() {
   // ─── Step 4: Set new password ─────────────────────────────────────────────────
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setError('');
     if (newPassword.length < 6) { setError("Parol kamida 6 ta belgi bo'lishi kerak"); return; }
     if (newPassword !== confirmPassword) { setError("Parollar mos emas"); return; }

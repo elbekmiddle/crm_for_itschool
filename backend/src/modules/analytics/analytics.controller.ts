@@ -21,13 +21,14 @@ export class AnalyticsController {
     return this.analyticsService.getDashboard();
   }
 
-  @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Roles('ADMIN', 'MANAGER', 'TEACHER', 'STUDENT')
   @Get('student/:id')
   @ApiOperation({ summary: 'Analyze single student presence and monetary progress' })
   @ApiParam({ name: 'id', description: 'Student UUID' })
   @ApiResponse({ status: 200, description: 'Aggregated sums of presence and payments.' })
-  getStudentAnalytics(@Param('id') id: string) {
-    return this.analyticsService.getStudentAnalytics(id);
+  getStudentAnalytics(@Param('id') id: string, @Request() req) {
+    const targetId = id === 'me' ? req.user.id : id;
+    return this.analyticsService.getStudentAnalytics(targetId);
   }
 
   @Roles('TEACHER', 'ADMIN', 'MANAGER')

@@ -13,6 +13,12 @@ import { CreateQuestionDto } from './dto/create-question.dto';
 export class QuestionsController {
   constructor(private readonly questionsService: QuestionsService) {}
 
+  @Get('stats')
+  @ApiOperation({ summary: 'Get global question bank statistics' })
+  getStats() {
+    return this.questionsService.getStats();
+  }
+
   @Roles('ADMIN', 'MANAGER', 'TEACHER')
   @Post()
   @ApiOperation({ summary: 'Create a new question for a lesson bank' })

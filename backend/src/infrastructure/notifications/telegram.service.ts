@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DbService } from '../database/db.service';
 
 @Injectable()
 export class TelegramService {
@@ -8,15 +9,31 @@ export class TelegramService {
   private readonly logger = new Logger(TelegramService.name);
   private readonly baseUrl: string;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private dbService: DbService
+  ) {
     this.botToken = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
     this.adminChatId = this.configService.get<string>('TELEGRAM_ADMIN_CHAT_ID');
     this.baseUrl = `https://api.telegram.org/bot${this.botToken}`;
   }
 
   // ─── Core send ────────────────────────────────────────────────────────────
-  async sendMessage(message: string, chatId?: string): Promise<boolean> {
+  async sendMessage(message: string, chatId?: string, studentId?: string, title?: string): Promise<boolean> {
     const targetChatId = chatId || this.adminChatId;
+
+    // Persist to DB if studentId is provided
+    if (studentId) {
+      try {
+        await this.dbService.query(
+          `INSERT INTO notifications (student_id, title, message) VALUES ($1, $2, $3)`,
+          [studentId, title || 'IT School Xabari', message.replace(/<[^>]*>?/gm, '')]
+        );
+      } catch (e) {
+        this.logger.error('Failed to save notification to DB:', e.message);
+      }
+    }
+
     if (!this.botToken || !targetChatId) {
       this.logger.warn('Telegram Bot Token or Chat ID not configured. Notification skipped.');
       return false;
@@ -48,109 +65,94 @@ export class TelegramService {
   // ─── Auth / Verification ──────────────────────────────────────────────────
 
   /** Send verify/reset code to student */
-  async sendVerifyCode(chatId: string, code: string, studentName: string): Promise<void> {
-    await this.sendMessage(
-      `🔐 <b>IT School Tasdiqlash Kodi</b>\n\n` +
+  async sendVerifyCode(chatId: string, code: string, studentName: string, studentId?: string): Promise<void> {
+    const msg = `🔐 <b>IT School Tasdiqlash Kodi</b>\n\n` +
       `Salom, <b>${studentName}</b>!\n\n` +
       `Sizning tasdiqlash kodingiz:\n\n` +
       `<b><code>${code}</code></b>\n\n` +
       `⏰ Kod 5 daqiqa ichida amal qiladi.\n` +
-      `❗ Ushbu kodni hech kimga bermang.`,
-      chatId,
-    );
+      `❗ Ushbu kodni hech kimga bermang.`;
+    await this.sendMessage(msg, chatId, studentId, 'Tasdiqlash kodi');
   }
 
   /** Fallback: send code to admin if student has no telegram_chat_id */
-  async sendVerifyCodeToAdmin(studentName: string, phone: string, code: string): Promise<void> {
-    await this.sendMessage(
-      `📱 <b>Talaba tasdiqlash kodi</b>\n\n` +
+  async sendVerifyCodeToAdmin(studentName: string, phone: string, code: string, studentId?: string): Promise<void> {
+    const msg = `📱 <b>Talaba tasdiqlash kodi</b>\n\n` +
       `👤 Talaba: <b>${studentName}</b>\n` +
       `📞 Telefon: ${phone}\n\n` +
       `🔐 Kod: <b><code>${code}</code></b>\n\n` +
-      `<i>⚠️ Bu talabaning telegram_chat_id si yo'q — kodni SMS orqali yetkazing.</i>`,
-    );
+      `<i>⚠️ Bu talabaning telegram_chat_id si yo'q — kodni SMS orqali yetkazing.</i>`;
+    await this.sendMessage(msg, null, studentId, 'Talaba tasdiqlash kodi (Admin)');
   }
 
   /** Welcome after first-time verification */
-  async sendWelcome(chatId: string, studentName: string): Promise<void> {
-    await this.sendMessage(
-      `🎉 <b>Xush kelibsiz, ${studentName}!</b>\n\n` +
+  async sendWelcome(chatId: string, studentName: string, studentId?: string): Promise<void> {
+    const msg = `🎉 <b>Xush kelibsiz, ${studentName}!</b>\n\n` +
       `Siz IT School platformasiga muvaffaqiyatli ro'yxatdan o'tdingiz.\n\n` +
       `✅ Parolingiz saqlandi.\n\n` +
       `📱 Buyruqlar:\n/status — Holat\n/reset — Parol tiklash\n/help — Yordam\n\n` +
-      `Omad! 🚀`,
-      chatId,
-    );
+      `Omad! 🚀`;
+    await this.sendMessage(msg, chatId, studentId, 'Xush kelibsiz');
   }
 
   // ─── Exam Notifications ───────────────────────────────────────────────────
 
   /** Notify student that a new exam has been assigned to their group */
-  async notifyExamAssigned(chatId: string, studentName: string, examTitle: string, examDate?: string): Promise<void> {
-    await this.sendMessage(
-      `📝 <b>Yangi Imtihon Tayinlandi!</b>\n\n` +
+  async notifyExamAssigned(chatId: string, studentName: string, examTitle: string, studentId?: string, examDate?: string): Promise<void> {
+    const msg = `📝 <b>Yangi Imtihon Tayinlandi!</b>\n\n` +
       `Salom, <b>${studentName}</b>!\n\n` +
       `📌 Imtihon: <b>${examTitle}</b>\n` +
       `📅 Sana: ${examDate || 'Tez orada'}\n\n` +
       `🚀 Exam Platform'ga kiring va tayyorlanishni boshlang!\n` +
-      `🔗 Exam Platform orqali kirish uchun /start buyrug'ini yuboring.`,
-      chatId,
-    );
+      `🔗 Exam Platform orqali kirish uchun /start buyrug'ini yuboring.`;
+    await this.sendMessage(msg, chatId, studentId, 'Yangi imtihon');
   }
 
   /** Notify student of their exam result */
-  async notifyExamResult(chatId: string, studentName: string, examTitle: string, score: number): Promise<void> {
+  async notifyExamResult(chatId: string, studentName: string, examTitle: string, score: number, studentId?: string): Promise<void> {
     const emoji = score >= 80 ? '🏆' : score >= 50 ? '👍' : '📖';
     const comment = score >= 80 ? 'Ajoyib natija!' : score >= 50 ? 'Yaxshi harakat!' : "Ko'proq o'rganing!";
-    await this.sendMessage(
-      `${emoji} <b>Imtihon Natijasi!</b>\n\n` +
+    const msg = `${emoji} <b>Imtihon Natijasi!</b>\n\n` +
       `Salom, <b>${studentName}</b>!\n\n` +
       `📝 ${examTitle}\n` +
       `🎯 Ball: <b>${score}%</b>\n\n` +
-      `${comment}`,
-      chatId,
-    );
+      `${comment}`;
+    await this.sendMessage(msg, chatId, studentId, 'Imtihon natijasi');
   }
 
   // ─── Attendance Notifications ─────────────────────────────────────────────
 
   /** Notify student they missed a lesson */
-  async notifyAbsent(chatId: string, studentName: string, courseName: string, lessonDate: string): Promise<void> {
-    await this.sendMessage(
-      `⚠️ <b>Darsga kelmadingiz!</b>\n\n` +
+  async notifyAbsent(chatId: string, studentName: string, courseName: string, lessonDate: string, studentId?: string): Promise<void> {
+    const msg = `⚠️ <b>Darsga kelmadingiz!</b>\n\n` +
       `Salom, <b>${studentName}</b>!\n\n` +
       `📚 Kurs: ${courseName}\n` +
       `📅 Sana: ${lessonDate}\n\n` +
       `Sababli bo'lmagan darslar ko'paysa, sertifikatga ta'sir qilishi mumkin.\n` +
-      `Muammo bo'lsa, o'qituvchi yoki menejer bilan bog'laning.`,
-      chatId,
-    );
+      `Muammo bo'lsa, o'qituvchi yoki menejer bilan bog'laning.`;
+    await this.sendMessage(msg, chatId, studentId, 'Davomatdan ogohlantirish');
   }
 
   /** Notify parent about student absence */
-  async notifyParentAbsent(parentChatId: string, studentName: string, courseName: string, lessonDate: string): Promise<void> {
-    await this.sendMessage(
-      `👨‍👩‍👦 <b>Farzandingiz darsga kelmadi</b>\n\n` +
+  async notifyParentAbsent(parentChatId: string, studentName: string, courseName: string, lessonDate: string, studentId?: string): Promise<void> {
+    const msg = `👨‍👩‍👦 <b>Farzandingiz darsga kelmadi</b>\n\n` +
       `👤 Talaba: <b>${studentName}</b>\n` +
       `📚 Kurs: ${courseName}\n` +
       `📅 Sana: ${lessonDate}\n\n` +
-      `Iltimos, farzandingiz bilan gaplashing.`,
-      parentChatId,
-    );
+      `Iltimos, farzandingiz bilan gaplashing.`;
+    await this.sendMessage(msg, parentChatId, studentId, 'Ota-ona uchun ogohlantirish');
   }
 
   // ─── Payment Notifications ────────────────────────────────────────────────
 
   /** Notify student about upcoming/overdue payment */
-  async notifyPaymentDue(chatId: string, studentName: string, amount: number, month: string): Promise<void> {
-    await this.sendMessage(
-      `💳 <b>To'lov Eslatmasi!</b>\n\n` +
+  async notifyPaymentDue(chatId: string, studentName: string, amount: number, month: string, studentId?: string): Promise<void> {
+    const msg = `💳 <b>To'lov Eslatmasi!</b>\n\n` +
       `Salom, <b>${studentName}</b>!\n\n` +
       `💰 ${month} oyi uchun to'lov: <b>${Number(amount).toLocaleString()} so'm</b>\n\n` +
       `Iltimos, imkon qadar to'lovni amalga oshiring.\n` +
-      `❓ Savol uchun menejer bilan bog'laning.`,
-      chatId,
-    );
+      `❓ Savol uchun menejer bilan bog'laning.`;
+    await this.sendMessage(msg, chatId, studentId, 'To\'lov eslatmasi');
   }
 
   /** Notify admin about new payment received */

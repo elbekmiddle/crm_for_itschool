@@ -19,7 +19,7 @@ const difficultyBars = (d: string) => {
 };
 
 const QuestionsPage: React.FC = () => {
-  const { questions, courses, lessons, fetchCourses, fetchLessons, fetchQuestions, createQuestion, isLoading } = useAdminStore();
+  const { questions, courses, lessons, fetchCourses, fetchLessons, fetchQuestions, createQuestion, questionStats, fetchQuestionStats, isLoading } = useAdminStore();
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedLessonId, setSelectedLessonId] = useState('');
   const [modal, setModal] = useState(false);
@@ -28,7 +28,7 @@ const QuestionsPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const perPage = 10;
 
-  useEffect(() => { fetchCourses(); }, []);
+  useEffect(() => { fetchCourses(); fetchQuestionStats(); }, []);
 
   useEffect(() => {
     if (selectedCourseId) fetchLessons(selectedCourseId);
@@ -68,19 +68,19 @@ const QuestionsPage: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
         <div className="card p-5">
           <p className="label-subtle mb-1">Jami savollar</p>
-          <p className="text-3xl font-black text-slate-800">{questions.length}</p>
+          <p className="text-3xl font-black text-slate-800">{questionStats?.totalQuestions || 0}</p>
         </div>
         <div className="card p-5">
           <p className="label-subtle mb-1">Tekshirish darajasi</p>
-          <p className="text-3xl font-black text-slate-800">94.2%</p>
+          <p className="text-3xl font-black text-slate-800">{questionStats?.checkedRate || 0}%</p>
         </div>
         <div className="card p-5">
           <p className="label-subtle mb-1">Foydalanish</p>
-          <p className="text-3xl font-black text-slate-800">{questions.length * 12}</p>
+          <p className="text-3xl font-black text-slate-800">{questionStats?.usageCount || 0}</p>
         </div>
         <div className="card p-5">
           <p className="label-subtle mb-1">Kutilmoqda</p>
-          <p className="text-3xl font-black text-amber-600">{Math.max(0, Math.floor(questions.length * 0.15))}</p>
+          <p className="text-3xl font-black text-amber-600">{questionStats?.pendingCount || 0}</p>
         </div>
       </div>
 

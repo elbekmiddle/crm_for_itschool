@@ -15,9 +15,15 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor to handle auth errors
+// Response interceptor to handle auth errors and data unwrapping
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // If the backend uses the TransformInterceptor pattern { success: true, data: ... }
+    if (response.data && response.data.success === true && response.data.data !== undefined) {
+      return { ...response, data: response.data.data };
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');

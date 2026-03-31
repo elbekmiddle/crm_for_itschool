@@ -165,5 +165,40 @@ export class StudentsService {
       },
     };
   }
+
+  async getNotifications(studentId: string) {
+    return this.dbService.query(
+      `SELECT * FROM notifications WHERE student_id = $1 ORDER BY created_at DESC LIMIT 50`,
+      [studentId]
+    );
+  }
+
+  async markNotificationRead(id: string, studentId: string) {
+    return this.dbService.query(
+      `UPDATE notifications SET is_read = TRUE WHERE id = $1 AND student_id = $2`,
+      [id, studentId]
+    );
+  }
+
+  async getStats(studentId: string) {
+    const dashboard = await this.getDashboard(studentId);
+    if (!dashboard) return null;
+
+    const totalExams = dashboard.exams?.length || 0;
+    const avgScore = totalExams > 0 
+      ? Math.round(dashboard.exams.reduce((acc: number, ex: any) => acc + (ex.score || 0), 0) / totalExams)
+      : 0;
+
+    const totalPayments = dashboard.payments?.reduce((acc: number, p: any) => acc + (p.amount || 0), 0) || 0;
+
+    return {
+      total_exams: totalExams,
+      average_score: avgScore,
+      attendance_percentage: dashboard.attendance_percentage || 0,
+      missed_lessons: dashboard.absent_days || 0,
+      total_payments: totalPayments,
+      ai_status: dashboard.ai_status
+    };
+  }
 }
 

@@ -7,18 +7,22 @@ import {
 } from 'lucide-react';
 
 const roleColors: Record<string, string> = {
-  admin: 'bg-red-50 text-red-600 border-red-200',
-  manager: 'bg-purple-50 text-purple-600 border-purple-200',
-  teacher: 'bg-blue-50 text-blue-600 border-blue-200',
+  ADMIN: 'bg-red-50 text-red-600 border-red-200',
+  MANAGER: 'bg-purple-50 text-purple-600 border-purple-200',
+  TEACHER: 'bg-blue-50 text-blue-600 border-blue-200',
 };
 
-const UsersPage: React.FC = () => {
+const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
   const { users, fetchUsers, createUser, updateUser, deleteUser, isLoading } = useAdminStore();
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
-  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', password: '', role: 'teacher' });
+  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', password: '', role: roleFilter || 'TEACHER' });
 
   useEffect(() => { fetchUsers(); }, []);
+
+  const filteredUsers = roleFilter 
+    ? users.filter((u: any) => u.role === roleFilter)
+    : users;
 
   const openCreate = () => {
     setForm({ first_name: '', last_name: '', email: '', phone: '', password: '', role: 'teacher' });
@@ -103,7 +107,7 @@ const UsersPage: React.FC = () => {
           <div className="card p-6">
             <h2 className="section-title mb-4">Tezkor Belgilash</h2>
             <div className="space-y-3">
-              {users.slice(0, 4).map((u: any) => (
+              {filteredUsers.slice(0, 4).map((u: any) => (
                 <div key={u.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-all">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 bg-primary-100 rounded-lg flex items-center justify-center text-xs font-black text-primary-600">
@@ -149,7 +153,7 @@ const UsersPage: React.FC = () => {
                 <tr><th>Ism</th><th>Email</th><th>Telefon</th><th>Rol</th><th className="text-right">Amallar</th></tr>
               </thead>
               <tbody>
-                {users.map((u: any) => (
+                {filteredUsers.map((u: any) => (
                   <tr key={u.id}>
                     <td className="font-bold text-slate-700">{u.first_name} {u.last_name}</td>
                     <td className="text-xs text-slate-500">{u.email}</td>
@@ -188,9 +192,9 @@ const UsersPage: React.FC = () => {
               <div>
                 <label className="input-label">Rol</label>
                 <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="select">
-                  <option value="teacher">Teacher</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
+                  <option value="TEACHER">Teacher</option>
+                  <option value="MANAGER">Manager</option>
+                  <option value="ADMIN">Admin</option>
                 </select>
               </div>
             </div>

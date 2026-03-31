@@ -116,9 +116,9 @@ export class AuthService {
     this.logger.debug(`[sendVerifyCode] phone=${phone} code=${code} redis_key=${redisKey}`);
 
     if (student.telegram_chat_id) {
-      await this.telegramService.sendVerifyCode(student.telegram_chat_id, code, student.first_name);
+      await this.telegramService.sendVerifyCode(student.telegram_chat_id, code, student.first_name, student.id);
     } else {
-      await this.telegramService.sendVerifyCodeToAdmin(student.first_name, phone, code);
+      await this.telegramService.sendVerifyCodeToAdmin(student.first_name, phone, code, student.id);
     }
 
     return {
@@ -179,7 +179,7 @@ export class AuthService {
 
     // Send welcome Telegram notification
     if (student.telegram_chat_id) {
-      await this.telegramService.sendWelcome(student.telegram_chat_id, student.first_name);
+      await this.telegramService.sendWelcome(student.telegram_chat_id, student.first_name, student.id);
     }
 
     return this.generateTokens({ ...student, role: 'STUDENT' });

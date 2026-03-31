@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Request, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpCode, HttpStatus, Request, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { StudentLoginDto } from './dto/student-login.dto';
@@ -103,5 +103,13 @@ export class AuthController {
   logout(@Request() req) {
     const token = req.headers.authorization?.split(' ')[1];
     return this.authService.logout(token);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile' })
+  getMe(@Request() req) {
+    return req.user;
   }
 }

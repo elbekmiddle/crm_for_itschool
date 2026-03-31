@@ -15,6 +15,13 @@ export class ExamsController {
   constructor(private readonly examsService: ExamsService) {}
 
   @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Get()
+  @ApiOperation({ summary: 'List all exams' })
+  findAll() {
+    return this.examsService.findAll();
+  }
+
+  @Roles('ADMIN', 'MANAGER', 'TEACHER')
   @Post()
   @ApiOperation({ summary: 'Create a new exam' })
   create(@Body() createExamDto: CreateExamDto, @Request() req) {
@@ -62,6 +69,14 @@ export class ExamsController {
   @ApiOperation({ summary: 'Get available exams for current logged in student' })
   getAvailableExams(@Request() req) {
     return this.examsService.getAvailableExams(req.user.id);
+  }
+
+  @Roles('STUDENT', 'ADMIN', 'MANAGER', 'TEACHER')
+  @Get('results/student/:studentId')
+  @ApiOperation({ summary: 'Get all exam results for a specific student' })
+  getStudentResults(@Param('studentId') studentId: string, @Request() req) {
+    const targetId = studentId === 'me' ? req.user.id : studentId;
+    return this.examsService.getStudentResults(targetId);
   }
 
   @Post(':id/start')

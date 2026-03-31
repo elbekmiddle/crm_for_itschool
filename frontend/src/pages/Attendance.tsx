@@ -24,7 +24,7 @@ const AttendancePage: React.FC = () => {
   const selectedGroup = groups.find((g: any) => g.id === selectedGroupId);
   const today = new Date().toLocaleDateString('uz-UZ', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  const handleMark = async (studentId: string, status: 'present' | 'absent') => {
+  const handleMark = async (studentId: string, status: 'PRESENT' | 'ABSENT') => {
     await markAttendance({
       student_id: studentId,
       group_id: selectedGroupId,
@@ -34,7 +34,7 @@ const AttendancePage: React.FC = () => {
     await fetchAttendance(selectedGroupId);
   };
 
-  const presentCount = attendance.filter((a: any) => a.status === 'present').length;
+  const presentCount = attendance.filter((a: any) => a.status?.toUpperCase() === 'PRESENT').length;
   const totalStudents = students.length || 1;
   const attendancePercent = Math.round((presentCount / totalStudents) * 100);
 
@@ -97,28 +97,28 @@ const AttendancePage: React.FC = () => {
                             <span className="text-xs text-slate-400 font-semibold">N/A</span>
                           ) : (
                             <div className="flex gap-1.5">
-                              <button
-                                onClick={() => handleMark(s.id, 'present')}
-                                className={cn(
-                                  "px-4 py-2 rounded-lg text-xs font-bold border transition-all",
-                                  status === 'present'
-                                    ? "bg-green-500 text-white border-green-500"
-                                    : "border-slate-200 text-slate-500 hover:border-green-300 hover:text-green-600"
-                                )}
-                              >
-                                Present
-                              </button>
-                              <button
-                                onClick={() => handleMark(s.id, 'absent')}
-                                className={cn(
-                                  "px-4 py-2 rounded-lg text-xs font-bold border transition-all",
-                                  status === 'absent'
-                                    ? "bg-red-500 text-white border-red-500"
-                                    : "border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-600"
-                                )}
-                              >
-                                Absent
-                              </button>
+                                <button
+                                  onClick={() => handleMark(s.id, 'PRESENT')}
+                                  className={cn(
+                                    "px-4 py-2 rounded-lg text-xs font-bold border transition-all",
+                                    status?.toUpperCase() === 'PRESENT'
+                                      ? "bg-green-500 text-white border-green-500"
+                                      : "border-slate-200 text-slate-500 hover:border-green-300 hover:text-green-600"
+                                  )}
+                                >
+                                  Present
+                                </button>
+                                <button
+                                  onClick={() => handleMark(s.id, 'ABSENT')}
+                                  className={cn(
+                                    "px-4 py-2 rounded-lg text-xs font-bold border transition-all",
+                                    status?.toUpperCase() === 'ABSENT'
+                                      ? "bg-red-500 text-white border-red-500"
+                                      : "border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-600"
+                                  )}
+                                >
+                                  Absent
+                                </button>
                             </div>
                           )}
                         </div>

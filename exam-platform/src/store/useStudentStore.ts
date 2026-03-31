@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import api from '../lib/api';
-import type { Student, CourseInfo, AttendanceRecord, AttendanceStats, Payment, StudentStats } from '../types';
+import type { Student, CourseInfo, AttendanceRecord, AttendanceStats, Payment, StudentStats, Notification } from '../types';
 
 const isDev = import.meta.env.DEV;
 const devLog = (...args: any[]) => { if (isDev) console.log('[StudentStore]', ...args); };
@@ -12,6 +12,7 @@ interface StudentState {
   attendanceStats: AttendanceStats | null;
   payments: Payment[];
   stats: StudentStats | null;
+  notifications: Notification[];
   isLoading: boolean;
 
   fetchProfile: () => Promise<void>;
@@ -19,6 +20,8 @@ interface StudentState {
   fetchAttendance: (studentId: string) => Promise<void>;
   fetchPayments: (studentId: string) => Promise<void>;
   fetchStats: () => Promise<void>;
+  fetchNotifications: () => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
 }
 
 export const useStudentStore = create<StudentState>((set, get) => ({
@@ -28,6 +31,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   attendanceStats: null,
   payments: [],
   stats: null,
+  notifications: [],
   isLoading: false,
 
   fetchProfile: async () => {
@@ -55,7 +59,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     set({ isLoading: true });
     try {
       // Try student's own dashboard which includes group/course info
-      const { data } = await api.get('/students/dashboard/me');
+      const { data } = await api.get('/students/me/dashboard');
       devLog('fetchCourse (dashboard):', data);
       if (data) {
         set({
@@ -136,8 +140,10 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     set({ isLoading: true });
     try {
       const { data } = await api.get(`/payments/student/${studentId}`);
-      devLog('fetchPayments:', Array.isArray(data) ? data.length : data);
-      set({ payments: Array.isArray(data) ? data : [] });
+      devLog('fetchPayments:', data);
+      // New backend returns { status, payments }
+      const pList = Array.isArray(data) ? data : (data.payments || []);
+      set({ payments: pList });
     } catch (e) {
       devLog('fetchPayments failed:', e);
       set({ payments: [] });
@@ -148,35 +154,75 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
   fetchStats: async () => {
     try {
-      const { data } = await api.get('/students/me/stats');
-      devLog('fetchStats:', data);
-      set({ stats: data });
+      // Use the dashboard endpoint to get AI humor status as well
+      const { data } = await api.get('/students/me/dashboard');
+      devLog('fetchStats (dashboard):', data);
+      set({ 
+        stats: {
+          total_exams: data.total_exams || 0,
+          average_score: data.average_score || 0,
+          attendance_percentage: data.attendance_percentage || 0,
+          missed_lessons: data.absent_days || 0,
+          total_payments: data.payments?.length || 0,
+          ai_status: data.ai_status
+        }
+      });
     } catch (e1) {
       try {
-        // Fallback: analytics dashboard for student
-        const { data } = await api.get('/analytics/student/me');
-        devLog('fetchStats analytics:', data);
-        set({
-          stats: {
-            total_exams: data.total_exams || 0,
-            average_score: data.average_score || 0,
-            attendance_percentage: data.attendance_percentage || 0,
-            missed_lessons: data.absent_count || data.missed_lessons || 0,
-            total_payments: data.total_payments || 0,
-          },
-        });
+        // Fallback: older stats endpoint
+        const { data } = await api.get('/students/me/stats');
+        devLog('fetchStats fallback:', data);
+        set({ stats: data });
       } catch (e2) {
-        devLog('fetchStats failed, using defaults');
-        set({
-          stats: {
-            total_exams: 0,
-            average_score: 0,
-            attendance_percentage: 0,
-            missed_lessons: 0,
-            total_payments: 0,
-          },
-        });
+        try {
+          // Fallback: analytics dashboard for student
+          const { data } = await api.get('/analytics/student/me');
+          devLog('fetchStats analytics:', data);
+          set({
+            stats: {
+              total_exams: data.total_exams || 0,
+              average_score: data.average_score || 0,
+              attendance_percentage: data.attendance_percentage || 0,
+              missed_lessons: data.absent_count || data.missed_lessons || 0,
+              total_payments: data.total_payments || 0,
+            },
+          });
+        } catch (e3) {
+          devLog('fetchStats failed, using defaults');
+          set({
+            stats: {
+              total_exams: 0,
+              average_score: 0,
+              attendance_percentage: 0,
+              missed_lessons: 0,
+              total_payments: 0,
+            },
+          });
+        }
       }
+    }
+  },
+
+  fetchNotifications: async () => {
+    try {
+      const { data } = await api.get('/students/me/notifications');
+      devLog('fetchNotifications:', data);
+      set({ notifications: Array.isArray(data) ? data : [] });
+    } catch (e) {
+      devLog('fetchNotifications failed:', e);
+    }
+  },
+
+  markNotificationRead: async (id: string) => {
+    try {
+      await api.patch(`/students/me/notifications/${id}/read`);
+      set((state) => ({
+        notifications: state.notifications.map((n) =>
+          n.id === id ? { ...n, is_read: true } : n
+        ),
+      }));
+    } catch (e) {
+      devLog('markNotificationRead failed:', e);
     }
   },
 }));

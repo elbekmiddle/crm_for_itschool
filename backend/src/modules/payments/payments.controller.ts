@@ -31,7 +31,7 @@ export class PaymentsController {
     return this.paymentsService.create(body);
   }
 
-  @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Roles('ADMIN', 'MANAGER', 'TEACHER', 'STUDENT')
   @Get('student/:id')
   @ApiOperation({ summary: 'Check student payment status and history' })
   @ApiParam({ name: 'id', description: 'Student UUID' })

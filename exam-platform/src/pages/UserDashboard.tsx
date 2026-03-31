@@ -50,6 +50,21 @@ const UserDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* AI Humor Status */}
+      {stats?.ai_status && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex items-center gap-4 animate-in">
+          <div className="w-12 h-12 bg-amber-100 dark:bg-amber-950/40 rounded-xl flex items-center justify-center shrink-0">
+            <Sparkles className="w-6 h-6 text-amber-500" />
+          </div>
+          <div>
+            <p className="text-[10px] text-amber-600 dark:text-amber-400 font-black uppercase tracking-widest mb-0.5">AI Holat (Humor)</p>
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300 italic leading-relaxed">
+              "{stats.ai_status}"
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Alerts */}
       {hasAlerts && (
         <div className="space-y-2">
@@ -177,7 +192,7 @@ const UserDashboard: React.FC = () => {
       )}
 
       {/* AI Tip */}
-      <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-5 text-white">
+      {/* <div className="bg-gradient-to-br from-amber-400 -pt-10 to-orange-500 rounded-2xl p-5 text-white">
         <div className="flex items-center gap-2 mb-2">
           <Sparkles className="w-4 h-4" />
           <span className="text-xs font-black uppercase tracking-widest">AI Tavsiya</span>
@@ -185,7 +200,7 @@ const UserDashboard: React.FC = () => {
         <p className="text-sm font-semibold leading-relaxed opacity-95">
           "Har kuni 30 daqiqa takrorlash natijangizni 40% ga oshiradi. Bugungi imtihonga tayyorlanishni boshlang! 🚀"
         </p>
-      </div>
+      </div> */}
     </div>
   );
 };

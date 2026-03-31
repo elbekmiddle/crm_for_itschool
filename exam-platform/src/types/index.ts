@@ -104,4 +104,16 @@ export interface StudentStats {
   attendance_percentage: number;
   missed_lessons: number;
   total_payments: number;
+  ai_status?: string;
+}
+
+// ── Notification ──
+export interface Notification {
+  id: string;
+  student_id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  is_read: boolean;
+  created_at: string;
 }

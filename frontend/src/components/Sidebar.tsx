@@ -7,31 +7,53 @@ import {
   BookOpen,
   Calendar,
   ClipboardList,
-  HelpCircle,
   Wallet,
   BarChart3,
   Settings,
   LogOut,
-  ChevronLeft,
-  ChevronRight,
   X,
-  Menu,
 } from 'lucide-react';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
 
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', shortcut: '⌘D' },
-  { to: '/courses', icon: BookOpen, label: 'Kurslar', shortcut: '⌘C' },
-  { to: '/groups', icon: Users, label: 'Guruhlar', shortcut: '⌘G' },
-  { to: '/students', icon: GraduationCap, label: 'Talabalar', shortcut: '⌘S' },
-  { to: '/attendance', icon: Calendar, label: 'Davomat' },
-  { to: '/exams', icon: ClipboardList, label: 'Imtihonlar' },
-  { to: '/questions', icon: HelpCircle, label: 'Savollar' },
-  { to: '/users', icon: Users, label: 'Foydalanuvchilar' },
-  { to: '/payments', icon: Wallet, label: "To'lovlar", shortcut: '⌘P' },
-  { to: '/analytics', icon: BarChart3, label: 'Analitika' },
-];
+const getNavItems = (role: string) => {
+  const common = [
+    { to: `/${role.toLowerCase()}/dashboard`, icon: LayoutDashboard, label: 'Dashboard' },
+  ];
+
+  if (role === 'ADMIN') return [
+    ...common,
+    { to: '/admin/users', icon: Users, label: 'Foydalanuvchilar' },
+    { to: '/admin/teachers', icon: Users, label: "O'qituvchilar" },
+    { to: '/admin/managers', icon: Users, label: 'Menejerlar' },
+    { to: '/admin/students', icon: GraduationCap, label: 'Talabalar' },
+    { to: '/admin/courses', icon: BookOpen, label: 'Kurslar' },
+    { to: '/admin/groups', icon: Users, label: 'Guruhlar' },
+    { to: '/admin/analytics', icon: BarChart3, label: 'Analitika' },
+  ];
+
+  if (role === 'MANAGER') return [
+    ...common,
+    { to: '/manager/students', icon: GraduationCap, label: 'Talabalar' },
+    { to: '/manager/payments', icon: Wallet, label: "To'lovlar" },
+    { to: '/manager/courses', icon: BookOpen, label: 'Kurslar' },
+  ];
+
+  if (role === 'TEACHER') return [
+    ...common,
+    { to: '/teacher/groups', icon: Users, label: 'Guruhlar' },
+    { to: '/teacher/attendance', icon: Calendar, label: 'Davomat' },
+    { to: '/teacher/exams', icon: ClipboardList, label: 'Imtihonlar' },
+  ];
+
+  if (role === 'STUDENT') return [
+    ...common,
+    { to: '/student/profile', icon: Users, label: 'Profil' },
+    { to: '/student/exams', icon: ClipboardList, label: 'Imtihonlar' },
+  ];
+
+  return common;
+};
 
 interface SidebarProps {
   isOpen: boolean;
@@ -78,7 +100,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
 
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto no-scrollbar">
-          {navItems.map((item) => (
+          {getNavItems(user?.role || '').map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -95,9 +117,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
             >
               <item.icon className="w-[18px] h-[18px] shrink-0" />
               <span className={cn("flex-1", !isOpen && "md:hidden")}>{item.label}</span>
-              {item.shortcut && isOpen && (
-                <span className="text-[9px] font-bold text-slate-300 bg-slate-50 px-1.5 py-0.5 rounded">{item.shortcut}</span>
-              )}
             </NavLink>
           ))}
         </nav>
