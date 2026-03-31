@@ -1,4 +1,5 @@
-import { Controller, Post, Get, Body, HttpCode, HttpStatus, Request, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpCode, HttpStatus, Request, UseGuards, Res, Req } from '@nestjs/common';
+import { Response, Request as ExpressRequest } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { StudentLoginDto } from './dto/student-login.dto';
@@ -19,18 +20,22 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login user (admin/manager/teacher) with email+password' })
-  login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  @ApiOperation({ summary: 'Foydalanuvchi kirishi (admin/manager/teacher) email+parol bilan' })
+  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
+    const tokens = await this.authService.login(loginDto);
+    this.setCookies(res, tokens);
+    return { message: 'Muvaffaqiyatli tizimga kirdingiz' };
   }
 
   /* ── STUDENT LEGACY (phone + firstName) ── */
 
   @Post('student-login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Student login with phone + firstName (legacy)' })
-  studentLogin(@Body() studentLoginDto: StudentLoginDto) {
-    return this.authService.studentLogin(studentLoginDto);
+  @ApiOperation({ summary: 'O\'quvchi kirishi telefon + ism bilan (eski usul)' })
+  async studentLogin(@Body() studentLoginDto: StudentLoginDto, @Res({ passthrough: true }) res: Response) {
+    const tokens = await this.authService.studentLogin(studentLoginDto);
+    this.setCookies(res, tokens);
+    return { message: 'Muvaffaqiyatli tizimga kirdingiz' };
   }
 
   /* ── STUDENT TELEGRAM VERIFICATION FLOW ── */
@@ -41,7 +46,7 @@ export class AuthController {
    */
   @Post('check-phone')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Step 1: Check if student phone exists and is verified' })
+  @ApiOperation({ summary: '1-qadam: Telefon raqam mavjudligini tekshirish' })
   checkPhone(@Body() dto: CheckPhoneDto) {
     return this.authService.checkPhone(dto);
   }
@@ -51,7 +56,7 @@ export class AuthController {
    */
   @Post('send-verify-code')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Step 2a: Send 6-digit code via Telegram bot (5min TTL)' })
+  @ApiOperation({ summary: '2a-qadam: Telegram orqali 6 raqamli kod yuborish (5 daqiqa)' })
   sendVerifyCode(@Body() dto: CheckPhoneDto) {
     return this.authService.sendVerifyCode(dto);
   }
@@ -61,7 +66,7 @@ export class AuthController {
    */
   @Post('check-code')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Step 1.5: Pre-validate Telegram code (no password change)' })
+  @ApiOperation({ summary: '1.5-qadam: Telegram kodini tekshirish (parolsiz)' })
   checkCode(@Body() dto: CheckCodeDto) {
     return this.authService.checkCode(dto);
   }
@@ -71,9 +76,11 @@ export class AuthController {
    */
   @Post('verify-code')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Step 2b: Verify Telegram code, set password, receive JWT' })
-  verifyCode(@Body() dto: VerifyCodeDto) {
-    return this.authService.verifyCodeAndSetPassword(dto);
+  @ApiOperation({ summary: '2b-qadam: Telegram kodini tasdiqlash, parol o\'rnatish va tizimga kirish' })
+  async verifyCode(@Body() dto: VerifyCodeDto, @Res({ passthrough: true }) res: Response) {
+    const tokens = await this.authService.verifyCodeAndSetPassword(dto);
+    this.setCookies(res, tokens);
+    return { message: 'Muvaffaqiyatli ro\'yxatdan o\'tdingiz va tizimga kirdingiz' };
   }
 
   /**
@@ -81,35 +88,75 @@ export class AuthController {
    */
   @Post('student-login-password')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Step 2c: Login verified student with phone + password' })
-  studentPasswordLogin(@Body() dto: StudentPasswordLoginDto) {
-    return this.authService.studentPasswordLogin(dto);
+  @ApiOperation({ summary: '2c-qadam: Tasdiqlangan o\'quvchini telefon + parol bilan kirish' })
+  async studentPasswordLogin(@Body() dto: StudentPasswordLoginDto, @Res({ passthrough: true }) res: Response) {
+    const tokens = await this.authService.studentPasswordLogin(dto);
+    this.setCookies(res, tokens);
+    return { message: 'Muvaffaqiyatli tizimga kirdingiz' };
   }
 
   /* ── TOKEN REFRESH / LOGOUT ── */
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Refresh access token' })
-  refresh(@Body() refreshDto: RefreshTokenDto) {
-    return this.authService.refreshToken(refreshDto.refresh_token);
+  @ApiOperation({ summary: 'Access tokenni yangilash' })
+  async refresh(@Req() req: ExpressRequest, @Res({ passthrough: true }) res: Response) {
+    const refreshToken = req.cookies?.refresh_token;
+    if (!refreshToken) {
+      throw new Error('Refresh token topilmadi');
+    }
+    const tokens = await this.authService.refreshToken(refreshToken);
+    this.setCookies(res, tokens);
+    return { message: 'Token muvaffaqiyatli yangilandi' };
   }
 
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Logout user' })
-  logout(@Request() req) {
-    const token = req.headers.authorization?.split(' ')[1];
-    return this.authService.logout(token);
+  @ApiOperation({ summary: 'Tizimdan chiqish' })
+  async logout(@Req() req: ExpressRequest, @Res({ passthrough: true }) res: Response) {
+    const token = req.cookies?.access_token;
+    if (token) {
+      await this.authService.logout(token);
+    }
+    this.clearCookies(res);
+    return { message: 'Tizimdan muvaffaqiyatli chiqdingiz' };
   }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiOperation({ summary: 'Joriy foydalanuvchi ma\'lumotlarini olish' })
   getMe(@Request() req) {
     return req.user;
+  }
+
+  /* ── HELPER: Set HTTPOnly Secure Cookies ── */
+  private setCookies(res: Response, tokens: { access_token: string; refresh_token: string }) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Access token - 15 daqiqa
+    res.cookie('access_token', tokens.access_token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+      path: '/',
+    });
+
+    // Refresh token - 7 kun
+    res.cookie('refresh_token', tokens.refresh_token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
+    });
+  }
+
+  private clearCookies(res: Response) {
+    res.clearCookie('access_token', { path: '/' });
+    res.clearCookie('refresh_token', { path: '/' });
   }
 }

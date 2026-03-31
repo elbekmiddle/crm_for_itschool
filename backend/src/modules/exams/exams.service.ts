@@ -9,13 +9,13 @@ import { add_questions_to_exam } from './commands/add_questions_to_exam';
 import * as dayjs from 'dayjs';
 
 import { TelegramService } from '../../infrastructure/notifications/telegram.service';
-
-@Injectable()
+import { SocketsGateway } from '../sockets/sockets.gateway';
 export class ExamsService {
   constructor(
     private readonly dbService: DbService, 
     private readonly queueService: QueueService,
-    private readonly telegramService: TelegramService
+    private readonly telegramService: TelegramService,
+    private readonly socketsGateway: SocketsGateway
   ) {}
 
   async findAll() {
@@ -33,7 +33,9 @@ export class ExamsService {
   }
 
   async create(createExamDto: CreateExamDto, teacherId: string) {
-    return create_exam(this.dbService, createExamDto, teacherId);
+    const newExam = await create_exam(this.dbService, createExamDto, teacherId);
+    this.socketsGateway.emitToAll('exam_created', newExam);
+    return newExam;
   }
 
   async update(id: string, data: any) {
@@ -43,6 +45,10 @@ export class ExamsService {
       `UPDATE exams SET ${fields} WHERE id = $1 RETURNING *`,
       [id, ...values]
     );
+    this.socketsGateway.emitToAll('exam_updated', result[0]);
+    if (data.status === 'published' || data.status === 'approved') {
+       this.socketsGateway.emitToAll('exam_approved', result[0]);
+    }
     return result[0];
   }
 
@@ -54,11 +60,55 @@ export class ExamsService {
     return add_questions_to_exam(this.dbService, examId, questionIds);
   }
 
+  async addNewQuestion(examId: string, data: any) {
+    const lessonId = data.lesson_id || null;
+    const result = await this.dbService.query(`
+      INSERT INTO questions (lesson_id, text, options, correct_answer, level, type, status)
+      VALUES ($1, $2, $3, $4, $5, $6, 'draft') RETURNING *
+    `, [
+      lessonId, 
+      data.text || 'Yangi savol', 
+      JSON.stringify(data.options || []), 
+      data.correct_answer ? JSON.stringify(data.correct_answer) : null, 
+      data.level || 'medium', 
+      data.type || 'multiple_choice'
+    ]);
+    
+    await this.dbService.query(`
+      INSERT INTO exam_questions (exam_id, question_id) VALUES ($1, $2)
+    `, [examId, result[0].id]);
+
+    this.socketsGateway.emitToAll('exam_updated', { examId });
+    return result[0];
+  }
+
   async removeQuestionFromExam(examId: string, questionId: string) {
     return this.dbService.query(
       `DELETE FROM exam_questions WHERE exam_id = $1 AND question_id = $2`,
       [examId, questionId]
     );
+  }
+
+  async updateQuestion(examId: string, questionId: string, data: any) {
+    const fields = Object.keys(data).map((key, i) => `${key} = $${i + 2}`).join(', ');
+    const values = Object.values(data);
+    const result = await this.dbService.query(
+      `UPDATE questions SET ${fields} WHERE id = $1 RETURNING *`,
+      [questionId, ...values]
+    );
+    this.socketsGateway.emitToAll('exam_updated', { examId });
+    return result[0];
+  }
+
+  async approveAllQuestions(examId: string) {
+    await this.dbService.query(`
+      UPDATE questions 
+      SET status = 'approved' 
+      WHERE id IN (SELECT question_id FROM exam_questions WHERE exam_id = $1)
+      AND status = 'draft'
+    `, [examId]);
+    this.socketsGateway.emitToAll('exam_updated', { examId });
+    return { success: true };
   }
 
   async generateAiExam(examId: string, lessonId: string, topic: string, level: string, count: number, teacherId: string) {
@@ -128,6 +178,18 @@ export class ExamsService {
       INSERT INTO exam_attempts (exam_id, student_id, deadline_at) 
       VALUES ($1, $2, $3) RETURNING *
     `, [examId, studentId, deadline]);
+
+    try {
+      const student = await this.dbService.query(`SELECT first_name FROM students WHERE id = $1`, [studentId]);
+      this.socketsGateway.emitToAll('exam_started', { examId, studentId, studentName: student[0]?.first_name });
+      const examObj = await this.dbService.query(`SELECT title FROM exams WHERE id = $1`, [examId]);
+      
+      // Attempt to notify Telegram if student has it
+      const studentData = await this.dbService.query(`SELECT telegram_chat_id FROM students WHERE id = $1`, [studentId]);
+      if (studentData[0]?.telegram_chat_id) {
+          await this.telegramService.notifyExamStarting(studentData[0].telegram_chat_id, student[0]?.first_name, examObj[0]?.title, studentId);
+      }
+    } catch (e) {}
 
     return result[0];
   }

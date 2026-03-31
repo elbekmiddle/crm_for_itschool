@@ -23,6 +23,9 @@ const SettingsPage = lazy(() => import('./pages/Settings'));
 const StudentExams = lazy(() => import('./pages/StudentExams'));
 const ExamSession = lazy(() => import('./pages/ExamSession'));
 const ExamResult = lazy(() => import('./pages/ExamResult'));
+const TeacherExamReview = lazy(() => import('./pages/TeacherExamReview'));
+const LandingPage = lazy(() => import('./pages/public/LandingPage'));
+const BlogPage = lazy(() => import('./pages/public/BlogPage'));
 
 const queryClient = new QueryClient();
 
@@ -43,6 +46,9 @@ const App: React.FC = () => {
       <Router>
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/blog" element={<BlogPage />} />
+            <Route path="/crm" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<LoginPage />} />
             
             {/* Protected Routes */}
@@ -78,6 +84,7 @@ const App: React.FC = () => {
               <Route path="/teacher/exams" element={<ProtectedRoute roles={['TEACHER']}><ExamsPage /></ProtectedRoute>} />
               <Route path="/teacher/exams/create" element={<ProtectedRoute roles={['TEACHER']}><ExamsPage /></ProtectedRoute>} />
               <Route path="/teacher/exams/:id" element={<ProtectedRoute roles={['TEACHER']}><ExamsPage /></ProtectedRoute>} />
+              <Route path="/teacher/:id/exams/review/:examId" element={<ProtectedRoute roles={['TEACHER']}><TeacherExamReview /></ProtectedRoute>} />
 
               {/* STUDENT Panel */}
               <Route path="/student" element={<ProtectedRoute roles={['STUDENT']} children={<Navigate to="/student/dashboard" replace />} />} />
@@ -89,7 +96,6 @@ const App: React.FC = () => {
               <Route path="/student/exams/:id/review" element={<ProtectedRoute roles={['STUDENT']}><ExamResult /></ProtectedRoute>} />
             </Route>
 
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Suspense>

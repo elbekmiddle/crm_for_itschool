@@ -108,6 +108,16 @@ export class TelegramService {
     await this.sendMessage(msg, chatId, studentId, 'Yangi imtihon');
   }
 
+  /** Notify student that their exam is starting NOW */
+  async notifyExamStarting(chatId: string, studentName: string, examTitle: string, studentId?: string): Promise<void> {
+    const msg = `⏳ <b>Imtihon Boshlanmoqda!</b>\n\n` +
+      `Salom, <b>${studentName}</b>!\n\n` +
+      `📌 Imtihon: <b>${examTitle}</b>\n` +
+      `🚀 Hozir Exam Platform'ga kiring va boshlang!\n` +
+      `Omad tilaymiz!`;
+    await this.sendMessage(msg, chatId, studentId, 'Imtihon boshlanmoqda');
+  }
+
   /** Notify student of their exam result */
   async notifyExamResult(chatId: string, studentName: string, examTitle: string, score: number, studentId?: string): Promise<void> {
     const emoji = score >= 80 ? '🏆' : score >= 50 ? '👍' : '📖';

@@ -6,13 +6,15 @@ import { update_attendance } from './commands/update_attendance';
 import { AiService } from '../ai/ai.service';
 
 import { TelegramService } from '../../infrastructure/notifications/telegram.service';
+import { SocketsGateway } from '../sockets/sockets.gateway';
 
 @Injectable()
 export class AttendanceService {
   constructor(
     private readonly dbService: DbService,
     private readonly aiService: AiService,
-    private readonly telegramService: TelegramService
+    private readonly telegramService: TelegramService,
+    private readonly socketsGateway: SocketsGateway
   ) {}
 
   async markAttendance(data: any) {
@@ -25,6 +27,8 @@ export class AttendanceService {
          group_id: data.group_id,
          student_id: data.student_id
        });
+       
+       this.socketsGateway.emitToAll('attendance_missed', { studentId: data.student_id, groupId: data.group_id });
 
        try {
          const student = await this.dbService.query(`SELECT first_name, telegram_chat_id, parent_phone FROM students WHERE id = $1`, [data.student_id]);

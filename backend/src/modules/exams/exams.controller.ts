@@ -43,6 +43,13 @@ export class ExamsController {
   }
 
   @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Post(':id/questions/new')
+  @ApiOperation({ summary: 'Create a new question and add to exam' })
+  addNewQuestion(@Param('id') examId: string, @Body() body: any, @Request() req) {
+    return this.examsService.addNewQuestion(examId, { ...body, teacherId: req.user.id });
+  }
+
+  @Roles('ADMIN', 'MANAGER', 'TEACHER')
   @Delete(':id/questions/:questionId')
   @ApiOperation({ summary: 'Remove a question from an exam' })
   removeQuestion(@Param('id') examId: string, @Param('questionId') questionId: string) {
@@ -54,6 +61,27 @@ export class ExamsController {
   @ApiOperation({ summary: 'Publish exam to students' })
   publish(@Param('id') id: string) {
     return this.examsService.update(id, { status: 'published' });
+  }
+
+  @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Patch(':id/questions/:questionId')
+  @ApiOperation({ summary: 'Update a specific question in an exam (e.g. correct_answer, options, text)' })
+  updateQuestion(@Param('id') examId: string, @Param('questionId') questionId: string, @Body() data: any) {
+    return this.examsService.updateQuestion(examId, questionId, data);
+  }
+
+  @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Post(':id/questions/:questionId/approve')
+  @ApiOperation({ summary: 'Approve a single AI generated question' })
+  approveQuestion(@Param('id') examId: string, @Param('questionId') questionId: string) {
+    return this.examsService.updateQuestion(examId, questionId, { status: 'approved' });
+  }
+
+  @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Post(':id/approve-all')
+  @ApiOperation({ summary: 'Approve all draft questions in an exam' })
+  approveAllQuestions(@Param('id') examId: string) {
+    return this.examsService.approveAllQuestions(examId);
   }
 
   @Roles('ADMIN', 'MANAGER', 'TEACHER')
