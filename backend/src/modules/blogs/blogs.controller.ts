@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ValidationPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, Patch } from '@nestjs/common';
 import { BlogsService } from './blogs.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { CreateBlogDto } from './dto/blog.dto';
+import { CreateBlogPostDto, UpdateBlogPostDto } from './dto/blog-post.dto';
 
 @Controller('blogs')
 export class BlogsController {
@@ -18,8 +18,15 @@ export class BlogsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Post()
-  createBlog(@Body(new ValidationPipe()) data: CreateBlogDto, @Request() req) {
+  createBlog(@Body() data: CreateBlogPostDto, @Request() req) {
     return this.blogsService.create(data, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Patch(':id')
+  updateBlog(@Param('id') id: string, @Body() data: UpdateBlogPostDto) {
+    return this.blogsService.update(id, data);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

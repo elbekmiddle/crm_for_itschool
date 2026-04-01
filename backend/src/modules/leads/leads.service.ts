@@ -12,23 +12,26 @@ export class LeadsService {
   ) {}
 
   async createLead(data: any) {
-    if (!data.phone) throw new BadRequestException('Phone is required');
-    const existing = await this.dbService.query(`SELECT * FROM leads WHERE phone=$1`, [data.phone]);
+    if (!data.phone) throw new BadRequestException('Telefon raqam kiritilishi shart');
+    
+    // Improved unique check (ignoring rejected leads)
+    const existing = await this.dbService.query(`SELECT id FROM leads WHERE phone=$1 AND status != 'rejected' LIMIT 1`, [data.phone]);
     if (existing.length) throw new BadRequestException('Bu raqamdan avval ariza tushgan.');
 
     const res = await this.dbService.query(`
-      INSERT INTO leads (first_name, last_name, phone, parent_name, course_id, source)
-      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+      INSERT INTO leads (first_name, last_name, phone, parent_name, course_id, source, status)
+      VALUES ($1, $2, $3, $4, $5, $6, 'new') RETURNING *
     `, [data.first_name, data.last_name || null, data.phone, data.parent_name || null, data.course_id || null, data.source || 'site']);
 
-    // Emit realtime event
-    this.socketsGateway.emitToAll('new_lead', res[0]);
+    const lead = res[0];
 
-    // Notify Manager
-    const msg = `🆕 <b>Yangi Ariza tushdi!</b>\n\n👤 Talaba: ${data.first_name} ${data.last_name || ''}\n📞 Tel: ${data.phone}\nManba: ${data.source || 'Sayt'}`;
-    await this.telegramService.notifyAdmin(msg);
+    // Real-time notification for CRM
+    this.socketsGateway.emitToAll('new_lead', lead);
 
-    return res[0];
+    // Interactive Telegram notification (as per telegram_reception_bot repo logic)
+    await this.telegramService.notifyNewLead(lead);
+
+    return lead;
   }
 
   async findAll() {

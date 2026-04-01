@@ -7,6 +7,8 @@ import {
   Pencil, Trash2, X, UserPlus, ChevronLeft, ChevronRight, Send, Eye
 } from 'lucide-react';
 
+import { useConfirm } from '../context/ConfirmContext';
+
 const statusPill = (s: string) => {
   const m: Record<string, string> = {
     active: 'pill-active', frozen: 'pill-frozen', dropped: 'pill-dropped', graduated: 'pill-completed',
@@ -16,6 +18,7 @@ const statusPill = (s: string) => {
 
 const StudentsPage: React.FC = () => {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { students, courses, fetchStudents, fetchCourses, createStudent, updateStudent, deleteStudent, enrollStudent, isLoading } = useAdminStore();
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
@@ -62,7 +65,13 @@ const StudentsPage: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Talabani o'chirishni tasdiqlaysizmi?")) await deleteStudent(id);
+    const ok = await confirm({
+      title: "O'chirishni tasdiqlaysizmi?",
+      message: "Ushbu talaba ma'lumotlari butunlay o'chiriladi.",
+      confirmText: "O'CHIRISH",
+      type: 'danger'
+    });
+    if (ok) await deleteStudent(id);
   };
 
   return (

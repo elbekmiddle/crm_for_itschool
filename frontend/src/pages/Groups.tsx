@@ -6,8 +6,11 @@ import {
   Radio, Calendar, ChevronRight
 } from 'lucide-react';
 
+import { useConfirm } from '../context/ConfirmContext';
+
 const GroupsPage: React.FC = () => {
   const { groups, courses, students, fetchGroups, fetchCourses, fetchStudents, createGroup, updateGroup, deleteGroup, addStudentToGroup, removeStudentFromGroup, fetchGroupStudents, isLoading } = useAdminStore();
+  const confirm = useConfirm();
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
   const [form, setForm] = useState({ name: '', course_id: '', schedule: '', max_students: '' });
@@ -51,10 +54,28 @@ const GroupsPage: React.FC = () => {
   };
 
   const handleRemoveStudent = async (studentId: string) => {
-    if (selectedGroup && confirm("Talabani guruhdan chiqarishni tasdiqlaysizmi?")) {
-      await removeStudentFromGroup(selectedGroup.id, studentId);
-      await loadGroupStudents(selectedGroup);
+    if (selectedGroup) {
+      const ok = await confirm({
+        title: "Guruhdan chiqarish?",
+        message: "Ushbu talaba guruhdan chiqariladi.",
+        confirmText: "CHIQARISH",
+        type: 'warning'
+      });
+      if (ok) {
+        await removeStudentFromGroup(selectedGroup.id, studentId);
+        await loadGroupStudents(selectedGroup);
+      }
     }
+  };
+
+  const handleDeleteGroup = async (id: string) => {
+    const ok = await confirm({
+      title: "Guruhni o'chirish?",
+      message: "Ushbu guruh va undagi barcha talabalar bog'liqligi o'chiriladi.",
+      confirmText: "O'CHIRISH",
+      type: 'danger'
+    });
+    if (ok) await deleteGroup(id);
   };
 
   return (
@@ -100,7 +121,7 @@ const GroupsPage: React.FC = () => {
                       <button onClick={(e) => { e.stopPropagation(); openEdit(group); }} className="p-2 rounded-lg hover:bg-slate-100">
                         <Pencil className="w-4 h-4 text-slate-400" />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); if (confirm("O'chirishni tasdiqlaysizmi?")) deleteGroup(group.id); }} className="p-2 rounded-lg hover:bg-red-50">
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id); }} className="p-2 rounded-lg hover:bg-red-50">
                         <Trash2 className="w-4 h-4 text-red-400" />
                       </button>
                     </div>

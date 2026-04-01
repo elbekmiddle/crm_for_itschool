@@ -6,6 +6,9 @@ import {
   Play, Eye, ChevronLeft, ChevronRight, Radio, FileText, Sparkles
 } from 'lucide-react';
 
+import { useConfirm } from '../context/ConfirmContext';
+import { toast } from 'react-hot-toast';
+
 const statusMap: Record<string, { label: string; cls: string }> = {
   draft: { label: 'DRAFT', cls: 'pill-draft' },
   published: { label: 'PUBLISHED', cls: 'pill-published' },
@@ -14,10 +17,12 @@ const statusMap: Record<string, { label: string; cls: string }> = {
 };
 
 const ExamsPage: React.FC = () => {
-  const { exams, courses, examResults, fetchExams, fetchCourses, createExam, updateExam, deleteExam, publishExam, fetchExamResults, isLoading } = useAdminStore();
-  const [modal, setModal] = useState<'create' | 'edit' | 'results' | null>(null);
-  const [editTarget, setEditTarget] = useState<any>(null);
+  const { exams, courses, examResults, fetchExams, fetchCourses, createExam, updateExam, deleteExam, publishExam, generateAiExam, fetchExamResults, isLoading } = useAdminStore();
+  const confirm = useConfirm();
+  const [modal, setModal] = useState<'create' | 'edit' | 'results' | 'ai' | null>(null);
+  const [targetExam, setTargetExam] = useState<any>(null);
   const [form, setForm] = useState({ title: '', course_id: '', duration_minutes: '', passing_score: '' });
+  const [aiForm, setAiForm] = useState({ topic: '', level: 'medium', count: '10' });
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'all' | 'active' | 'completed' | 'draft'>('all');
   const [page, setPage] = useState(1);
@@ -38,7 +43,7 @@ const ExamsPage: React.FC = () => {
   };
 
   const openEdit = (e: any) => {
-    setEditTarget(e);
+    setTargetExam(e);
     setForm({
       title: e.title, course_id: e.course_id || '',
       duration_minutes: e.duration_minutes?.toString() || '30',
@@ -50,13 +55,35 @@ const ExamsPage: React.FC = () => {
   const handleSave = async () => {
     const payload = { ...form, duration_minutes: Number(form.duration_minutes), passing_score: Number(form.passing_score) };
     if (modal === 'create') await createExam(payload);
-    else if (editTarget) await updateExam(editTarget.id, payload);
+    else if (targetExam) await updateExam(targetExam.id, payload);
     setModal(null);
+  };
+
+  const handleAiGenerate = async () => {
+    if (targetExam) {
+      await generateAiExam(targetExam.id, { 
+        ...aiForm, 
+        count: Number(aiForm.count),
+        lesson_id: null // optional
+      });
+      toast.success("AI savol yaratish boshlandi!");
+      setModal(null);
+    }
   };
 
   const viewResults = async (examId: string) => {
     await fetchExamResults(examId);
     setModal('results');
+  };
+
+  const handleDelete = async (id: string) => {
+    const ok = await confirm({
+      title: "Imtihonni o'chirish?",
+      message: "Ushbu imtihon va barcha natijalar o'chib ketadi.",
+      confirmText: "O'CHIRISH",
+      type: 'danger'
+    });
+    if (ok) await deleteExam(id);
   };
 
   return (
@@ -164,9 +191,14 @@ const ExamsPage: React.FC = () => {
                       <td>
                         <div className="flex items-center justify-end gap-1">
                           {exam.status === 'draft' && (
-                            <button onClick={() => publishExam(exam.id)} className="p-2 rounded-lg hover:bg-green-50 text-green-600" title="Nashr qilish">
-                              <Play className="w-4 h-4" />
-                            </button>
+                            <>
+                              <button onClick={() => { setTargetExam(exam); setAiForm({ ...aiForm, topic: exam.title }); setModal('ai'); }} className="p-2 rounded-lg hover:bg-indigo-50 text-indigo-600" title="AI Savol Yaratish">
+                                <Sparkles className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => publishExam(exam.id)} className="p-2 rounded-lg hover:bg-green-50 text-green-600" title="Nashr qilish">
+                                <Play className="w-4 h-4" />
+                              </button>
+                            </>
                           )}
                           <button onClick={() => viewResults(exam.id)} className="p-2 rounded-lg hover:bg-primary-50 text-primary-600" title="Natijalar">
                             <Eye className="w-4 h-4" />
@@ -174,7 +206,7 @@ const ExamsPage: React.FC = () => {
                           <button onClick={() => openEdit(exam)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500" title="Tahrirlash">
                             <Pencil className="w-4 h-4" />
                           </button>
-                          <button onClick={() => { if (confirm("O'chirishni tasdiqlaysizmi?")) deleteExam(exam.id); }} className="p-2 rounded-lg hover:bg-red-50 text-red-500" title="O'chirish">
+                          <button onClick={() => handleDelete(exam.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-500" title="O'chirish">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -243,28 +275,71 @@ const ExamsPage: React.FC = () => {
         </div>
       )}
 
+      {/* AI Generate Modal */}
+      {modal === 'ai' && (
+        <div className="modal-overlay" onClick={() => setModal(null)}>
+          <div className="modal-content p-8 animate-in-scale max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-indigo-600" />
+              </div>
+              <h2 className="text-xl font-black text-slate-800">AI Savol Yaratish</h2>
+            </div>
+            
+            <div className="space-y-5">
+              <div>
+                <label className="input-label">Mavzu / Kontekst</label>
+                <input value={aiForm.topic} onChange={(e) => setAiForm({ ...aiForm, topic: e.target.value })} className="input" placeholder="Masalan: JavaScript array methods..." />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="input-label">Qiyinlik</label>
+                  <select value={aiForm.level} onChange={(e) => setAiForm({ ...aiForm, level: e.target.value })} className="select font-bold">
+                    <option value="easy">Oson</option>
+                    <option value="medium">O'rtacha</option>
+                    <option value="hard">Qiyin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="input-label">Soni</label>
+                  <input type="number" value={aiForm.count} onChange={(e) => setAiForm({ ...aiForm, count: e.target.value })} className="input" />
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                * AI savollarni yaratib, ularni "Draft" holatida imtihonga qo'shib qo'yadi. Siz keyinroq ularni ko'rib chiqib tasdiqlashingiz mumkin.
+              </p>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setModal(null)} className="btn-secondary flex-1 py-4">Bekor qilish</button>
+              <button onClick={handleAiGenerate} className="btn-primary flex-1 py-4 shadow-lg shadow-indigo-600/30">GENERATE</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Results Modal */}
       {modal === 'results' && (
         <div className="modal-overlay" onClick={() => setModal(null)}>
-          <div className="modal-content p-6 animate-in-scale max-w-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-black">Natijalar</h2>
-              <button onClick={() => setModal(null)} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
+          <div className="modal-content p-6 animate-in-scale max-w-2xl px-10 py-10" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">Imtihon Natijalari</h2>
+              <button onClick={() => setModal(null)} className="p-2 rounded-xl hover:bg-slate-100"><X className="w-5 h-5 text-slate-400" /></button>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-hidden rounded-3xl border border-slate-100">
               <table className="data-table">
-                <thead>
-                  <tr><th>Talaba</th><th>Ball</th><th>Status</th></tr>
+                <thead className="bg-slate-50/50">
+                  <tr><th>Talaba</th><th className="text-center">Ball</th><th className="text-right">Status</th></tr>
                 </thead>
                 <tbody>
                   {examResults.map((r: any) => (
                     <tr key={r.id}>
-                      <td className="font-bold">{r.student_name || `${r.first_name || ''} ${r.last_name || ''}`}</td>
-                      <td className="font-bold text-primary-600">{r.score}%</td>
-                      <td><span className={cn("status-pill", r.score >= 60 ? 'pill-active' : 'pill-dropped')}>{r.score >= 60 ? 'O\'tdi' : 'Yiqildi'}</span></td>
+                      <td className="font-bold text-slate-700">{r.student_name || `${r.first_name || ''} ${r.last_name || ''}`}</td>
+                      <td className="text-center font-black text-primary-600">{r.score}%</td>
+                      <td className="text-right"><span className={cn("status-pill", r.score >= 60 ? 'pill-active' : 'pill-dropped')}>{r.score >= 60 ? 'O\'tdi' : 'Yiqildi'}</span></td>
                     </tr>
                   ))}
-                  {examResults.length === 0 && <tr><td colSpan={3} className="text-center py-8 text-slate-400">Natijalar yo'q</td></tr>}
+                  {examResults.length === 0 && <tr><td colSpan={3} className="text-center py-12 text-slate-300 font-bold italic">Natijalar hozircha mavjud emas</td></tr>}
                 </tbody>
               </table>
             </div>

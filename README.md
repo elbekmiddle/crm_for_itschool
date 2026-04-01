@@ -1,10 +1,26 @@
-# 🚀 IT School Ecosystem (CRM + LMS + AI + Marketing + HR)
+# IT School CRM & LMS (Production-Grade)
 
-Welcome to the ultimate **Startup-level full-stack education ecosystem**. This repository contains a fully micro-frontend architecture powered by a monolithic robust NestJS backend.
+Ushbu platforma zamonaviy ta'lim markazlari uchun mo'ljallangan bo'lib, quyidagi interfeyslardan tashkil topgan:
 
-## 🌟 Modules & Features
-Instead of a crowded monolithic interface, the system seamlessly decouples into specialized roles:
-- **Admin/Manager CRM** (`crm/`): Control admissions, manage courses, users, and handle HR processing. Leads converting to Students happens securely here.
+## 🚀 Tizim arxitekturasi
+- **Backend (NestJS)**: Clean Architecture asosida qurilgan.
+- **Frontend (Vite + React)**: Unified portal (Admin/Teacher/Student).
+- **Notification (Telegram)**: Interactive callbacks orqali CRM integratsiyasi.
+
+## ✨ Muhim hususiyatlar
+- **Unified API Response**: Barcha javoblar `{success, data, message}` formatida.
+- **Global Error Handling**: Tizimdagi barcha xatoliklar bir xil formatda qaytadi.
+- **AI Exam Engine**: Savollarni avtomatik yaratish va o'qituvchi tomonidan tasdiqlash flow'si.
+- **Anti-Cheat System**: 
+  - `Visibility Detection`: Oyna almashishni aniqlash.
+  - `Multi-tab Protection`: Bir vaqtda bir nechta tabda kirishni taqiqlash.
+  - `Auto-submit`: Qoidabuzarliklar soni oshib ketganda avtomatik yakunlash.
+- **Interactive CRM**: Telegram orqali Leadlarni bir tugma bilan Studentga aylantirish.
+
+## 🛠 Texnologiyalar
+- **Backend**: NestJS, PostgreSQL, Redis (BullMQ), Telegram Bot API.
+- **Frontend**: React, Framer Motion, TailwindCSS, Lucia Auth.
+
 - **Student Exam Platform** (`students/`): Students take AI-generated exams, view their real-time score, check attendance, and explore courses. (Also known as students.itschool.uz)
 - **Marketing Site** (`itschool/`): High conversion Landing page to capture hot leads, complete with vacancy postings and CRM Webhooks.
 - **IT Blog** (`blog/`): Dedicated blog site for SEO.

@@ -29,6 +29,32 @@ export class BlogsService {
     return b[0];
   }
 
+  async update(id: string, data: any) {
+    let slug = undefined;
+    if (data.title) {
+      slug = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now();
+    }
+
+    const fields = [];
+    const values = [];
+    let i = 1;
+
+    for (const [key, value] of Object.entries(data)) {
+        fields.push(`${key} = $${i++}`);
+        values.push(value);
+    }
+
+    if (slug) {
+        fields.push(`slug = $${i++}`);
+        values.push(slug);
+    }
+
+    values.push(id);
+    return this.db.query(`
+      UPDATE blogs SET ${fields.join(', ')} WHERE id = $${i} RETURNING *
+    `, values);
+  }
+
   async delete(id: string) {
     return this.db.query('DELETE FROM blogs WHERE id=$1', [id]);
   }

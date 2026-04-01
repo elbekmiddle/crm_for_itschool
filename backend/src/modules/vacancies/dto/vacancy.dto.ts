@@ -1,9 +1,8 @@
-import { IsString, IsNotEmpty, IsOptional, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsEnum, IsArray } from 'class-validator';
 
 export class CreateVacancyDto {
   @IsString()
   @IsNotEmpty()
-  @MaxLength(200)
   title: string;
 
   @IsString()
@@ -12,7 +11,6 @@ export class CreateVacancyDto {
 
   @IsString()
   @IsOptional()
-  @MaxLength(50)
   salary?: string;
 }
 
@@ -23,15 +21,13 @@ export class ApplyVacancyDto {
 
   @IsString()
   @IsNotEmpty()
-  @MaxLength(100)
   name: string;
 
   @IsString()
   @IsNotEmpty()
-  @MaxLength(20)
   phone: string;
 
   @IsString()
-  @IsNotEmpty()
-  resume_url: string;
+  @IsOptional()
+  resume_url?: string;
 }

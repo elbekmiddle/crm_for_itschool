@@ -6,8 +6,11 @@ import {
   TrendingUp, Snowflake, ChevronLeft, ChevronRight, AlertTriangle
 } from 'lucide-react';
 
+import { useConfirm } from '../context/ConfirmContext';
+
 const PaymentsPage: React.FC = () => {
   const { payments, students, courses, stats, fetchPayments, fetchStudents, fetchCourses, fetchStats, createPayment, deletePayment, isLoading } = useAdminStore();
+  const confirm = useConfirm();
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ student_id: '', amount: '', payment_method: 'cash', description: '' });
   const [tab, setTab] = useState<'all' | 'debt'>('all');
@@ -25,6 +28,19 @@ const PaymentsPage: React.FC = () => {
     await createPayment({ ...form, amount: Number(form.amount) });
     setModal(false);
     fetchStats();
+  };
+
+  const handleDelete = async (id: string) => {
+    const ok = await confirm({
+      title: "To'lovni o'chirish?",
+      message: "Ushbu to'lov ma'lumoti qaytarib bo'lmaydigan qilib o'chiriladi.",
+      confirmText: "O'CHIRISH",
+      type: 'danger'
+    });
+    if (ok) {
+       await deletePayment(id);
+       fetchStats();
+    }
   };
 
   return (
@@ -143,7 +159,7 @@ const PaymentsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="text-right">
-                      <button onClick={() => { if (confirm("O'chirishni tasdiqlaysizmi?")) deletePayment(p.id); }} className="p-2 rounded-lg hover:bg-red-50 text-red-500">
+                      <button onClick={() => handleDelete(p.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-500">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </td>

@@ -10,6 +10,7 @@ import * as dayjs from 'dayjs';
 
 import { TelegramService } from '../../infrastructure/notifications/telegram.service';
 import { SocketsGateway } from '../sockets/sockets.gateway';
+@Injectable()
 export class ExamsService {
   constructor(
     private readonly dbService: DbService, 
@@ -101,17 +102,27 @@ export class ExamsService {
   }
 
   async approveAllQuestions(examId: string) {
+    const exam = await this.dbService.query(`SELECT id FROM exams WHERE id = $1`, [examId]);
+    if (!exam.length) throw new NotFoundException('Imtihon topilmadi');
+
     await this.dbService.query(`
       UPDATE questions 
       SET status = 'approved' 
       WHERE id IN (SELECT question_id FROM exam_questions WHERE exam_id = $1)
       AND status = 'draft'
     `, [examId]);
-    this.socketsGateway.emitToAll('exam_updated', { examId });
-    return { success: true };
+
+    // Update exam status if it was pending
+    await this.dbService.query(`UPDATE exams SET status = 'published' WHERE id = $1`, [examId]);
+
+    this.socketsGateway.emitToAll('exam_approved', { examId });
+    return { success: true, message: 'Barcha savollar tasdiqlandi va imtihon e\'lon qilindi' };
   }
 
   async generateAiExam(examId: string, lessonId: string, topic: string, level: string, count: number, teacherId: string) {
+    const exam = await this.dbService.query(`SELECT id, title, teacher_id FROM exams WHERE id = $1`, [examId]);
+    if (!exam.length) throw new NotFoundException('Exam not found');
+
     const job = await this.queueService.addExamJob({
       examId,
       lessonId,
@@ -120,6 +131,16 @@ export class ExamsService {
       count,
       teacherId
     });
+
+    // Notify teacher via Telegram that AI is working (or check socket room)
+    const teacher = await this.dbService.query(`SELECT telegram_chat_id FROM users WHERE id = $1`, [teacherId]);
+    if (teacher[0]?.telegram_chat_id) {
+       await this.telegramService.sendMessage(
+         `⚙️ <b>AI Imtihon yaratishni boshladi...</b>\n\n📌 <b>${exam[0].title}</b> uchun savollar tayyorlanmoqda. Yakunlangach xabar beramiz.`,
+         teacher[0].telegram_chat_id
+       );
+    }
+
     return { success: true, message: 'AI generation started', jobId: job?.id };
   }
 

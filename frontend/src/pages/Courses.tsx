@@ -5,8 +5,11 @@ import {
   BookOpen, Plus, Search, Loader2, Pencil, Trash2, X, Users, CheckCircle, Clock
 } from 'lucide-react';
 
+import { useConfirm } from '../context/ConfirmContext';
+
 const CoursesPage: React.FC = () => {
   const { courses, fetchCourses, createCourse, updateCourse, deleteCourse, isLoading } = useAdminStore();
+  const confirm = useConfirm();
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
   const [form, setForm] = useState({ name: '', description: '', price: '', duration_months: '' });
@@ -35,7 +38,13 @@ const CoursesPage: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Kursni o'chirishni tasdiqlaysizmi?")) await deleteCourse(id);
+    const ok = await confirm({
+      title: "Kursni o'chirish?",
+      message: "Ushbu kurs barcha darslari va talabalari bog'liqligi bilan o'chirilishi mumkin.",
+      confirmText: "O'CHIRISH",
+      type: 'danger'
+    });
+    if (ok) await deleteCourse(id);
   };
 
   return (

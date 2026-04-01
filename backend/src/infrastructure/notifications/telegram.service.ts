@@ -18,157 +18,136 @@ export class TelegramService {
     this.baseUrl = `https://api.telegram.org/bot${this.botToken}`;
   }
 
-  // ─── Core send ────────────────────────────────────────────────────────────
-  async sendMessage(message: string, chatId?: string, studentId?: string, title?: string): Promise<boolean> {
+  // --- Core Base Method ---
+  async sendMessage(message: string, chatId?: string, studentId?: string, title?: string, replyMarkup?: any): Promise<boolean> {
     const targetChatId = chatId || this.adminChatId;
+    if (!this.botToken || !targetChatId) return false;
 
-    // Persist to DB if studentId is provided
+    // Optional: Save notification for student platform history
     if (studentId) {
-      try {
-        await this.dbService.query(
-          `INSERT INTO notifications (student_id, title, message) VALUES ($1, $2, $3)`,
-          [studentId, title || 'IT School Xabari', message.replace(/<[^>]*>?/gm, '')]
-        );
-      } catch (e) {
-        this.logger.error('Failed to save notification to DB:', e.message);
-      }
+       this.dbService.query(
+         `INSERT INTO notifications (student_id, title, message) VALUES ($1, $2, $3)`,
+         [studentId, title || 'IT School', message.replace(/<[^>]*>?/gm, '')]
+       ).catch(() => {});
     }
 
-    if (!this.botToken || !targetChatId) {
-      this.logger.warn('Telegram Bot Token or Chat ID not configured. Notification skipped.');
-      return false;
-    }
     try {
-      const url = `${this.baseUrl}/sendMessage`;
-      const res = await fetch(url, {
+      const res = await fetch(`${this.baseUrl}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: targetChatId,
           text: message,
           parse_mode: 'HTML',
+          reply_markup: replyMarkup
         }),
       });
-      const data: any = await res.json();
-      if (!data.ok) {
-        this.logger.warn(`Telegram API error: ${data.description} (chat_id: ${targetChatId})`);
-        return false;
-      }
-      this.logger.log(`✅ Telegram sent to ${targetChatId}`);
-      return true;
-    } catch (error) {
-      this.logger.error('Failed to send Telegram notification:', error.message);
+      return (await res.json()).ok;
+    } catch (e) {
+      this.logger.error('Telegram send failed:', e.message);
       return false;
     }
   }
 
-  // ─── Auth / Verification ──────────────────────────────────────────────────
+  /** Notify Admin of new lead with interactive buttons */
+  async notifyNewLead(lead: any): Promise<void> {
+    const text = `🆕 <b>Yangi Ariza tushdi!</b>\n\n` +
+      `👤 Ism: ${lead.first_name}\n` +
+      `📞 Tel: ${lead.phone}\n` +
+      `📚 Kurs: ${lead.course_id || 'Tanlanmagan'}\n` +
+      `🔗 Manba: #${lead.source}\n\n` +
+      `<i>Menejerlar diqqatiga: Qo'ng'iroq qilinib, converted statusiga olib o'tilsin.</i>`;
+    
+    // Callback buttons (repo-style integration)
+    const replyMarkup = {
+      inline_keyboard: [
+        [
+          { text: '📞 Qo\'ng\'iroq qilindi', callback_data: `lead:call:${lead.id}` },
+          { text: '✅ Qabul qilindi', callback_data: `lead:convert:${lead.id}` }
+        ]
+      ]
+    };
 
-  /** Send verify/reset code to student */
-  async sendVerifyCode(chatId: string, code: string, studentName: string, studentId?: string): Promise<void> {
-    const msg = `🔐 <b>IT School Tasdiqlash Kodi</b>\n\n` +
-      `Salom, <b>${studentName}</b>!\n\n` +
-      `Sizning tasdiqlash kodingiz:\n\n` +
-      `<b><code>${code}</code></b>\n\n` +
-      `⏰ Kod 5 daqiqa ichida amal qiladi.\n` +
-      `❗ Ushbu kodni hech kimga bermang.`;
-    await this.sendMessage(msg, chatId, studentId, 'Tasdiqlash kodi');
+    await this.sendMessage(text, this.adminChatId, null, null, replyMarkup);
   }
 
-  /** Fallback: send code to admin if student has no telegram_chat_id */
-  async sendVerifyCodeToAdmin(studentName: string, phone: string, code: string, studentId?: string): Promise<void> {
-    const msg = `📱 <b>Talaba tasdiqlash kodi</b>\n\n` +
-      `👤 Talaba: <b>${studentName}</b>\n` +
-      `📞 Telefon: ${phone}\n\n` +
-      `🔐 Kod: <b><code>${code}</code></b>\n\n` +
-      `<i>⚠️ Bu talabaning telegram_chat_id si yo'q — kodni SMS orqali yetkazing.</i>`;
-    await this.sendMessage(msg, null, studentId, 'Talaba tasdiqlash kodi (Admin)');
+  /** Notify Teacher of AI-generated exam for review */
+  async sendExamForReview(teacherId: string, teacherChatId: string, exam: any): Promise<void> {
+    const crmUrl = `https://crm.itschool.uz/teacher/exams/review/${exam.id}`;
+    const text = `🧠 <b>AI Imtihon tayyor!</b>\n\n` +
+      `📌 Imtihon: <b>${exam.title}</b>\n` +
+      `📝 Savollar: ${exam.question_count || 0}\n\n` +
+      `Iltimos, savollarni ko'rib chiqing va tasdiqlang. Shundan so'ng talabalarga ko'rinadi.`;
+
+    const replyMarkup = {
+      inline_keyboard: [
+        [
+          { text: '👉 Ko\'rib chiqish (CRM)', url: crmUrl },
+          { text: '✅ Hammasini tasdiqlash', callback_data: `exam:approve:${exam.id}` }
+        ]
+      ]
+    };
+
+    await this.sendMessage(text, teacherChatId, null, null, replyMarkup);
   }
 
-  /** Welcome after first-time verification */
-  async sendWelcome(chatId: string, studentName: string, studentId?: string): Promise<void> {
-    const msg = `🎉 <b>Xush kelibsiz, ${studentName}!</b>\n\n` +
-      `Siz IT School platformasiga muvaffaqiyatli ro'yxatdan o'tdingiz.\n\n` +
-      `✅ Parolingiz saqlandi.\n\n` +
-      `📱 Buyruqlar:\n/status — Holat\n/reset — Parol tiklash\n/help — Yordam\n\n` +
-      `Omad! 🚀`;
-    await this.sendMessage(msg, chatId, studentId, 'Xush kelibsiz');
+  // --- Auth Verification ---
+  async sendVerifyCode(chatId: string, code: string, firstName: string, studentId: string): Promise<void> {
+    const text = `🔐 <b>IT School Tasdiqlash Kodi</b>\n\nSalom, <b>${firstName}</b>!\n\nSizning kirish kodingiz: <code>${code}</code>\n\nUni hech kimga bermang!`;
+    await this.sendMessage(text, chatId, studentId, 'Tasdiqlash kodi');
   }
 
-  // ─── Exam Notifications ───────────────────────────────────────────────────
-
-  /** Notify student that a new exam has been assigned to their group */
-  async notifyExamAssigned(chatId: string, studentName: string, examTitle: string, studentId?: string, examDate?: string): Promise<void> {
-    const msg = `📝 <b>Yangi Imtihon Tayinlandi!</b>\n\n` +
-      `Salom, <b>${studentName}</b>!\n\n` +
-      `📌 Imtihon: <b>${examTitle}</b>\n` +
-      `📅 Sana: ${examDate || 'Tez orada'}\n\n` +
-      `🚀 Exam Platform'ga kiring va tayyorlanishni boshlang!\n` +
-      `🔗 Exam Platform orqali kirish uchun /start buyrug'ini yuboring.`;
-    await this.sendMessage(msg, chatId, studentId, 'Yangi imtihon');
+  async sendVerifyCodeToAdmin(firstName: string, phone: string, code: string, studentId: string): Promise<void> {
+    const text = `🔔 <b>Admin diqqatiga!</b>\n\nO'quvchi <b>${firstName}</b> (${phone}) platformaga kirish uchun kod so'radi (ChatID yo'q).\n\nKod: <code>${code}</code>\n\nO'quvchiga yetkazib qo'ying.`;
+    await this.sendMessage(text, this.adminChatId, studentId, 'Admin verifikatsiya xabari');
   }
 
-  /** Notify student that their exam is starting NOW */
-  async notifyExamStarting(chatId: string, studentName: string, examTitle: string, studentId?: string): Promise<void> {
-    const msg = `⏳ <b>Imtihon Boshlanmoqda!</b>\n\n` +
-      `Salom, <b>${studentName}</b>!\n\n` +
-      `📌 Imtihon: <b>${examTitle}</b>\n` +
-      `🚀 Hozir Exam Platform'ga kiring va boshlang!\n` +
-      `Omad tilaymiz!`;
-    await this.sendMessage(msg, chatId, studentId, 'Imtihon boshlanmoqda');
+  async sendWelcome(chatId: string, firstName: string, studentId: string): Promise<void> {
+    const text = `🎉 <b>Muvaffaqiyatli ro'yxatdan o'tdingiz!</b>\n\nSalom, <b>${firstName}</b>!\n\nIT School platformasiga xush kelibsiz. Endi siz imtihonlarni topshirishingiz va darslarni kuzatishingiz mumkin.`;
+    await this.sendMessage(text, chatId, studentId, 'Xush kelibsiz');
   }
 
-  /** Notify student of their exam result */
-  async notifyExamResult(chatId: string, studentName: string, examTitle: string, score: number, studentId?: string): Promise<void> {
+  // --- Attendance & Classes ---
+  async notifyAbsent(chatId: string, name: string, course: string, date: string, studentId: string): Promise<void> {
+    const text = `⚠️ <b>Darsda qatnashmadingiz!</b>\n\n` +
+      `O'quvchi: <b>${name}</b>\n` +
+      `📚 Kurs: ${course}\n` +
+      `📅 Sana: ${date}\n\n` +
+      `Siz bugungi darsni qoldirdingiz. Sababini ustozga tushuntiring.`;
+    await this.sendMessage(text, chatId, studentId, 'Davomat ogohlantirishi');
+  }
+
+  // --- Exams ---
+  async notifyExamStarting(chatId: string, studentName: string, examTitle: string, studentId: string): Promise<void> {
+    const text = `🚀 <b>Imtihon boshlandi!</b>\n\n` +
+      `<b>${studentName}</b>, siz <b>${examTitle}</b> imtihonini boshladingiz.\n\n` +
+      `Omad tilaymiz! Oynani tark etmang.`;
+    await this.sendMessage(text, chatId, studentId, 'Imtihon boshlanishi');
+  }
+
+  async notifyExamResult(chatId: string, studentName: string, examTitle: string, score: number, studentId: string): Promise<void> {
     const emoji = score >= 80 ? '🏆' : score >= 50 ? '👍' : '📖';
-    const comment = score >= 80 ? 'Ajoyib natija!' : score >= 50 ? 'Yaxshi harakat!' : "Ko'proq o'rganing!";
-    const msg = `${emoji} <b>Imtihon Natijasi!</b>\n\n` +
+    const text = `${emoji} <b>Imtihon Natijasi!</b>\n\n` +
       `Salom, <b>${studentName}</b>!\n\n` +
-      `📝 ${examTitle}\n` +
+      `📝 ${examTitle}\n\n` +
       `🎯 Ball: <b>${score}%</b>\n\n` +
-      `${comment}`;
-    await this.sendMessage(msg, chatId, studentId, 'Imtihon natijasi');
+      `<i>Natijani batafsil ko'rish uchun students.itschool.uz’ga kiring.</i>`;
+    
+    await this.sendMessage(text, chatId, studentId, 'Imtihon natijasi');
   }
 
-  // ─── Attendance Notifications ─────────────────────────────────────────────
-
-  /** Notify student they missed a lesson */
-  async notifyAbsent(chatId: string, studentName: string, courseName: string, lessonDate: string, studentId?: string): Promise<void> {
-    const msg = `⚠️ <b>Darsga kelmadingiz!</b>\n\n` +
-      `Salom, <b>${studentName}</b>!\n\n` +
-      `📚 Kurs: ${courseName}\n` +
-      `📅 Sana: ${lessonDate}\n\n` +
-      `Sababli bo'lmagan darslar ko'paysa, sertifikatga ta'sir qilishi mumkin.\n` +
-      `Muammo bo'lsa, o'qituvchi yoki menejer bilan bog'laning.`;
-    await this.sendMessage(msg, chatId, studentId, 'Davomatdan ogohlantirish');
+  // --- Payments ---
+  async notifyPaymentDue(chatId: string, name: string, amount: number, month: string, studentId?: string): Promise<void> {
+    const text = `💳 <b>To'lov vaqti keldi!</b>\n\n` +
+      `O'quvchi: <b>${name}</b>\n` +
+      `💰 To'lov: <b>${amount.toLocaleString()} so'm</b>\n` +
+      `🗓 Oy: ${month}\n\n` +
+      `Iltimos, o'quv markaziga kelib to'lovni amalga oshiring.`;
+    await this.sendMessage(text, chatId, studentId, 'To\'lov haqida ogohlantirish');
   }
 
-  /** Notify parent about student absence */
-  async notifyParentAbsent(parentChatId: string, studentName: string, courseName: string, lessonDate: string, studentId?: string): Promise<void> {
-    const msg = `👨‍👩‍👦 <b>Farzandingiz darsga kelmadi</b>\n\n` +
-      `👤 Talaba: <b>${studentName}</b>\n` +
-      `📚 Kurs: ${courseName}\n` +
-      `📅 Sana: ${lessonDate}\n\n` +
-      `Iltimos, farzandingiz bilan gaplashing.`;
-    await this.sendMessage(msg, parentChatId, studentId, 'Ota-ona uchun ogohlantirish');
-  }
-
-  // ─── Payment Notifications ────────────────────────────────────────────────
-
-  /** Notify student about upcoming/overdue payment */
-  async notifyPaymentDue(chatId: string, studentName: string, amount: number, month: string, studentId?: string): Promise<void> {
-    const msg = `💳 <b>To'lov Eslatmasi!</b>\n\n` +
-      `Salom, <b>${studentName}</b>!\n\n` +
-      `💰 ${month} oyi uchun to'lov: <b>${Number(amount).toLocaleString()} so'm</b>\n\n` +
-      `Iltimos, imkon qadar to'lovni amalga oshiring.\n` +
-      `❓ Savol uchun menejer bilan bog'laning.`;
-    await this.sendMessage(msg, chatId, studentId, 'To\'lov eslatmasi');
-  }
-
-  /** Notify admin about new payment received */
-  async notifyNewPayment(studentName: string, amount: number, course: string): Promise<void> {
-    const text = `💰 <b>Yangi To'lov!</b>\n\n👤 Talaba: ${studentName}\n💵 Summa: ${amount.toLocaleString()} UZS\n📚 Kurs: ${course}`;
-    await this.sendMessage(text);
+  async notifyPaymentAlert(chatId: string, name: string, amount: number, month: string): Promise<void> {
+     await this.notifyPaymentDue(chatId, name, amount, month);
   }
 
   /** Notify admin about a debtor */
@@ -176,8 +155,6 @@ export class TelegramService {
     const text = `⚠️ <b>Qarzdorlik Aniqlandi!</b>\n\n👤 Talaba: ${studentName}\n📞 Tel: ${phone}\n👥 Guruh: ${group}\n\n<i>Iltimos, managerlar nazoratga olsin.</i>`;
     await this.sendMessage(text);
   }
-
-  // ─── Admin Alerts ─────────────────────────────────────────────────────────
 
   /** General admin notification */
   async notifyAdmin(message: string): Promise<void> {

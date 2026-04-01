@@ -6,6 +6,8 @@ import {
   Shield, CheckCircle2
 } from 'lucide-react';
 
+import { useConfirm } from '../context/ConfirmContext';
+
 const roleColors: Record<string, string> = {
   ADMIN: 'bg-red-50 text-red-600 border-red-200',
   MANAGER: 'bg-purple-50 text-purple-600 border-purple-200',
@@ -14,6 +16,7 @@ const roleColors: Record<string, string> = {
 
 const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
   const { users, fetchUsers, createUser, updateUser, deleteUser, isLoading } = useAdminStore();
+  const confirm = useConfirm();
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
   const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', password: '', role: roleFilter || 'TEACHER' });
@@ -43,6 +46,16 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
       await updateUser(editTarget.id, payload);
     }
     setModal(null);
+  };
+
+  const handleDelete = async (id: string) => {
+    const ok = await confirm({
+      title: "Foydalanuvchini o'chirish?",
+      message: "Ushbu foydalanuvchi tizimdan butunlay o'chiriladi.",
+      confirmText: "O'CHIRISH",
+      type: 'danger'
+    });
+    if (ok) await deleteUser(id);
   };
 
   // Permission matrix
@@ -162,7 +175,7 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
                     <td>
                       <div className="flex justify-end gap-1">
                         <button onClick={() => openEdit(u)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={() => { if (confirm("O'chirishni tasdiqlaysizmi?")) deleteUser(u.id); }} className="p-2 rounded-lg hover:bg-red-50 text-red-500"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => handleDelete(u.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-500"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
