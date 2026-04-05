@@ -17,7 +17,7 @@ const AttendancePage: React.FC = () => {
   return (
     <div className="page-container space-y-6 pb-20 lg:pb-6 animate-in">
       <div>
-        <h1 className="text-2xl font-black text-slate-900">Davomat</h1>
+        <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100">Davomat</h1>
         <p className="text-slate-400 text-sm mt-1">Darslarga qatnashish statistikasi</p>
       </div>
 
@@ -32,7 +32,7 @@ const AttendancePage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="label-subtle">Umumiy davomat</p>
-                    <p className="text-4xl font-black text-slate-900 mt-1">{pct}%</p>
+                    <p className="text-4xl font-black text-slate-900 dark:text-slate-100 mt-1">{pct}%</p>
                   </div>
                   <div className={`px-3 py-2 rounded-xl border font-bold text-sm ${badgeColor}`}>
                     {emoji} {badge}
@@ -70,7 +70,7 @@ const AttendancePage: React.FC = () => {
                 </div>
                 <div>
                   <p className="label-subtle">Jami dars</p>
-                  <p className="text-2xl font-black text-slate-800">{attendanceStats.total_lessons}</p>
+                  <p className="text-2xl font-black text-slate-800 dark:text-slate-100">{attendanceStats.total_lessons}</p>
                 </div>
               </div>
             </div>
@@ -92,7 +92,7 @@ const AttendancePage: React.FC = () => {
                       }
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-bold text-slate-800">{r.lesson_date ? new Date(r.lesson_date).toLocaleDateString('uz-UZ', { weekday: 'long', day: 'numeric', month: 'long' }) : `Dars #${i + 1}`}</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{r.lesson_date ? new Date(r.lesson_date).toLocaleDateString('uz-UZ', { weekday: 'long', day: 'numeric', month: 'long' }) : `Dars #${i + 1}`}</p>
                       {r.notes && <p className="text-xs text-slate-400 mt-0.5">{r.notes}</p>}
                     </div>
                     <span className={`status-pill ${r.status === 'PRESENT' ? 'pill-active' : 'pill-missed'}`}>

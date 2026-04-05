@@ -12,9 +12,11 @@ import {
   Settings,
   LogOut,
   X,
+  UserPlus
 } from 'lucide-react';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
+import { useConfirm } from '../context/ConfirmContext';
 
 const getNavItems = (role: string) => {
   const common = [
@@ -29,6 +31,7 @@ const getNavItems = (role: string) => {
     { to: '/admin/students', icon: GraduationCap, label: "O'quvchilar" },
     { to: '/admin/courses', icon: BookOpen, label: 'Kurslar' },
     { to: '/admin/groups', icon: Users, label: 'Guruhlar' },
+    {to: '/admin/leads', icon: UserPlus, label: 'Leadlar (Arizalar)'},
     { to: '/admin/analytics', icon: BarChart3, label: 'Analitika' },
   ];
 
@@ -37,6 +40,7 @@ const getNavItems = (role: string) => {
     { to: '/manager/students', icon: GraduationCap, label: "O'quvchilar" },
     { to: '/manager/payments', icon: Wallet, label: "To'lovlar" },
     { to: '/manager/courses', icon: BookOpen, label: 'Kurslar' },
+    { to: '/manager/leads', icon: UserPlus, label: 'Leadlar (Arizalar)' },
   ];
 
   if (role === 'TEACHER') return [
@@ -63,10 +67,20 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
   const { user, logout } = useAdminStore();
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    const isConfirmed = await confirm({
+      title: "Chiqish",
+      message: "Tizimdan chiqishni xohlaysizmi?",
+      confirmText: "Ha, chiqish",
+      type: "danger"
+    });
+    
+    if (isConfirmed) {
+      logout();
+      navigate('/login');
+    }
   };
 
   return (
@@ -83,17 +97,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
         )}
       >
         {/* Brand */}
-        <div className="p-5 border-b border-slate-50 flex items-center justify-between">
-          <div className={cn("flex items-center gap-3 overflow-hidden", !isOpen && "md:justify-center")}>
-            <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center text-white shrink-0">
-              <GraduationCap className="w-5 h-5" />
+        <div className="p-5 border-b border-slate-50 flex items-center justify-between min-h-[73px]">
+          <div className={cn("flex items-center gap-3 overflow-hidden", !isOpen && "md:justify-center w-full")}>
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm p-1.5 shrink-0">
+               <img 
+                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Logo_IT_Park_Uzbekistan.svg/3840px-Logo_IT_Park_Uzbekistan.svg.png" 
+                 alt="IT Park" 
+                 className="w-full h-full object-contain"
+               />
             </div>
-            <div className={cn("transition-all", !isOpen && "md:hidden")}>
-              <h1 className="text-base font-black text-primary-700 tracking-tight leading-none">Academic Edge</h1>
-              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Ta'lim Boshqaruv Tizimi</p>
+            <div className={cn("transition-all duration-300", !isOpen && "md:hidden opacity-0")}>
+              <h1 className="text-sm font-black text-slate-800 tracking-tighter uppercase leading-none">IT Academy</h1>
+              <p className="text-[9px] font-black text-primary-500 uppercase tracking-widest mt-0.5 opacity-70">CRM System</p>
             </div>
           </div>
-          <button className="md:hidden" onClick={onToggle}>
+          <button className="md:hidden p-2 rounded-lg hover:bg-slate-50" onClick={onToggle}>
             <X className="w-5 h-5 text-slate-400" />
           </button>
         </div>

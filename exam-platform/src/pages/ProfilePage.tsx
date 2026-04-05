@@ -16,14 +16,13 @@ const ProfilePage: React.FC = () => {
   const fields = [
     { icon: User, label: 'Ism', value: `${data?.first_name || ''} ${data?.last_name || ''}` },
     { icon: Phone, label: 'Telefon', value: data?.phone || '—' },
-    { icon: Mail, label: 'Email', value: (data as any)?.email || '—' },
     { icon: User, label: "Ota-ona ismi", value: (data as any)?.parent_name || '—' },
   ];
 
   return (
     <div className="page-container space-y-6 pb-20 lg:pb-6 animate-in">
       <div>
-        <h1 className="text-2xl font-black text-slate-900">Profilim</h1>
+        <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100">Profilim</h1>
         <p className="text-slate-400 text-sm mt-1">Shaxsiy ma'lumotlaringiz</p>
       </div>
 
@@ -52,7 +51,7 @@ const ProfilePage: React.FC = () => {
               )}
             </div>
             <div className="text-center">
-              <h2 className="text-xl font-black text-slate-900">{data?.first_name} {data?.last_name}</h2>
+              <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">{data?.first_name} {data?.last_name}</h2>
               <span className="status-pill pill-active mt-2 inline-flex">● Faol talaba</span>
             </div>
           </div>
@@ -66,7 +65,7 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <div>
                   <p className="label-subtle">{label}</p>
-                  <p className="text-sm font-bold text-slate-800 mt-0.5">{value}</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100 mt-0.5">{value}</p>
                 </div>
               </div>
             ))}
@@ -79,7 +78,7 @@ const ProfilePage: React.FC = () => {
                 <Shield className="w-4 h-4 text-green-500" />
               </div>
               <div>
-                <p className="font-bold text-slate-800 text-sm">Xavfsizlik</p>
+                <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">Xavfsizlik</p>
                 <p className="text-xs text-slate-400">Telegram orqali tasdiqlangan</p>
               </div>
             </div>
@@ -96,7 +95,7 @@ const ProfilePage: React.FC = () => {
             </div>
             <div>
               <p className="label-subtle">Rol</p>
-              <p className="text-sm font-bold text-slate-800">Talaba</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Talaba</p>
             </div>
           </div>
         </>

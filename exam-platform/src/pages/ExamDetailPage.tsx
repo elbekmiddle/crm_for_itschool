@@ -1,17 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useExamStore } from '../store/useExamStore';
-import { Clock, HelpCircle, AlertTriangle, ShieldAlert, Play, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Clock, HelpCircle, AlertTriangle, ShieldAlert, Play, Loader2, ArrowLeft, CheckCircle2, ChevronRight, XCircle } from 'lucide-react';
 import api from '../lib/api';
+
+// ─── Simple Status Modal (instead of alert) ──────────────────────────────────
+const StatusModal: React.FC<{ msg: string; onClose: () => void }> = ({ msg, onClose }) => (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+    <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-6 w-full max-w-xs text-center border border-slate-100 dark:border-slate-800">
+      <div className="w-14 h-14 bg-red-50 dark:bg-red-950/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <XCircle className="w-7 h-7 text-red-500" />
+      </div>
+      <h3 className="font-black text-slate-900 dark:text-white mb-2">Xatolik</h3>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{msg}</p>
+      <button onClick={onClose} className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold text-sm transition-transform active:scale-95">
+        Tushundim
+      </button>
+    </div>
+  </div>
+);
 
 const ExamDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { startExam, isLoading } = useExamStore();
+  const { startExam } = useExamStore();
   const [exam, setExam] = useState<any>(null);
   const [loadingExam, setLoadingExam] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [errorModal, setErrorModal] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -33,7 +51,7 @@ const ExamDetailPage: React.FC = () => {
     } catch (e: any) {
       setStarting(false);
       setShowConfirm(false);
-      alert(e.response?.data?.message || 'Imtihonni boshlashda xatolik');
+      setErrorModal(e.response?.data?.message || 'Imtihonni boshlashda xatolik');
     }
   };
 
@@ -105,21 +123,42 @@ const ExamDetailPage: React.FC = () => {
 
       {/* Start button */}
       {!showConfirm ? (
-        <button onClick={() => setShowConfirm(true)} className="btn-primary w-full py-4 text-base flex items-center justify-center gap-2">
-          <Play className="w-5 h-5" /> Imtihonni boshlash
+        <button 
+          onClick={() => setShowConfirm(true)} 
+          className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-600/20"
+        >
+          <Play className="w-6 h-6" /> Imtihonni boshlash
         </button>
       ) : (
-        <div className="card p-5 space-y-4 border-2 border-primary-200">
-          <h3 className="font-black text-slate-900">Haqiqatan ham boshlaysizmi?</h3>
-          <p className="text-sm text-slate-500">Imtihonni boshlagandan so'ng uni to'xtatib bo'lmaydi. Tayyormisiz?</p>
+        <div className="card p-6 space-y-5 border-2 border-indigo-200 animate-in slide-in-from-bottom-5 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+              <Play className="w-5 h-5 text-indigo-600" />
+            </div>
+            <h3 className="font-black text-slate-900">Tayyormisiz?</h3>
+          </div>
+          <p className="text-sm text-slate-500 font-medium leading-relaxed">
+            Imtihonni boshlagandan so'ng uni to'xtatib bo'lmaydi. Vaqt avtomatik hisoblanadi.
+          </p>
           <div className="flex gap-3">
-            <button onClick={() => setShowConfirm(false)} className="btn-secondary flex-1">Bekor qilish</button>
-            <button onClick={handleStart} disabled={starting} className="btn-primary flex-1 flex items-center justify-center gap-2">
-              {starting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Play className="w-4 h-4" /> Ha, boshlash</>}
+            <button 
+              onClick={() => setShowConfirm(false)} 
+              className="flex-1 py-4 rounded-2xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors"
+            >
+              Bekor qilish
+            </button>
+            <button 
+              onClick={handleStart} 
+              disabled={starting} 
+              className="flex-1 py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20"
+            >
+              {starting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Boshlash <ChevronRight className="w-4 h-4" /></>}
             </button>
           </div>
         </div>
       )}
+
+      {errorModal && <StatusModal msg={errorModal} onClose={() => setErrorModal('')} />}
     </div>
   );
 };

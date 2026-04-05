@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 interface ConfirmOptions {
   title?: string;
@@ -42,15 +42,16 @@ export const useConfirm = () => {
  * Hook to prevent accidental tab/refresh/close when there's unsaved state
  */
 export const useConfirmLeave = (isDirty: boolean) => {
-  const [showConfirm, setShowConfirm] = useState(false);
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
 
-  // Browser level (beforeunload)
-  const handleBeforeUnload = useCallback((e: BeforeUnloadEvent) => {
-    if (isDirty) {
       e.preventDefault();
-      e.returnValue = ''; // Standard way to trigger browser warning
-    }
-  }, [isDirty]);
+      e.returnValue = '';
+    };
 
-  return { showConfirm, setShowConfirm, handleBeforeUnload };
+    window.addEventListener('beforeunload', handler);
+
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
 };

@@ -9,31 +9,30 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, roles }) => {
-  const { user, fetchMe } = useAdminStore();
+  const { user, fetchMe, isInitialized } = useAdminStore();
   const location = useLocation();
-  const token = localStorage.getItem('token');
 
   useEffect(() => {
-    if (token && !user) {
+    if (!isInitialized) {
       fetchMe();
     }
-  }, [token, user, fetchMe]);
+  }, [isInitialized, fetchMe]);
 
-  // If no token, redirect to login
-  if (!token) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  // If token exists but no user in store, show loading
-  if (!user) {
+  // While checking session, show a loader
+  if (!isInitialized) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">
+        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest animate-pulse mt-2">
           Sessiya tiklanmoqda...
         </span>
       </div>
     );
+  }
+
+  // If session checked and no user, redirect to login
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // If roles are specified, check if user has required role

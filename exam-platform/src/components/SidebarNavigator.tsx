@@ -96,7 +96,7 @@ const SidebarNavigator: React.FC = () => {
       )}
 
       {/* Desktop sidebar */}
-      <div className="hidden md:block w-72 bg-white border-r border-slate-100 min-h-screen p-6 sticky top-[64px] overflow-y-auto max-h-[calc(100vh-64px)] no-scrollbar">
+      <div className="hidden md:block w-72 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 min-h-screen p-6 sticky top-0 overflow-y-auto h-screen no-scrollbar">
         {content}
       </div>
     </>

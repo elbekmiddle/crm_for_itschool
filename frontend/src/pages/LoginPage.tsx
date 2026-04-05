@@ -57,20 +57,32 @@ const LoginPage: React.FC = () => {
       const endpoint = isPhone(loginValue) ? '/auth/student-login-password' : '/auth/login';
       const payload = isPhone(loginValue) ? { phone: loginValue, password } : { email: loginValue, password };
       
-      await api.post(endpoint, payload);
-      await fetchMe();
+      const { data: responseData } = await api.post(endpoint, payload);
+      // Backend now returns { data: { user, access_token, ... } } because of TransformInterceptor
+      const userData = responseData?.user || responseData?.data?.user;
       
-      const user = useAdminStore.getState().user;
+      if (userData) {
+        useAdminStore.getState().setUser(userData);
+      } else {
+        // Fallback to fetchMe if user info not in body
+        await fetchMe();
+      }
+      
+      const updatedUser = useAdminStore.getState().user;
+      if (!updatedUser) {
+        throw new Error("Foydalanuvchi ma'lumotlarini yuklab bo'lmadi");
+      }
+      
       const routes: Record<string, string> = {
         'ADMIN': '/admin/dashboard',
         'MANAGER': '/manager/dashboard',
         'TEACHER': '/teacher/dashboard',
         'STUDENT': '/student/dashboard'
       };
-      navigate(routes[user?.role || ''] || '/dashboard');
+      navigate(routes[updatedUser.role] || '/dashboard');
       toast.success("Xush kelibsiz!");
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Parol noto'g'ri");
+      toast.error(err.response?.data?.message || err.message || "Parol noto'g'ri");
     } finally {
       setLoading(false);
     }
@@ -125,10 +137,14 @@ const LoginPage: React.FC = () => {
          <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,#0ea5e9,transparent_50%)] opacity-20" />
          
          <div className="relative z-10 flex items-center gap-3">
-            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
-               <GraduationCap className="w-6 h-6 text-white" />
+            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-black/10 p-2">
+               <img 
+                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Logo_IT_Park_Uzbekistan.svg/3840px-Logo_IT_Park_Uzbekistan.svg.png" 
+                 alt="IT Park" 
+                 className="w-full h-full object-contain"
+               />
             </div>
-            <span className="text-xl font-black text-white tracking-tight uppercase">IT School <span className="text-indigo-400">Flow</span></span>
+            <span className="text-2xl font-black text-white tracking-widest uppercase">IT Academy <span className="text-indigo-400">CRM</span></span>
          </div>
 
          <div className="relative z-10">
@@ -157,8 +173,12 @@ const LoginPage: React.FC = () => {
          <div className="w-full max-w-md">
             <div className="mb-10 text-center lg:text-left">
                <div className="lg:hidden flex justify-center mb-6">
-                  <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-                     <GraduationCap className="w-7 h-7 text-white" />
+                  <div className="w-14 h-14 bg-white border border-slate-100 rounded-2xl flex items-center justify-center shadow-lg p-2">
+                     <img 
+                       src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Logo_IT_Park_Uzbekistan.svg/3840px-Logo_IT_Park_Uzbekistan.svg.png" 
+                       alt="IT Park" 
+                       className="w-full h-full object-contain"
+                     />
                   </div>
                </div>
                <h2 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Tizimga kirish</h2>

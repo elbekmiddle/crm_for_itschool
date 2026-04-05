@@ -17,7 +17,7 @@ const PaymentsPage: React.FC = () => {
   return (
     <div className="page-container space-y-6 pb-20 lg:pb-6 animate-in">
       <div>
-        <h1 className="text-2xl font-black text-slate-900">To'lovlar</h1>
+        <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100">To'lovlar</h1>
         <p className="text-slate-400 text-sm mt-1">Oylik to'lov tarixi</p>
       </div>
 
@@ -69,7 +69,7 @@ const PaymentsPage: React.FC = () => {
                         <CreditCard className={`w-4 h-4 ${isPaid ? 'text-green-500' : 'text-red-400'}`} />
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-bold text-slate-800">
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
                           {p.month || (p.created_at ? new Date(p.created_at).toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' }) : `To'lov #${i + 1}`)}
                         </p>
                         <p className="text-xs text-slate-400 mt-0.5">{p.payment_method || 'Naqd'}</p>

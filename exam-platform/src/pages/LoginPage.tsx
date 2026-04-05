@@ -162,12 +162,16 @@ export default function LoginPage() {
       <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 relative overflow-hidden flex-col justify-between p-12">
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-16">
-            <div className="w-11 h-11 bg-white/10 backdrop-blur rounded-2xl flex items-center justify-center shadow-lg">
-              <GraduationCap className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg p-2">
+               <img 
+                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Logo_IT_Park_Uzbekistan.svg/3840px-Logo_IT_Park_Uzbekistan.svg.png" 
+                 alt="IT Park" 
+                 className="w-full h-full object-contain"
+               />
             </div>
             <div>
-              <span className="text-white font-black text-lg">IT School</span>
-              <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Exam Portal</p>
+              <span className="text-white font-black text-xl uppercase tracking-tighter">IT Academy</span>
+              <p className="text-[10px] text-white/40 uppercase tracking-[0.2em] font-bold">Exam Portal</p>
             </div>
           </div>
 
@@ -207,11 +211,15 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
 
           {/* Logo (mobile only) */}
-          <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
-            <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-white" />
+          <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
+            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center p-2 shadow-sm border border-slate-100">
+               <img 
+                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Logo_IT_Park_Uzbekistan.svg/3840px-Logo_IT_Park_Uzbekistan.svg.png" 
+                 alt="IT Park" 
+                 className="w-full h-full object-contain"
+               />
             </div>
-            <span className="text-slate-900 dark:text-white font-black text-xl">IT School</span>
+            <span className="text-slate-900 dark:text-white font-black text-2xl uppercase tracking-tighter">IT Academy</span>
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl shadow-slate-200/50 dark:shadow-black/30 p-8 border border-slate-100 dark:border-slate-800">

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
 import {
-  GraduationCap, Plus, Download, Search, Loader2,
+  Plus, Download, Search, Loader2,
   Pencil, Trash2, X, UserPlus, ChevronLeft, ChevronRight, Send, Eye
 } from 'lucide-react';
 

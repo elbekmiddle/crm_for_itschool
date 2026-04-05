@@ -43,14 +43,14 @@ export class LeadsService {
     `);
   }
 
-  async convertLead(id: string, branchId: string = null) {
+  async convertLead(id: string, branchId: string = null, groupId: string = null) {
     const lead = await this.dbService.query(`SELECT * FROM leads WHERE id=$1`, [id]);
     if (!lead.length) throw new BadRequestException('Lead not found');
 
     const l = lead[0];
-    const password = '123';
+    const password = '123'; // Temporary password
 
-    // 1. Transaction to create user, student profile, course access
+    // 1. Transaction to create user, student profile, course access, and group
     try {
        await this.dbService.query('BEGIN');
        
@@ -66,6 +66,7 @@ export class LeadsService {
          VALUES ($1, $2, $3, $4, $5)
        `, [userId, l.first_name, l.last_name, l.parent_name, l.phone]);
 
+       // Link to course if present
        if (l.course_id) {
          await this.dbService.query(`
            INSERT INTO student_courses (student_id, course_id, price_agreed)
@@ -73,9 +74,20 @@ export class LeadsService {
          `, [userId, l.course_id]);
        }
 
+       // Link to group if present
+       if (groupId) {
+         await this.dbService.query(`
+           INSERT INTO group_students (group_id, student_id)
+           VALUES ($1, $2)
+         `, [groupId, userId]);
+       }
+
        await this.dbService.query(`UPDATE leads SET status='converted' WHERE id=$1`, [id]);
        await this.dbService.query('COMMIT');
        
+       // Notify via socket
+       this.socketsGateway.emitToAll('lead_converted', { leadId: id, studentId: userId });
+
        return { success: true, message: "Talaba ro'yxatga olindi", userId };
     } catch (e) {
        await this.dbService.query('ROLLBACK');

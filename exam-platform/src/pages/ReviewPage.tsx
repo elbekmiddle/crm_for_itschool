@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useExamStore } from '../store/useExamStore';
-import { useAuthStore } from '../store/useAuthStore';
 import { ArrowLeft, CheckCircle2, XCircle, Loader2, BookOpen } from 'lucide-react';
 import api from '../lib/api';
 
@@ -9,7 +8,6 @@ const ReviewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { questions, answers, attemptId } = useExamStore();
-  const { user } = useAuthStore();
   const [reviewData, setReviewData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 

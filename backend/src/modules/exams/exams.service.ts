@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { QueueService } from '../../infrastructure/queue/queue.service';
@@ -33,6 +33,25 @@ export class ExamsService {
     `);
   }
 
+  async findOne(id: string) {
+    const exam = await this.dbService.query(`
+      SELECT e.*, c.name as course_name
+      FROM exams e
+      JOIN courses c ON e.course_id = c.id
+      WHERE e.id = $1 AND e.deleted_at IS NULL
+    `, [id]);
+    if (!exam.length) throw new NotFoundException('Imtihon topilmadi');
+    
+    const questions = await this.dbService.query(`
+      SELECT q.* 
+      FROM questions q
+      JOIN exam_questions eq ON q.id = eq.question_id
+      WHERE eq.exam_id = $1
+    `, [id]);
+    
+    return { ...exam[0], questions };
+  }
+
   async create(createExamDto: CreateExamDto, teacherId: string) {
     const newExam = await create_exam(this.dbService, createExamDto, teacherId);
     this.socketsGateway.emitToAll('exam_created', newExam);
@@ -53,7 +72,7 @@ export class ExamsService {
     return result[0];
   }
 
-  async delete(id: string) {
+  async remove(id: string) {
     return this.dbService.query(`UPDATE exams SET deleted_at = NOW() WHERE id = $1`, [id]);
   }
 
@@ -224,15 +243,46 @@ export class ExamsService {
       FROM questions q
       JOIN exam_questions eq ON eq.question_id = q.id
       WHERE eq.exam_id = $1
-      ORDER BY RANDOM()
+      ORDER BY q.id ASC
     `, [attempt[0].exam_id]);
 
     return questions;
   }
 
-  async saveAnswer(attemptId: string, questionId: string, payload: any) {
+  async getAttemptAnswers(attemptId: string) {
+    const answers = await this.dbService.query(`
+      SELECT question_id, answer_payload
+      FROM attempt_answers
+      WHERE attempt_id = $1
+    `, [attemptId]);
+
+    // Return as a simple mapping
+    return answers.reduce((acc, curr) => {
+      acc[curr.question_id] = JSON.parse(curr.answer_payload);
+      return acc;
+    }, {});
+  }
+
+  async getActiveAttempt(examId: string, studentId: string) {
+    const active = await this.dbService.query(`
+      SELECT * FROM exam_attempts
+      WHERE exam_id = $1 AND student_id = $2 AND status = 'in_progress'
+      ORDER BY started_at DESC LIMIT 1
+    `, [examId, studentId]);
+
+    return active[0] || null;
+  }
+
+  async saveAnswer(attemptId: string, questionId: string, payload: any, clientTime?: number) {
     const attempt = await this.dbService.query(`SELECT status FROM exam_attempts WHERE id = $1`, [attemptId]);
     if (attempt[0].status !== 'in_progress') throw new ConflictException('Exam session is not active.');
+
+    if (clientTime) {
+      const serverTime = Date.now();
+      if (clientTime > serverTime + 300000) { // 5 minutes
+        throw new ForbiddenException("Time manipulation detected");
+      }
+    }
 
     return this.dbService.query(`
       INSERT INTO attempt_answers (attempt_id, question_id, answer_payload)

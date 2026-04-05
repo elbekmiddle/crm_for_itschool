@@ -20,6 +20,7 @@ import { StudentPasswordLoginDto } from './dto/student-password-login.dto';
 import { get_user_by_email } from './queries/get_user_by_email';
 import { get_user_by_id_for_auth } from './queries/get_user_by_id_for_auth';
 import { get_student_by_phone } from './queries/get_student_by_phone';
+import { get_student_by_id_with_auth_data } from './queries/get_student_by_id_with_auth_data';
 
 @Injectable()
 export class AuthService {
@@ -56,12 +57,42 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const users = await get_user_by_email(this.dbService, loginDto.email);
-    if (!users.length) throw new NotFoundException('User not found');
+    this.logger.debug(`[login] email: ${loginDto.email}`);
+    const users = await this.dbService.query(
+      'SELECT id, email, password, role, first_name, last_name, phone, telegram_chat_id FROM users WHERE email = $1',
+      [loginDto.email]
+    );
+    
+    if (!users.length) {
+      this.logger.warn(`[login] User not found: ${loginDto.email}`);
+      throw new NotFoundException('Foydalanuvchi topilmadi');
+    }
+    
     const user = users[0];
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
-    if (!isPasswordValid) throw new UnauthorizedException('Invalid credentials');
-    return this.generateTokens(user);
+    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password).catch(() => false);
+    if (!isPasswordValid) {
+      this.logger.warn(`[login] Invalid password for: ${loginDto.email}`);
+      throw new UnauthorizedException('Email yoki parol noto\'g\'ri');
+    }
+    
+    try {
+      const tokens = await this.generateTokens(user);
+      return { 
+        ...tokens, 
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          role: user.role, 
+          first_name: user.first_name, 
+          last_name: user.last_name,
+          phone: user.phone,
+          telegram_chat_id: user.telegram_chat_id
+        } 
+      };
+    } catch (error) {
+      this.logger.error(`[login] Token generation failed: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   // ----- STUDENT LOGIN (legacy phone+firstName) -----
@@ -72,7 +103,8 @@ export class AuthService {
     if (student.first_name.toLowerCase() !== studentLoginDto.first_name.toLowerCase()) {
       throw new UnauthorizedException('Invalid first name for this phone number');
     }
-    return this.generateTokens({ ...student, role: 'STUDENT' });
+    const tokens = await this.generateTokens({ ...student, role: 'STUDENT' });
+    return { ...tokens, user: { id: student.id, phone: student.phone, role: 'STUDENT', first_name: student.first_name, last_name: student.last_name } };
   }
 
   // ----- TELEGRAM VERIFICATION FLOW -----
@@ -182,7 +214,8 @@ export class AuthService {
       await this.telegramService.sendWelcome(student.telegram_chat_id, student.first_name, student.id);
     }
 
-    return this.generateTokens({ ...student, role: 'STUDENT' });
+    const tokens = await this.generateTokens({ ...student, role: 'STUDENT' });
+    return { ...tokens, user: { id: student.id, phone: student.phone, role: 'STUDENT', first_name: student.first_name, last_name: student.last_name } };
   }
 
   /**
@@ -206,7 +239,8 @@ export class AuthService {
       throw new UnauthorizedException('Parol noto\'g\'ri.');
     }
 
-    return this.generateTokens({ ...student, role: 'STUDENT' });
+    const tokens = await this.generateTokens({ ...student, role: 'STUDENT' });
+    return { ...tokens, user: { id: student.id, phone: student.phone, role: 'STUDENT', first_name: student.first_name, last_name: student.last_name } };
   }
 
   async refreshToken(refreshToken: string) {
@@ -214,18 +248,39 @@ export class AuthService {
       const payload = this.jwtService.verify(refreshToken, {
         secret: this.configService.get('JWT_REFRESH_SECRET'),
       });
-      const users = await get_user_by_id_for_auth(this.dbService, payload.sub);
-      if (!users.length) throw new Error();
-      return this.generateTokens(users[0]);
-    } catch {
-      throw new UnauthorizedException('Invalid refresh token');
+      
+      this.logger.debug(`[refreshToken] sub: ${payload.sub} role: ${payload.role}`);
+      
+      let user;
+      if (payload.role === 'STUDENT') {
+        const studentRes = await get_student_by_id_with_auth_data(this.dbService, payload.sub);
+        if (!studentRes.length) throw new Error('Student not found');
+        user = { ...studentRes[0], role: 'STUDENT' };
+      } else {
+        const userRes = await get_user_by_id_for_auth(this.dbService, payload.sub);
+        if (!userRes.length) throw new Error('User not found');
+        user = userRes[0];
+      }
+      
+      return this.generateTokens(user);
+    } catch (error) {
+      this.logger.warn(`[refreshToken] failed: ${error.message}`);
+      throw new UnauthorizedException('JWT muddati tugagan yoki noto\'g\'ri');
     }
   }
 
   private async generateTokens(user: any) {
+    const rolePermissions = {
+      'ADMIN': ['*'],
+      'MANAGER': ['STUDENT_READ', 'STUDENT_CREATE', 'STUDENT_UPDATE', 'STUDENT_ENROLL', 'COURSE_READ', 'GROUP_READ', 'GROUP_CREATE', 'GROUP_UPDATE', 'PAYMENT_READ', 'PAYMENT_CREATE', 'ANALYTICS_VIEW'],
+      'TEACHER': ['STUDENT_READ', 'GROUP_READ', 'ATTENDANCE_MARK', 'ATTENDANCE_READ', 'EXAM_MANAGE', 'PAYMENT_READ', 'ANALYTICS_VIEW'],
+      'STUDENT': ['STUDENT_READ', 'EXAM_PASS', 'EXAM_READ', 'ATTENDANCE_READ', 'PAYMENT_READ', 'COURSE_READ']
+    };
+
     const payload = {
       sub: user.id,
       role: user.role,
+      permissions: rolePermissions[user.role] || [],
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       phone: user.phone || '',
@@ -237,5 +292,26 @@ export class AuthService {
       expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN', '7d'),
     });
     return { access_token: accessToken, refresh_token: refreshToken };
+  }
+
+  async recoverPassword(email: string) {
+    const users = await this.dbService.query(
+      'SELECT id, email, first_name, phone, telegram_chat_id FROM users WHERE email = $1',
+      [email]
+    );
+    if (!users.length) throw new NotFoundException('Foydalanuvchi topilmadi');
+    const user = users[0];
+
+    const tempCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    if (user.telegram_chat_id) {
+       await this.telegramService.sendPasswordRecovery(user.telegram_chat_id, user.first_name || 'Xodim', tempCode);
+       const hashed = await bcrypt.hash(tempCode, 10);
+       await this.dbService.query('UPDATE users SET password = $1 WHERE id = $2', [hashed, user.id]);
+       return { success: true, message: 'Telegram botga vaqtinchalik parol yuborildi!' };
+    } else {
+       await this.telegramService.notifyAdminOfPasswordRequest(user);
+       return { success: true, message: 'Telegram bot ulanmagan. Administratorga xabar yuborildi!' };
+    }
   }
 }

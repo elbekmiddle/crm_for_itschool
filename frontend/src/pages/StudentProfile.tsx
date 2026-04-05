@@ -1,14 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
 import api from '../lib/api';
 import {
   Loader2,
-  UserCheck,
-  BarChart3,
+  Phone,
+  User,
+  Calendar,
+  Sparkles,
+  DollarSign,
+  ClipboardList,
+  ArrowLeft,
   Clock,
-  ArrowLeft
+  BookOpen,
+  Users,
+  UserCircle
 } from 'lucide-react';
 
 const StudentProfilePage: React.FC = () => {
@@ -41,7 +48,12 @@ const StudentProfilePage: React.FC = () => {
   }, [id, user?.id]);
 
   if (loading) {
-    return <div className="page-container flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 text-primary-500 animate-spin" /></div>;
+    return (
+      <div className="page-container flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="w-12 h-12 border-4 border-primary-100 border-t-primary-600 rounded-full animate-spin mb-4" />
+        <p className="text-slate-400 font-bold text-sm uppercase tracking-widest animate-pulse">Yuklanmoqda...</p>
+      </div>
+    );
   }
 
   if (!student) {
@@ -62,193 +74,166 @@ const StudentProfilePage: React.FC = () => {
     : 0;
 
   return (
-    <div className="page-container animate-in">
-      {/* Back Button */}
-      <button onClick={() => navigate('/students')} className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary-600 mb-6 transition-all">
-        <ArrowLeft className="w-4 h-4" /> Talabalar ro'yxatiga qaytish
-      </button>
+    <div className="page-container animate-in space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <button onClick={() => navigate('/students')} className="flex items-center gap-2 text-xs font-black text-slate-400 hover:text-primary-600 mb-2 transition-all uppercase tracking-wider">
+            <ArrowLeft className="w-4 h-4" /> Talabalar ro'yxatiga qaytish
+          </button>
+          <h1 className="text-2xl font-black text-slate-800">Talaba Profili</h1>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left — Profile */}
+        {/* Left — Profile Info */}
         <div className="space-y-6">
-          <div className="card p-6 text-center shadow-sm">
-            <div className="w-24 h-24 bg-gradient-to-br from-primary-500 to-primary-700 rounded-3xl flex items-center justify-center text-white text-3xl font-black mx-auto mb-4 shadow-xl shadow-primary-200/40">
+          <div className="card p-6 text-center shadow-lg border-primary-50">
+            <div className="w-28 h-28 bg-gradient-to-br from-primary-500 to-indigo-700 rounded-[2rem] flex items-center justify-center text-white text-3xl font-black mx-auto mb-4 shadow-2xl shadow-primary-200/40 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               {student.image_url ? (
-                <img src={student.image_url} alt="" className="w-full h-full rounded-3xl object-cover" />
+                <img src={student.image_url} alt="" className="w-full h-full object-cover" />
               ) : (
                 `${student.first_name?.[0] || ''}${student.last_name?.[0] || ''}`
               )}
             </div>
             <h2 className="text-xl font-black text-slate-800">{student.first_name} {student.last_name}</h2>
-            <p className="text-xs text-slate-400 mt-1">ID: {student.id?.slice(0, 8)}</p>
-            <span className={cn("status-pill mt-3", student.status === 'active' ? 'pill-active' : student.status === 'frozen' ? 'pill-frozen' : 'pill-active')}>
-              ● {student.status || 'Active'}
-            </span>
-
-            <div className="grid grid-cols-1 gap-3 mt-6 text-left">
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/50">
-                <Phone className="w-4 h-4 text-slate-400" />
-                <div>
-                  <p className="label-subtle">Telefon</p>
-                  <p className="text-sm font-bold text-slate-700">{student.phone || '—'}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/50">
-                <Mail className="w-4 h-4 text-slate-400" />
-                <div>
-                  <p className="label-subtle">Email</p>
-                  <p className="text-sm font-bold text-slate-700">{student.email || '—'}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/50">
-                <User className="w-4 h-4 text-slate-400" />
-                <div>
-                  <p className="label-subtle">Ota-ona</p>
-                  <p className="text-sm font-bold text-slate-700">{student.parent_name || '—'}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/50">
-                <Calendar className="w-4 h-4 text-slate-400" />
-                <div>
-                  <p className="label-subtle">Ro'yxatga olingan</p>
-                  <p className="text-sm font-bold text-slate-700">{student.created_at ? new Date(student.created_at).toLocaleDateString('uz-UZ') : '—'}</p>
-                </div>
-              </div>
-              {student.telegram_chat_id && (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-50/40 border border-blue-100/50">
-                  <div className="w-8 h-8 bg-[#0088cc] rounded-lg flex items-center justify-center text-white shadow-sm">
-                    <Send className="w-4 h-4" />
-                  </div>
-                  <div className="overflow-hidden">
-                    <p className="label-subtle text-[#0088cc]/80 font-bold">Telegram Ulangan</p>
-                    <p className="text-sm font-bold text-slate-700 truncate">
-                      {student.telegram_username ? `@${student.telegram_username}` : 'ID: ' + student.telegram_chat_id}
-                    </p>
-                  </div>
-                </div>
-              )}
+            <p className="text-[10px] font-black text-slate-300 mt-1 uppercase tracking-[0.2em]">ID: {student.id?.slice(0, 8)}</p>
+            
+            <div className="flex justify-center mt-3">
+              <span className={cn(
+                "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5",
+                student.status === 'active' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
+              )}>
+                <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                {student.status || 'Active'}
+              </span>
             </div>
-          </div>
 
-          {/* AI Insight */}
-          <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-6 text-white shadow-lg shadow-amber-200/40">
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-5 h-5" />
-              <span className="text-xs font-black uppercase tracking-widest">AI Insight 🤖</span>
+            <div className="grid grid-cols-1 gap-3 mt-8 text-left">
+              <div className="flex items-center gap-4 p-4 rounded-3xl bg-slate-50/50 border border-slate-100/50 hover:bg-white hover:border-primary-100 transition-all duration-300">
+                <div className="w-10 h-10 bg-white rounded-2xl shadow-sm flex items-center justify-center shrink-0">
+                   <Phone className="w-5 h-5 text-primary-500" />
+                </div>
+                <div>
+                  <p className="label-subtle">Telefon raqam</p>
+                  <p className="text-sm font-black text-slate-800 tracking-tight">{student.phone || '—'}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 p-4 rounded-3xl bg-slate-50/50 border border-slate-100/50 hover:bg-white hover:border-primary-100 transition-all duration-300">
+                <div className="w-10 h-10 bg-white rounded-2xl shadow-sm flex items-center justify-center shrink-0">
+                   <UserCircle className="w-5 h-5 text-indigo-500" />
+                </div>
+                <div>
+                  <p className="label-subtle">Ota-ona ismi</p>
+                  <p className="text-sm font-black text-slate-800 tracking-tight">{student.parent_name || '—'}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 p-4 rounded-3xl bg-slate-50/50 border border-slate-100/50 hover:bg-white hover:border-primary-100 transition-all duration-300">
+                <div className="w-10 h-10 bg-white rounded-2xl shadow-sm flex items-center justify-center shrink-0">
+                   <Calendar className="w-5 h-5 text-slate-400" />
+                </div>
+                <div>
+                  <p className="label-subtle">Ro'yxatdan o'tgan</p>
+                  <p className="text-sm font-black text-slate-800 tracking-tight">
+                    {student.created_at ? new Date(student.created_at).toLocaleDateString('uz-UZ') : '—'}
+                  </p>
+                </div>
+              </div>
             </div>
-            <p className="text-sm font-semibold leading-relaxed opacity-95">
-              {dashboard?.ai_status ? `"${dashboard.ai_status}"` : `"${student.first_name} davomati barqaror. Imtihon ko'rsatkichlari yaxshi — davom eting! 🏆"`}
-            </p>
           </div>
         </div>
 
-        {/* Right — Stats & Data */}
+        {/* Right — Stats & Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="card p-5">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 bg-primary-50 rounded-xl flex items-center justify-center">
-                  <BarChart3 className="w-5 h-5 text-primary-600" />
-                </div>
-                <div>
-                  <p className="label-subtle">O'rtacha Ball</p>
-                  <p className="text-2xl font-black text-slate-800">{avgExamScore}%</p>
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="card p-6 bg-white border-l-4 border-l-primary-500 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <p className="label-subtle text-primary-600/70">Davomat</p>
+                <div className="w-9 h-9 bg-primary-50 rounded-xl flex items-center justify-center text-primary-500">
+                  <Clock className="w-5 h-5" />
                 </div>
               </div>
-            </div>
-            <div className="card p-5">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 bg-green-50 rounded-xl flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="label-subtle">Davomat</p>
-                  <p className="text-2xl font-black text-slate-800">{attendancePercent}%</p>
-                </div>
+              <div className="flex items-baseline gap-2">
+                <h4 className="text-3xl font-black text-slate-800">{attendancePercent}<span className="text-lg opacity-40">%</span></h4>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ko'rsatkich</p>
               </div>
             </div>
-            <div className="card p-5">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 bg-emerald-50 rounded-xl flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-emerald-600" />
+
+            <div className="card p-6 bg-white border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <p className="label-subtle text-green-600/70">To'lovlar</p>
+                <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center text-green-500">
+                  <DollarSign className="w-5 h-5" />
                 </div>
-                <div>
-                  <p className="label-subtle">Jami to'lov</p>
-                  <p className="text-2xl font-black text-slate-800">{totalPaid.toLocaleString()} <span className="text-xs font-bold text-slate-300">so'm</span></p>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <h4 className="text-2xl font-black text-slate-800 tabular-nums">{totalPaid.toLocaleString()}</h4>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">So'm</p>
+              </div>
+            </div>
+
+            <div className="card p-6 bg-white border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <p className="label-subtle text-amber-600/70">Imtihonlar</p>
+                <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500">
+                  <ClipboardList className="w-5 h-5" />
                 </div>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <h4 className="text-3xl font-black text-slate-800">{avgExamScore}</h4>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ball</p>
               </div>
             </div>
           </div>
+
+          {/* AI Mentor Feedback */}
+          {dashboard?.ai_status && (
+            <div className="card p-8 bg-gradient-to-br from-primary-600 to-indigo-800 text-white relative overflow-hidden group">
+               <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-white/20 transition-all duration-1000" />
+               <div className="relative z-10 flex items-start gap-6">
+                 <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-[1.5rem] flex items-center justify-center shrink-0 shadow-inner">
+                    <Sparkles className="w-7 h-7 text-white" />
+                 </div>
+                 <div>
+                   <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary-100 mb-2">AI Mentor Fikri</h3>
+                   <p className="text-lg font-medium italic leading-relaxed text-indigo-50">
+                     "{dashboard.ai_status}"
+                   </p>
+                 </div>
+               </div>
+            </div>
+          )}
 
           {/* Course & Group */}
           <div className="card p-6">
-            <h3 className="section-title mb-4">Kurs & Guruh</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-50 rounded-xl p-4">
-                <p className="label-subtle mb-1">Kurs</p>
-                <p className="text-sm font-bold text-slate-700">{student.course_name || 'Belgilanmagan'}</p>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-4">
-                <p className="label-subtle mb-1">Guruh</p>
-                <p className="text-sm font-bold text-slate-700">{student.group_name || 'Belgilanmagan'}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Exam Performance (dynamic chart) */}
-          <div className="card p-6">
-            <h3 className="section-title mb-4">Imtihon Natijalari</h3>
-            <div className="flex items-end gap-2 h-32">
-              {examResults.length > 0 ? examResults.slice(0, 10).reverse().map((res: any, i: number) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
-                  <div
-                    className={cn("w-full rounded-t-md transition-all group-hover:opacity-80", 
-                      Number(res.score) >= 80 ? "bg-green-400" : Number(res.score) >= 60 ? "bg-amber-400" : "bg-red-400")}
-                    style={{ height: `${res.score}%` }}
-                  />
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-10">
-                    {res.exam_title}: {res.score}%
-                  </div>
-                  <span className="text-[9px] font-bold text-slate-400">#{i + 1}</span>
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
+               Kurs & Guruh
+               <div className="h-0.5 w-8 bg-primary-100" />
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-slate-50/70 border border-slate-100 rounded-3xl p-5 flex items-center gap-4 hover:bg-white hover:border-primary-100 transition-all duration-300">
+                <div className="w-12 h-12 bg-white rounded-[1.25rem] shadow-sm flex items-center justify-center text-indigo-500">
+                   <BookOpen className="w-6 h-6" />
                 </div>
-              )) : (
-                <div className="w-full flex items-center justify-center text-slate-300 text-sm">Hali imtihon topshirilmagan</div>
-              )}
-            </div>
-            <div className="flex gap-6 mt-3">
-              <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-green-400" /><span className="text-slate-500 font-semibold">80%+</span></div>
-              <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-amber-400" /><span className="text-slate-500 font-semibold">60-79%</span></div>
-              <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-red-400" /><span className="text-slate-500 font-semibold">&lt;60%</span></div>
-            </div>
-          </div>
-
-          {/* Payment History */}
-          <div className="card overflow-hidden">
-            <div className="p-6 border-b border-slate-50">
-              <h3 className="section-title">To'lov Tarixi</h3>
-            </div>
-            {payments.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="data-table">
-                  <thead>
-                    <tr><th>Sana</th><th>Summa</th><th>Usul</th><th>Status</th></tr>
-                  </thead>
-                  <tbody>
-                    {payments.map((p: any) => (
-                      <tr key={p.id}>
-                        <td className="text-xs">{p.created_at ? new Date(p.created_at).toLocaleDateString('uz-UZ') : '—'}</td>
-                        <td className="font-bold text-green-600">{Number(p.amount).toLocaleString()} so'm</td>
-                        <td><span className="course-badge bg-slate-100 text-slate-600 uppercase">{p.payment_method || 'Cash'}</span></td>
-                        <td><span className={cn("status-pill", p.status === 'paid' ? 'pill-paid' : 'pill-pending')}>● {p.status || 'paid'}</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div>
+                   <p className="label-subtle">Talim Yo'nalishi</p>
+                   <p className="text-sm font-black text-slate-800 uppercase tracking-tight">{student.course_name || 'Belgilanmagan'}</p>
+                </div>
               </div>
-            ) : (
-              <div className="p-8 text-center text-slate-400 text-sm">To'lovlar topilmadi</div>
-            )}
+              <div className="bg-slate-50/70 border border-slate-100 rounded-3xl p-5 flex items-center gap-4 hover:bg-white hover:border-primary-100 transition-all duration-300">
+                <div className="w-12 h-12 bg-white rounded-[1.25rem] shadow-sm flex items-center justify-center text-primary-500">
+                   <Users className="w-6 h-6" />
+                </div>
+                <div>
+                   <p className="label-subtle">Guruh Nomi</p>
+                   <p className="text-sm font-black text-slate-800 uppercase tracking-tight">{student.group_name || 'Belgilanmagan'}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -97,6 +97,23 @@ export class TelegramService {
     await this.sendMessage(text, chatId, studentId, 'Tasdiqlash kodi');
   }
 
+  async sendPasswordRecovery(chatId: string, firstName: string, tempPass: string): Promise<void> {
+    const text = `🔄 <b>Parolni Qayta Tiklash</b>\n\n` +
+      `Salom, <b>${firstName}</b>!\n\n` +
+      `Siz uchun vaqtinchalik parol: <code>${tempPass}</code>\n\n` +
+      `Iltimos, tizimga kirgandan so'ng parolni darhol o'zgartiring!`;
+    await this.sendMessage(text, chatId);
+  }
+
+  async notifyAdminOfPasswordRequest(userInfo: any): Promise<void> {
+    const text = `⚠️ <b>Parol Tiklash So'rovi (Xodim)</b>\n\n` +
+      `👤 Ism: ${userInfo.first_name || 'Noma\'lum'}\n` +
+      `📞 Tel: ${userInfo.phone || 'Noma\'lum'}\n` +
+      `📧 Email: ${userInfo.email}\n\n` +
+      `<i>Eslatma: Ushbu foydalanuvchi Telegram botni ishlatmayapti. Iltimos, u bilan bog'lanib, parolini qo'lda tiklab bering.</i>`;
+    await this.sendMessage(text, this.adminChatId);
+  }
+
   async sendVerifyCodeToAdmin(firstName: string, phone: string, code: string, studentId: string): Promise<void> {
     const text = `🔔 <b>Admin diqqatiga!</b>\n\nO'quvchi <b>${firstName}</b> (${phone}) platformaga kirish uchun kod so'radi (ChatID yo'q).\n\nKod: <code>${code}</code>\n\nO'quvchiga yetkazib qo'ying.`;
     await this.sendMessage(text, this.adminChatId, studentId, 'Admin verifikatsiya xabari');

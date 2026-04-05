@@ -24,7 +24,7 @@ interface StudentState {
   markNotificationRead: (id: string) => Promise<void>;
 }
 
-export const useStudentStore = create<StudentState>((set, get) => ({
+export const useStudentStore = create<StudentState>()((set, get) => ({
   profile: null,
   course: null,
   attendance: [],
@@ -35,60 +35,56 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   isLoading: false,
 
   fetchProfile: async () => {
-    set({ isLoading: true });
+    const { profile } = get();
+    if (!profile) set({ isLoading: true });
     try {
-      // Try the dashboard endpoint which returns full student info
       const { data } = await api.get('/students/me');
-      devLog('fetchProfile:', data);
-      set({ profile: data });
-    } catch (e1) {
+      set({ profile: data, isLoading: false });
+    } catch {
       try {
-        // Fallback: use analytics student endpoint with self
         const { data } = await api.get('/analytics/student/me');
-        devLog('fetchProfile fallback:', data);
-        set({ profile: data });
+        set({ profile: data, isLoading: false });
       } catch (e2) {
-        devLog('fetchProfile failed:', e2);
+        set({ isLoading: false });
       }
-    } finally {
-      set({ isLoading: false });
     }
   },
 
   fetchCourse: async () => {
-    set({ isLoading: true });
+    const { course } = get();
+    if (!course) set({ isLoading: true });
     try {
-      // Try student's own dashboard which includes group/course info
       const { data } = await api.get('/students/me/dashboard');
-      devLog('fetchCourse (dashboard):', data);
-      if (data) {
+      if (data && data.courses && data.courses.length > 0) {
+        const c = data.courses[0];
+        const g = data.groups?.[0];
         set({
           course: {
-            course_name: data.course_name || data.course,
-            name: data.course_name || data.course,
-            level: data.level,
-            group_name: data.group_name || data.group,
-            teacher_name: data.teacher_name || data.teacher,
+            id: c.course_id || 'base-1',
+            name: c.course_name || 'Kurs',
+            course_name: c.course_name,
+            level: c.current_level || 'Boshlang\'ich',
+            group_name: g?.group_name || 'Guruhsiz',
+            teacher_name: g?.teacher_name || 'Ustoz',
           } as CourseInfo,
+          isLoading: false
         });
       }
-    } catch (e1) {
+    } catch {
       try {
-        // Fallback: GET /courses (if student is enrolled, returns their course)
         const { data } = await api.get('/courses');
         const courses = Array.isArray(data) ? data : data.data || [];
-        devLog('fetchCourse (courses list):', courses);
-        if (courses.length > 0) set({ course: courses[0] });
+        if (courses.length > 0) set({ course: courses[0], isLoading: false });
+        else set({ isLoading: false });
       } catch (e2) {
-        devLog('fetchCourse failed:', e2);
+        set({ isLoading: false });
       }
-    } finally {
-      set({ isLoading: false });
     }
   },
 
   fetchAttendance: async (studentId: string) => {
-    set({ isLoading: true });
+    const { attendance } = get();
+    if (!attendance.length) set({ isLoading: true });
     try {
       const { data } = await api.get(`/students/${studentId}/attendance`);
       devLog('fetchAttendance raw:', data);
@@ -137,79 +133,50 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   },
 
   fetchPayments: async (studentId: string) => {
-    set({ isLoading: true });
+    const { payments } = get();
+    if (!payments.length) set({ isLoading: true });
     try {
       const { data } = await api.get(`/payments/student/${studentId}`);
-      devLog('fetchPayments:', data);
-      // New backend returns { status, payments }
       const pList = Array.isArray(data) ? data : (data.payments || []);
-      set({ payments: pList });
-    } catch (e) {
-      devLog('fetchPayments failed:', e);
-      set({ payments: [] });
-    } finally {
+      set({ payments: pList, isLoading: false });
+    } catch {
       set({ isLoading: false });
     }
   },
 
   fetchStats: async () => {
+    const { stats } = get();
+    // Don't show loading for stats as it's background info
     try {
-      // Use the dashboard endpoint to get AI humor status as well
       const { data } = await api.get('/students/me/dashboard');
-      devLog('fetchStats (dashboard):', data);
+      const totalExams = data.exams?.length || 0;
+      const avgScore = totalExams > 0 
+        ? Math.round(data.exams.reduce((acc: number, ex: any) => acc + (ex.score || 0), 0) / totalExams)
+        : 0;
+      const totalLessons = (data.present_days || 0) + (data.absent_days || 0);
+      const attPct = totalLessons > 0 ? Math.round((data.present_days / totalLessons) * 100) : 0;
+
       set({ 
         stats: {
-          total_exams: data.total_exams || 0,
-          average_score: data.average_score || 0,
-          attendance_percentage: data.attendance_percentage || 0,
+          total_exams: totalExams,
+          average_score: avgScore,
+          attendance_percentage: attPct,
           missed_lessons: data.absent_days || 0,
           total_payments: data.payments?.length || 0,
           ai_status: data.ai_status
         }
       });
-    } catch (e1) {
-      try {
-        // Fallback: older stats endpoint
-        const { data } = await api.get('/students/me/stats');
-        devLog('fetchStats fallback:', data);
-        set({ stats: data });
-      } catch (e2) {
-        try {
-          // Fallback: analytics dashboard for student
-          const { data } = await api.get('/analytics/student/me');
-          devLog('fetchStats analytics:', data);
-          set({
-            stats: {
-              total_exams: data.total_exams || 0,
-              average_score: data.average_score || 0,
-              attendance_percentage: data.attendance_percentage || 0,
-              missed_lessons: data.absent_count || data.missed_lessons || 0,
-              total_payments: data.total_payments || 0,
-            },
-          });
-        } catch (e3) {
-          devLog('fetchStats failed, using defaults');
-          set({
-            stats: {
-              total_exams: 0,
-              average_score: 0,
-              attendance_percentage: 0,
-              missed_lessons: 0,
-              total_payments: 0,
-            },
-          });
-        }
-      }
+    } catch (e) {
+       // fallback silently or keep old stats
     }
   },
 
   fetchNotifications: async () => {
     try {
       const { data } = await api.get('/students/me/notifications');
-      devLog('fetchNotifications:', data);
       set({ notifications: Array.isArray(data) ? data : [] });
-    } catch (e) {
-      devLog('fetchNotifications failed:', e);
+    } catch {
+      // fail silently
     }
   },
 
@@ -221,8 +188,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           n.id === id ? { ...n, is_read: true } : n
         ),
       }));
-    } catch (e) {
-      devLog('markNotificationRead failed:', e);
+    } catch {
+      // fail silently
     }
   },
 }));

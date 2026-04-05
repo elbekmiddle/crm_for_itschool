@@ -17,8 +17,14 @@ import ResultPage from './pages/ResultPage';
 import ReviewPage from './pages/ReviewPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  
+  // RBAC: Only allow STUDENTS (or admins for testing)
+  if (user && user.role !== 'STUDENT' && user.role !== 'ADMIN') {
+    return <div className="p-10 text-center font-bold text-red-500">Kirish taqiqlangan. Bu platforma faqat talabalar uchun.</div>;
+  }
+  
   return <>{children}</>;
 };
 

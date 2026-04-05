@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../lib/api';
+import { socket } from '../lib/socket';
 import type { Question } from '../types';
 
 interface ExamState {
@@ -85,6 +86,15 @@ export const useExamStore = create<ExamState>()(
 
           const { data: attempt } = await api.post(`/exams/${examId}/start`);
           const { data: questions } = await api.get(`/exams/attempt/${attempt.id}/questions`);
+          
+          // Fetch existing answers for restoration
+          let existingAnswers = {};
+          try {
+            const { data: savedAnswers } = await api.get(`/exams/attempt/${attempt.id}/answers`);
+            existingAnswers = savedAnswers || {};
+          } catch (e) {
+            console.error('Failed to fetch existing answers', e);
+          }
 
           const deadline = new Date(attempt.deadline_at).getTime();
           const now = Date.now();
@@ -93,9 +103,9 @@ export const useExamStore = create<ExamState>()(
           set({
             examId,
             attemptId: attempt.id,
-            examTitle: attempt.exam_title || '',
+            examTitle: attempt.exam_title || attempt.title || '',
             questions: Array.isArray(questions) ? questions : [],
-            answers: {},
+            answers: existingAnswers,
             flagged: new Set(),
             timeLeft,
             startedAt: attempt.started_at,
@@ -127,6 +137,12 @@ export const useExamStore = create<ExamState>()(
             question_id: questionId,
             answer_payload: answer,
           });
+
+          // Sync via socket for real-time visibility (if needed by teacher)
+          if (socket.connected) {
+            socket.emit('student_answered', { attemptId, questionId });
+          }
+
           // Remove from pending if synced
           set((s) => ({
             pendingAnswers: s.pendingAnswers.filter((p) => p.questionId !== questionId),

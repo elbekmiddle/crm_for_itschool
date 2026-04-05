@@ -23,7 +23,7 @@ interface NotificationState {
 
 let socket: WebSocket | null = null;
 
-export const useNotificationStore = create<NotificationState>((set, get) => ({
+export const useNotificationStore = create<NotificationState>()((set, get) => ({
   notifications: [],
   unreadCount: 0,
   isConnected: false,

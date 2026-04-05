@@ -6,10 +6,10 @@ import {
   Layers, CheckCircle2
 } from 'lucide-react';
 
-const LEVELS = ['Boshlang\'ich', 'O\'rta', 'Yuqori'];
+const LEVELS = ['Boshlang`ich', 'O`rta', 'Yuqori'];
 
 const CoursePage: React.FC = () => {
-  const { course, fetchCourse, attendance, attendanceStats, fetchAttendance, isLoading } = useStudentStore();
+  const { course, fetchCourse, fetchAttendance, attendanceStats, isLoading } = useStudentStore();
   const { user } = useAuthStore();
 
   useEffect(() => {
@@ -23,7 +23,7 @@ const CoursePage: React.FC = () => {
   return (
     <div className="page-container space-y-6 pb-20 lg:pb-6 animate-in">
       <div>
-        <h1 className="text-2xl font-black text-slate-900">Kursim</h1>
+        <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100">Kursim</h1>
         <p className="text-slate-400 text-sm mt-1">Joriy kurs va guruh ma'lumotlari</p>
       </div>
 
@@ -52,7 +52,7 @@ const CoursePage: React.FC = () => {
                 </div>
                 <div>
                   <p className="label-subtle">Guruh</p>
-                  <p className="font-bold text-slate-800">{course.group_name || 'Guruhsiz'}</p>
+                  <p className="font-bold text-slate-800 dark:text-slate-100">{course.group_name || 'Guruhsiz'}</p>
                 </div>
               </div>
             </div>
@@ -63,7 +63,7 @@ const CoursePage: React.FC = () => {
                 </div>
                 <div>
                   <p className="label-subtle">O'qituvchi</p>
-                  <p className="font-bold text-slate-800">{course.teacher_name || 'Belgilanmagan'}</p>
+                  <p className="font-bold text-slate-800 dark:text-slate-100">{course.teacher_name || 'Belgilanmagan'}</p>
                 </div>
               </div>
             </div>
@@ -73,7 +73,7 @@ const CoursePage: React.FC = () => {
           <div className="card p-5 space-y-4">
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-primary-500" />
-              <p className="font-bold text-slate-800 text-sm">Daraja Progressi</p>
+              <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">Daraja Progressi</p>
             </div>
             <div className="flex gap-2">
               {LEVELS.map((l, i) => (
@@ -98,20 +98,20 @@ const CoursePage: React.FC = () => {
             <div className="card p-5 space-y-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-green-500" />
-                <p className="font-bold text-slate-800 text-sm">Davomat statistikasi</p>
+                <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">Davomat statistikasi</p>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-green-50 rounded-xl p-3 text-center">
-                  <p className="text-xl font-black text-green-600">{attendanceStats.present_count}</p>
-                  <p className="text-[10px] text-green-500 font-bold mt-0.5">KELDI</p>
+                <div className="bg-green-50 dark:bg-green-950/30 rounded-xl p-3 text-center transition-colors">
+                  <p className="text-xl font-black text-green-600 dark:text-green-400">{attendanceStats.present_count}</p>
+                  <p className="text-[10px] text-green-500 dark:text-green-600 font-bold mt-0.5">KELDI</p>
                 </div>
-                <div className="bg-red-50 rounded-xl p-3 text-center">
-                  <p className="text-xl font-black text-red-500">{attendanceStats.absent_count}</p>
-                  <p className="text-[10px] text-red-400 font-bold mt-0.5">QOLDI</p>
+                <div className="bg-red-50 dark:bg-red-950/30 rounded-xl p-3 text-center transition-colors">
+                  <p className="text-xl font-black text-red-500 dark:text-red-400">{attendanceStats.absent_count}</p>
+                  <p className="text-[10px] text-red-400 dark:text-red-600 font-bold mt-0.5">QOLDI</p>
                 </div>
-                <div className="bg-primary-50 rounded-xl p-3 text-center">
-                  <p className="text-xl font-black text-primary-600">{attendanceStats.attendance_percentage}%</p>
-                  <p className="text-[10px] text-primary-500 font-bold mt-0.5">FOIZ</p>
+                <div className="bg-primary-50 dark:bg-primary-950/30 rounded-xl p-3 text-center transition-colors">
+                  <p className="text-xl font-black text-primary-600 dark:text-primary-400">{attendanceStats.attendance_percentage}%</p>
+                  <p className="text-[10px] text-primary-500 dark:text-primary-600 font-bold mt-0.5">FOIZ</p>
                 </div>
               </div>
             </div>

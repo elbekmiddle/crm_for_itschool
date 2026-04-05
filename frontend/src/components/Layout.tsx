@@ -10,8 +10,14 @@ import { cn } from '../lib/utils';
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isAppLoading, setIsAppLoading] = useState(true);
   const { user } = useAdminStore();
   const { notifications, unreadCount, markAsRead, clearAll } = useNotifications();
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsAppLoading(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   useSocketEvents(user?.id);
 
@@ -53,32 +59,55 @@ const Layout: React.FC = () => {
             </button>
 
             {showNotifications && (
-              <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 animate-in-slide-down">
-                <div className="p-4 border-b border-slate-50 flex items-center justify-between">
-                  <h3 className="text-sm font-black text-slate-800">Bildirishnomalar</h3>
-                  <button onClick={clearAll} className="text-[10px] font-bold text-red-500 hover:underline">Tozalash</button>
-                </div>
-                <div className="max-h-[400px] overflow-y-auto p-2 space-y-1">
-                  {notifications.map(n => (
-                    <div 
-                      key={n.id} 
-                      onClick={() => markAsRead(n.id)}
-                      className={cn(
-                        "p-3 rounded-xl cursor-pointer transition-all border border-transparent",
-                        !n.read ? "bg-primary-50/50 border-primary-100" : "hover:bg-slate-50"
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <p className={cn("text-xs font-bold", !n.read ? "text-primary-700" : "text-slate-700")}>{n.title}</p>
-                        <span className="text-[8px] text-slate-300 font-bold uppercase">{new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setShowNotifications(false)} />
+                <div className="relative w-full max-w-md bg-white border border-slate-100 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                  <div className="p-6 bg-gradient-to-br from-primary-600 to-indigo-700 flex items-center justify-between text-white">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center">
+                        <Bell className="w-5 h-5 font-bold" />
                       </div>
-                      <p className="text-[11px] text-slate-500 leading-relaxed">{n.message}</p>
+                      <div>
+                        <h3 className="font-black text-lg">Bildirishnomalar</h3>
+                        <p className="text-white/80 text-[10px] font-bold uppercase tracking-wider">{unreadCount} ta yangi xabar</p>
+                      </div>
                     </div>
-                  ))}
-                  {notifications.length === 0 && (
-                    <div className="py-12 text-center">
-                       <Bell className="w-8 h-8 text-slate-100 mx-auto mb-2" />
-                       <p className="text-xs text-slate-400 font-medium italic">Sizda yangi xabarlar yo'q</p>
+                    <button onClick={() => setShowNotifications(false)} className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-2xl flex items-center justify-center transition-colors">
+                      <X className="w-5 h-5 font-black" />
+                    </button>
+                  </div>
+                  <div className="max-h-[400px] overflow-y-auto p-4 space-y-2 no-scrollbar bg-slate-50/50">
+                    {notifications.map(n => (
+                      <div 
+                        key={n.id} 
+                        onClick={() => markAsRead(n.id)}
+                        className={cn(
+                          "p-4 rounded-[1.5rem] bg-white border border-slate-100 cursor-pointer shadow-sm transition-all hover:border-primary-200",
+                          !n.read ? "ring-1 ring-primary-500/10" : ""
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <p className={cn("text-sm font-black", !n.read ? "text-primary-700" : "text-slate-700")}>{n.title}</p>
+                          {!n.read && <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse" />}
+                        </div>
+                        <p className="text-[12px] text-slate-500 leading-relaxed mb-2">{n.message}</p>
+                        <p className="text-[9px] text-slate-300 font-bold uppercase tracking-tighter">
+                          {new Date(n.timestamp).toLocaleString('uz-UZ')}
+                        </p>
+                      </div>
+                    ))}
+                    {notifications.length === 0 && (
+                      <div className="py-20 text-center">
+                         <div className="w-16 h-16 bg-slate-100 rounded-3xl mx-auto mb-4 flex items-center justify-center">
+                           <Bell className="w-8 h-8 text-slate-300" />
+                         </div>
+                         <p className="text-xs text-slate-400 font-bold italic tracking-wide">Xabarlar yo'q</p>
+                      </div>
+                    )}
+                  </div>
+                  {notifications.length > 0 && (
+                    <div className="p-3 border-t border-slate-100 bg-white">
+                      <button onClick={clearAll} className="w-full py-2 text-[11px] font-black uppercase text-red-500 tracking-widest hover:bg-red-50 rounded-xl transition-colors">Hammasini tozalash</button>
                     </div>
                   )}
                 </div>
@@ -89,20 +118,13 @@ const Layout: React.FC = () => {
               <Settings className="w-[18px] h-[18px]" />
             </button>
             <div className="flex items-center gap-3 pl-3 ml-1 border-l border-slate-100">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-slate-700 leading-none">
+              <div className="text-right">
+                <p className="text-sm font-black text-slate-700 leading-none">
                   {user?.first_name || 'Admin'} {user?.last_name || ''}
                 </p>
-                <p className="text-[10px] font-bold text-slate-400 capitalize mt-0.5">
+                <p className="text-[10px] font-black text-primary-500 uppercase tracking-widest mt-0.5">
                   {user?.role || 'Administrator'}
                 </p>
-              </div>
-              <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center text-white text-xs font-black">
-                {user?.image_url ? (
-                  <img src={user.image_url} alt="" className="w-full h-full rounded-xl object-cover" />
-                ) : (
-                  initials
-                )}
               </div>
             </div>
           </div>
@@ -112,6 +134,17 @@ const Layout: React.FC = () => {
         <main>
           <Outlet />
         </main>
+        {/* App Loader */}
+        {isAppLoading && (
+          <div className="fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center">
+            <div className="w-20 h-20 relative">
+              <div className="absolute inset-0 border-4 border-primary-50 rounded-full" />
+              <div className="absolute inset-0 border-4 border-primary-600 rounded-full border-t-transparent animate-spin" />
+              <GraduationCap className="absolute inset-0 m-auto w-8 h-8 text-primary-600" />
+            </div>
+            <p className="mt-6 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] animate-pulse">IT School CRM yuklanmoqda...</p>
+          </div>
+        )}
       </div>
     </div>
   );

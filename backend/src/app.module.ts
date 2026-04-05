@@ -29,6 +29,8 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { LeadsModule } from './modules/leads/leads.module';
 import { VacanciesModule } from './modules/vacancies/vacancies.module';
 import { BlogsModule } from './modules/blogs/blogs.module';
+import { RolesGuard } from './common/guards/roles.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 
 @Module({
   imports: [
@@ -66,6 +68,10 @@ import { BlogsModule } from './modules/blogs/blogs.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
     {
       provide: APP_INTERCEPTOR,

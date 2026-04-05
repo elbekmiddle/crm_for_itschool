@@ -3,7 +3,7 @@ import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
 import {
   Users, Plus, Loader2, Pencil, Trash2, X, UserPlus, UserMinus,
-  Radio, Calendar, ChevronRight
+  Radio, Calendar
 } from 'lucide-react';
 
 import { useConfirm } from '../context/ConfirmContext';

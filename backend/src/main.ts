@@ -17,12 +17,21 @@ async function bootstrap() {
   app.use(helmet());
   app.use(compression());
   
-  // CORS - cookie va credentials bilan
+  const isProduction = process.env.NODE_ENV === 'production';
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'];
+  
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true, // Cookie'larni qabul qilish uchun
+    origin: (origin, callback) => {
+      // In development, allow all origins
+      if (!isProduction || !origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('CORS xatoligi: Bu domen (origin) ruxsat berilganlar ro\'yxatida yo\'q: ' + origin));
+      }
+    },
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-refresh-token'],
   });
   
   app.setGlobalPrefix('api/v1');

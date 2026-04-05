@@ -15,19 +15,19 @@ export const useSocketEvents = (userId?: string) => {
     }
 
     const onExamCreated = (exam: any) => {
-      addNotification(`Yangi imtihon qo'shildi! 📝 ${exam?.title}`, 'info');
+      addNotification({ title: 'Imtihon yaratildi', message: `Yangi imtihon qo'shildi! 📝 ${exam?.title}`, type: 'info' });
     };
 
     const onExamStarted = (data: any) => {
-      addNotification(`Talaba ${data.studentName} imtihonni boshladi: ${data.examId}`, 'info');
+      addNotification({ title: 'Imtihon boshlandi', message: `Talaba ${data.studentName} imtihonni boshladi: ${data.examId}`, type: 'info' });
     };
 
     const onAttendanceMissed = (data: any) => {
-      addNotification(`Talaba dars qoldirdi: ${data.studentId}`, 'error');
+      addNotification({ title: 'Dars qoldirildi', message: `Talaba dars qoldirdi: ${data.studentId}`, type: 'error' });
     };
 
     const onExamApproved = (data: any) => {
-      addNotification(`Imtihon faollashtirildi: ${data.title}`, 'success');
+      addNotification({ title: 'Imtihon tasdiqlandi', message: `Imtihon faollashtirildi: ${data.title}`, type: 'success' });
     };
 
     socket.on('exam_created', onExamCreated);

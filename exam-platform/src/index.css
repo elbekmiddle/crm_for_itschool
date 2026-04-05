@@ -14,8 +14,10 @@
   --color-primary-950: #1e1b4b;
 }
 
-/* ── Base ── */
-*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -25,6 +27,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.dark body { background-color: #020617; color: #E2E8F0; }
+
 /* ── Card ── */
 .card {
   background-color: #FFFFFF;
@@ -33,6 +37,21 @@ body {
   box-shadow: 0 1px 3px rgba(0,0,0,0.03), 0 4px 12px rgba(0,0,0,0.02);
   transition: all 0.2s;
 }
+.dark .card, .dark .card-hover {
+  background-color: #0F172A !important;
+  border-color: #1E293B !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+  color: #F1F5F9 !important;
+}
+
+.dark .card p, .dark .card span, .dark .label-subtle {
+  color: #94A3B8 !important;
+}
+
+.dark .card h1, .dark .card h2, .dark .card h3, .dark .card .font-bold {
+  color: #F8FAFC !important;
+}
+
 .card-hover {
   background-color: #FFFFFF;
   border-radius: 1rem;
@@ -41,10 +60,20 @@ body {
   transition: all 0.2s;
   cursor: pointer;
 }
+.dark .card-hover {
+  background-color: #0F172A;
+  border-color: #1E293B;
+}
+
 .card-hover:hover {
   box-shadow: 0 8px 24px rgba(0,0,0,0.06);
   border-color: #CBD5E1;
   transform: translateY(-2px);
+}
+.dark .card-hover:hover {
+  border-color: #334155;
+  background-color: #1E293B;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.6);
 }
 
 /* ── Glass ── */
@@ -54,6 +83,10 @@ body {
   border: 1px solid rgba(255,255,255,0.5);
   border-radius: 1.5rem;
   box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+}
+.dark .glass-card {
+  background-color: rgba(15,23,42,0.8);
+  border-color: rgba(255,255,255,0.05);
 }
 
 /* ── Buttons ── */

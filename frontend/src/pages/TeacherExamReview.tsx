@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { Check, Edit2, Plus, Trash2, CheckCircle2, Save, X } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
+import { useConfirmLeave } from '../hooks/useConfirm';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 export default function TeacherExamReview() {
   const { examId } = useParams();
@@ -13,6 +16,8 @@ export default function TeacherExamReview() {
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
+
+  useConfirmLeave(isDirty);
 
   useEffect(() => {
     fetchExamData();

@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
-  GraduationCap, LayoutDashboard, User, BookOpen,
+  LayoutDashboard, User, BookOpen,
   CalendarCheck, CreditCard, ClipboardList, LogOut,
   Menu, X, Bell, Moon, Sun, ChevronLeft, ChevronRight,
-  AlertTriangle
+  AlertTriangle, GraduationCap
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useStudentStore } from '../store/useStudentStore';
-
+const Logo = "/Images/Logo.png";
 // ─── Nav items ───────────────────────────────────────────────────────────────
 const navItems = [
   { to: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard',    shortcut: '1' },
@@ -86,6 +86,7 @@ const LogoutModal: React.FC<{ onConfirm: () => void; onCancel: () => void }> = (
             Bekor qilish
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             className="flex-1 py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-colors shadow-lg shadow-red-500/25"
           >
@@ -109,11 +110,13 @@ const AppLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isAppLoading, setIsAppLoading] = useState(true);
 
   useEffect(() => {
+    const timer = setTimeout(() => setIsAppLoading(false), 1500);
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000); // refresh every minute
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => { clearInterval(interval); clearTimeout(timer); };
   }, [fetchNotifications]);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -162,58 +165,46 @@ const AppLayout: React.FC = () => {
       <aside className={`hidden lg:flex ${sidebarW} flex-col bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 fixed top-0 left-0 h-full z-30 transition-all duration-300 ease-in-out overflow-hidden`}>
 
         {/* Brand */}
-        <div className={`p-4 border-b border-slate-50 dark:border-slate-800 flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} min-h-[65px] shrink-0`}>
+        <div className={`p-4 border-b border-slate-50 dark:border-slate-800 flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} min-h-[70px] shrink-0`}>
           <div className={`flex items-center gap-3 overflow-hidden ${sidebarCollapsed ? 'hidden' : ''}`}>
-            <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center shadow shadow-indigo-200 dark:shadow-indigo-900 shrink-0">
-              <GraduationCap className="w-5 h-5 text-white" />
+            <div className="w-15 h-15 rounded-xl flex items-center justify-center shadow-sm p-2.5 shrink-0">
+              <img 
+                src={Logo}
+                alt="IT Park" 
+                className="w-full h-full object-contain"
+              />
             </div>
             {!sidebarCollapsed && (
               <div className="overflow-hidden">
-                <p className="font-black text-slate-800 dark:text-white text-sm leading-none whitespace-nowrap">IT School</p>
-                <p className="text-[10px] text-slate-400 font-bold mt-0.5 uppercase tracking-wider">Exam Portal</p>
+                <p className="font-black text-slate-800 dark:text-white text-sm leading-none whitespace-nowrap uppercase tracking-tighter">IT Academy</p>
+                <p className="text-[10px] text-indigo-500 font-bold mt-0.5 uppercase tracking-[0.2em] opacity-80">Exam Portal</p>
               </div>
             )}
           </div>
 
           {/* Icon only when collapsed */}
           {sidebarCollapsed && (
-            <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center shadow shadow-indigo-200 dark:shadow-indigo-900 shrink-0">
-               <GraduationCap className="w-5 h-5 text-white" />
-            </div>
+            // <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm p-1.5 shrink-0">
+            //    <img 
+            //      src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Logo_IT_Park_Uzbekistan.svg/3840px-Logo_IT_Park_Uzbekistan.svg.png" 
+            //      alt="IT Park" 
+            //      className="w-full h-full object-contain"
+            //    />
+            // </div>
+            <div></div>
           )}
 
           {/* Collapse toggle */}
           <button
+            type="button"
             onClick={() => setSidebarCollapsed(v => !v)}
             title="Alt+B — Yopish/ochish"
-            className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors shrink-0"
+            className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-all duration-300 shrink-0 shadow-sm"
           >
-            {sidebarCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+            {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
         </div>
 
-        {/* User card */}
-        {!sidebarCollapsed && (
-          <div className="px-3 pt-3 shrink-0">
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-center">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center text-white text-sm font-black shadow shrink-0">
-                {user?.image_url
-                  ? <img src={user.image_url} className="w-full h-full rounded-xl object-cover" alt="" />
-                  : initials}
-              </div>
-            </div>
-          </div>
-        )}
-        {sidebarCollapsed && (
-          <div className="px-3 pt-3 shrink-0">
-            <div title={`${user?.first_name} ${user?.last_name}`}
-              className="w-10 h-10 mx-auto bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center text-white text-xs font-black shadow">
-              {user?.image_url
-                ? <img src={user.image_url} className="w-full h-full rounded-xl object-cover" alt="" />
-                : initials}
-            </div>
-          </div>
-        )}
 
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-1 mt-2 overflow-y-auto">
@@ -257,28 +248,53 @@ const AppLayout: React.FC = () => {
               )}
             </button>
 
-            {showNotifications && !mobileOpen && (
-              <div className={`absolute ${sidebarCollapsed ? 'left-full bottom-0 ml-2' : 'bottom-full left-0 mb-2'} w-72 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200`}>
-                <div className="p-3 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
-                  <span className="font-bold text-sm">Xabarlar</span>
-                  {unreadCount > 0 && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">{unreadCount} ta yangi</span>}
-                </div>
-                <div className="max-h-80 overflow-y-auto">
-                  {notifications.length === 0 ? (
-                    <div className="p-8 text-center text-slate-400 text-xs text-balance">Hozircha xabarlar yo'q</div>
-                  ) : (
-                    notifications.map(n => (
-                      <div 
-                        key={n.id} 
-                        onClick={() => { markNotificationRead(n.id); }}
-                        className={`p-3 border-b border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${!n.is_read ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}`}
-                      >
-                        <p className="font-bold text-xs text-slate-800 dark:text-white mb-0.5">{n.title}</p>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-tight">{n.message}</p>
-                        <p className="text-[9px] text-slate-300 dark:text-slate-600 mt-1">{new Date(n.created_at).toLocaleDateString()} {new Date(n.created_at).toLocaleTimeString().slice(0,5)}</p>
+            {showNotifications && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setShowNotifications(false)} />
+                <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[1.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                  <div className="p-6 bg-gradient-to-br from-indigo-600 to-indigo-800 flex items-center justify-between text-white">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center">
+                        <Bell className="w-5 h-5 font-bold" />
                       </div>
-                    ))
-                  )}
+                      <div>
+                        <h3 className="font-black text-lg">Bildirishnomalar</h3>
+                        <p className="text-indigo-100 text-[11px] font-medium tracking-wide uppercase opacity-80">{unreadCount} ta yangi xabar</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setShowNotifications(false)} className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-2xl flex items-center justify-center transition-colors">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div className="p-2 max-h-[60vh] overflow-y-auto no-scrollbar bg-slate-50 dark:bg-slate-950/20">
+                    {notifications.length === 0 ? (
+                      <div className="py-16 text-center">
+                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-3xl mx-auto mb-4 flex items-center justify-center">
+                          <Bell className="w-7 h-7 text-slate-300 dark:text-slate-600" />
+                        </div>
+                        <p className="text-slate-400 text-sm font-semibold">Hozircha xabarlar yo'q</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {notifications.map(n => (
+                          <div 
+                            key={n.id} 
+                            onClick={() => { markNotificationRead(n.id); }}
+                            className={`p-4 rounded-[1.5rem] bg-white dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/60 cursor-pointer hover:border-indigo-200 dark:hover:border-indigo-800/40 transition-all duration-200 ${!n.is_read ? 'shadow-sm ring-1 ring-indigo-500/10' : ''}`}
+                          >
+                            <div className="flex items-start justify-between gap-3 mb-1">
+                              <p className={`font-black text-sm ${!n.is_read ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{n.title}</p>
+                              {!n.is_read && <div className="w-2 h-2 bg-indigo-500 rounded-full mt-1.5 shrink-0 animate-pulse" />}
+                            </div>
+                            <p className="text-[13px] text-slate-500 dark:text-slate-400 leading-relaxed mb-2 break-words">{n.message}</p>
+                            <p className="text-[10px] text-slate-300 dark:text-slate-600 font-bold uppercase tracking-wider tabular-nums">
+                              {new Date(n.created_at).toLocaleDateString('uz-UZ')} &bull; {new Date(n.created_at).toLocaleTimeString('uz-UZ').slice(0,5)}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -308,64 +324,7 @@ const AppLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* ── Mobile Header ── */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-lg flex items-center justify-center">
-            <GraduationCap className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-black text-slate-800 dark:text-white text-sm">IT School</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Dark mode */}
-          <button onClick={() => setDark(v => !v)}
-            className="w-9 h-9 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition-colors">
-            {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
-          {/* Bell */}
-          <div className="relative">
-            <button 
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="w-9 h-9 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-500 relative">
-              <Bell className="w-4 h-4" />
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-800" />
-              )}
-            </button>
-
-            {showNotifications && (
-              <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div className="p-3 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
-                  <span className="font-bold text-sm">Xabarlar</span>
-                  {unreadCount > 0 && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">{unreadCount} ta yangi</span>}
-                </div>
-                <div className="max-h-80 overflow-y-auto">
-                  {notifications.length === 0 ? (
-                    <div className="p-8 text-center text-slate-400 text-xs">Xabarlar yo'q</div>
-                  ) : (
-                    notifications.map(n => (
-                      <div 
-                        key={n.id} 
-                        onClick={() => { markNotificationRead(n.id); }}
-                        className={`p-3 border-b border-slate-50 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${!n.is_read ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : ''}`}
-                      >
-                        <p className="font-bold text-xs text-slate-800 dark:text-white mb-1">{n.title}</p>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">{n.message}</p>
-                        <p className="text-[9px] text-slate-300 dark:text-slate-600 mt-1">{new Date(n.created_at).toLocaleString()}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-          {/* Menu */}
-          <button onClick={() => setMobileOpen(v => !v)}
-            className="w-9 h-9 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-400">
-            {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-          </button>
-        </div>
-      </div>
+      {/* Mobile Header - Removed as requested, using bottom nav */}
 
       {/* ── Mobile Drawer ── */}
       {mobileOpen && (
@@ -426,23 +385,71 @@ const AppLayout: React.FC = () => {
       )}
 
       {/* ── Main content ── */}
-      <main className={`flex-1 ${contentML} min-h-screen transition-all duration-300`}>
-        <div className="pt-16 lg:pt-0 pb-20 lg:pb-0">
+      <main className={`flex-1 ${contentML} min-h-screen bg-slate-50/50 dark:bg-slate-950/20 transition-colors duration-300 flex flex-col`}>
+        
+        {/* ── Premium Top Bar ── */}
+        <header className="sticky top-0 z-40 h-16 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/60 px-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+               onClick={() => setMobileOpen(true)}
+               className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-sm"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="hidden lg:block">
+               <h1 className="text-[10px] font-black text-slate-400 dark:text-slate-500 tracking-[0.2em] uppercase opacity-80">Mission Control</h1>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Real-time indicator */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 dark:bg-green-950/30 border border-green-100 dark:border-green-800/40 text-[10px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest mr-2">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+              Tizim Onlayn
+            </div>
+
+            {/* Quick Dark Toggle (Premium shadcn style) */}
+            <button
+              type="button"
+              onClick={() => setDark(v => !v)}
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:ring-2 hover:ring-primary-500/20 dark:hover:ring-primary-400/20 transition-all duration-300 group shadow-sm"
+            >
+              {dark ? (
+                <Sun className="w-5 h-5 group-hover:rotate-180 transition-all duration-500 text-amber-500" />
+              ) : (
+                <Moon className="w-5 h-5 group-hover:-rotate-12 transition-all duration-500 text-indigo-400" />
+              )}
+            </button>
+
+            {/* User Avatar Shortcut */}
+            <button 
+              onClick={() => navigate('/profile')}
+              className="ml-2 flex items-center gap-2 p-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+            >
+              <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center text-white text-[10px] font-black shadow-lg shadow-primary-500/20">
+                {user?.image_url ? <img src={user.image_url} className="w-full h-full rounded-lg object-cover" alt="" /> : initials}
+              </div>
+            </button>
+          </div>
+        </header>
+
+        {/* Content body */}
+        <div className="flex-1 p-4 lg:p-8 pb-32 lg:pb-8 overflow-y-auto overflow-x-hidden no-scrollbar">
           <Outlet />
         </div>
       </main>
 
       {/* ── Mobile bottom nav ── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 z-30 px-2 py-1.5 flex items-center justify-around">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 z-30 px-2 py-2 px-2 flex items-center justify-around">
         {navItems.slice(0, 5).map(({ to, icon: Icon, label }) => (
           <NavLink key={to} to={to}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
+              `flex flex-col items-center gap-0.5 px-3 py-3 rounded-xl transition-all ${
                 isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'
               }`
             }
           >
-            <Icon className="w-5 h-5" />
+            <Icon className="w-6 h-6" />
             <span className="text-[9px] font-bold">{label}</span>
           </NavLink>
         ))}

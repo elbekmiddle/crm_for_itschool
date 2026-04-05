@@ -14,9 +14,11 @@ export interface Student {
 export interface CourseInfo {
   id: string;
   name: string;
+  course_name?: string;
   group_name?: string;
   group_type?: 'GROUP' | 'INDIVIDUAL';
   teacher_name: string;
+  level?: string;
   progress_level?: 'basic' | 'intermediate' | 'advanced';
 }
 

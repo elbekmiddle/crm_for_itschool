@@ -11,13 +11,14 @@ import {
 
 const UserDashboard: React.FC = () => {
   const { exams, fetchExams, isLoading: examsLoading } = useExamStore();
-  const { stats, fetchStats, fetchAttendance, fetchPayments, attendanceStats, payments } = useStudentStore();
+  const { stats, fetchStats, fetchAttendance, fetchPayments, fetchNotifications, attendanceStats, payments, notifications } = useStudentStore();
   const { user } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchExams();
     fetchStats();
+    fetchNotifications();
     if (user?.id) {
       fetchAttendance(user.id);
       fetchPayments(user.id);
@@ -92,7 +93,7 @@ const UserDashboard: React.FC = () => {
             </div>
             <p className="label-subtle mb-1">{label}</p>
             <div className="flex items-end gap-1">
-              <p className="text-2xl font-black text-slate-800">{value}</p>
+              <p className="text-2xl font-black text-slate-800 dark:text-slate-100">{value}</p>
               {sub && <p className="text-xs text-slate-400 mb-0.5 font-semibold">{sub}</p>}
             </div>
             {trend && <p className="text-[10px] text-green-600 font-bold mt-1">↑ {trend} bu hafta</p>}
@@ -101,13 +102,13 @@ const UserDashboard: React.FC = () => {
       </div>
 
       {/* Quick links */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <button onClick={() => navigate('/attendance')} className="card-hover p-4 flex items-center gap-3">
           <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
             <CalendarCheck className="w-5 h-5 text-green-500" />
           </div>
           <div className="text-left">
-            <p className="text-sm font-bold text-slate-800">Davomat</p>
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Davomat</p>
             <p className="text-[11px] text-slate-400">{attendanceStats?.attendance_percentage || 0}% hozir</p>
           </div>
           <ChevronRight className="w-4 h-4 text-slate-300 ml-auto" />
@@ -117,7 +118,7 @@ const UserDashboard: React.FC = () => {
             <BookOpen className="w-5 h-5 text-primary-500" />
           </div>
           <div className="text-left">
-            <p className="text-sm font-bold text-slate-800">Kursim</p>
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Kursim</p>
             <p className="text-[11px] text-slate-400">Ma'lumotlarni ko'ring</p>
           </div>
           <ChevronRight className="w-4 h-4 text-slate-300 ml-auto" />
@@ -147,7 +148,7 @@ const UserDashboard: React.FC = () => {
                   <Target className="w-5 h-5 text-primary-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-slate-800 truncate text-sm">{exam.title}</p>
+                  <p className="font-bold text-slate-800 dark:text-slate-100 truncate text-sm">{exam.title}</p>
                   <p className="text-xs text-slate-400 mt-0.5">{exam.duration} daqiqa · {exam.questions_count} savol</p>
                 </div>
                 <span className="status-pill pill-pending shrink-0">Kutilmoqda</span>
@@ -177,7 +178,7 @@ const UserDashboard: React.FC = () => {
                   <Trophy className="w-5 h-5 text-green-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-slate-800 truncate text-sm">{exam.title}</p>
+                  <p className="font-bold text-slate-800 dark:text-slate-100 truncate text-sm">{exam.title}</p>
                   <p className="text-xs text-slate-400 mt-0.5">Bajarildi</p>
                 </div>
                 {exam.score !== undefined && (

@@ -3,6 +3,7 @@ import api from '../lib/api';
 
 interface AdminState {
   user: any | null;
+  isInitialized: boolean;
   stats: any | null;
   isLoading: boolean;
   error: string | null;
@@ -18,6 +19,7 @@ interface AdminState {
   questions: any[];
   questionStats: any | null;
   attendance: any[];
+  leads: any[];
   
   // Actions
   setUser: (user: any) => void;
@@ -29,6 +31,11 @@ interface AdminState {
   updateStudent: (id: string, data: any) => Promise<void>;
   deleteStudent: (id: string) => Promise<void>;
   enrollStudent: (studentId: string, courseId: string) => Promise<void>;
+  
+  // Leads
+  fetchLeads: () => Promise<void>;
+  convertLead: (id: string, data: { branch_id?: string, group_id?: string }) => Promise<void>;
+  deleteLead: (id: string) => Promise<void>;
   
   // Courses
   fetchCourses: () => Promise<void>;
@@ -103,6 +110,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   questions: [],
   questionStats: null,
   attendance: [],
+  leads: [],
 
   setUser: (user) => {
     set({ user });
@@ -161,6 +169,30 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       await api.post(`/students/${studentId}/enroll`, { course_id: courseId });
       alert("O'quvchi kursga muvaffaqiyatli yozildi!");
     } catch (e: any) { alert(e.response?.data?.message || 'Kursga yozishda xatolik yuz berdi'); }
+  },
+
+  // ──── Leads ────
+  fetchLeads: async () => {
+    set({ isLoading: true });
+    try {
+      const { data } = await api.get('/leads');
+      set({ leads: data, isLoading: false });
+    } catch (e: any) { set({ error: e.message, isLoading: false }); }
+  },
+
+  convertLead: async (id, data) => {
+    try {
+      await api.post(`/leads/${id}/convert`, data);
+      await get().fetchLeads();
+      await get().fetchStudents();
+    } catch (e: any) { alert(e.response?.data?.message || 'Convert qilishda xatolik yuz berdi'); }
+  },
+
+  deleteLead: async (id) => {
+    try {
+      await api.delete(`/leads/${id}`);
+      set({ leads: get().leads.filter(l => l.id !== id) });
+    } catch (e: any) { alert("O'chirishda xatolik yuz berdi"); }
   },
 
   // ──── Courses ────
@@ -383,26 +415,52 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     } catch (e) { set({ questionStats: null }); }
   },
 
+  user: JSON.parse(localStorage.getItem('user') || 'null'),
+  isInitialized: false,
+  stats: null,
+  courses: [],
+  groups: [],
+  students: [],
+  selectedStudent: null,
+  attendance: [],
+  payments: [],
+  analytics: null,
+  leads: [],
+  questions: [],
+  questionStats: null,
+  isLoading: false,
+
+  setUser: (user) => {
+    set({ user });
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('user');
+    }
+  },
+
+  setLoading: (loading) => set({ isLoading: loading }),
+
   fetchMe: async () => {
     try {
       const { data } = await api.get('/auth/me');
       get().setUser(data);
+      set({ isInitialized: true });
     } catch (e) {
-      get().logout();
+      localStorage.removeItem('user');
+      set({ user: null, isInitialized: true });
     }
   },
 
   // ──── Auth ────
   logout: async () => {
     try {
-      // Backend cookie'larni tozalaydi
       await api.post('/auth/logout');
     } catch (e) {
       console.error('Logout xatosi:', e);
     } finally {
-      // Faqat localStorage'dagi user ma'lumotlarini tozalash
       localStorage.removeItem('user');
-      set({ user: null });
+      set({ user: null, isInitialized: true });
       window.location.href = '/login';
     }
   }

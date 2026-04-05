@@ -26,9 +26,7 @@ const StudentExams = lazy(() => import('./pages/StudentExams'));
 const ExamSession = lazy(() => import('./pages/ExamSession'));
 const ExamResult = lazy(() => import('./pages/ExamResult'));
 const TeacherExamReview = lazy(() => import('./pages/TeacherExamReview'));
-const LandingPage = lazy(() => import('./pages/public/LandingPage'));
-const BlogPage = lazy(() => import('./pages/public/BlogPage'));
-
+const LeadsPage = lazy(() => import('./pages/Leads'));
 const queryClient = new QueryClient();
 
 const LoadingScreen = () => (
@@ -50,9 +48,7 @@ const App: React.FC = () => {
         <Router>
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/blog" element={<BlogPage />} />
-              <Route path="/crm" element={<Navigate to="/login" replace />} />
+              <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="/login" element={<LoginPage />} />
               
               {/* Protected Routes */}
@@ -70,6 +66,7 @@ const App: React.FC = () => {
                 <Route path="/admin/courses" element={<ProtectedRoute roles={['ADMIN']}><CoursesPage /></ProtectedRoute>} />
                 <Route path="/admin/groups" element={<ProtectedRoute roles={['ADMIN']}><GroupsPage /></ProtectedRoute>} />
                 <Route path="/admin/analytics" element={<ProtectedRoute roles={['ADMIN']}><AnalyticsPage /></ProtectedRoute>} />
+                <Route path="/admin/leads" element={<ProtectedRoute roles={['ADMIN']}><LeadsPage /></ProtectedRoute>} />
 
                 {/* MANAGER Panel */}
                 <Route path="/manager" element={<ProtectedRoute roles={['MANAGER']} children={<Navigate to="/manager/dashboard" replace />} />} />
@@ -78,6 +75,7 @@ const App: React.FC = () => {
                 <Route path="/manager/students/:id" element={<ProtectedRoute roles={['MANAGER']}><StudentProfilePage /></ProtectedRoute>} />
                 <Route path="/manager/payments" element={<ProtectedRoute roles={['MANAGER']}><PaymentsPage /></ProtectedRoute>} />
                 <Route path="/manager/courses" element={<ProtectedRoute roles={['MANAGER']}><CoursesPage /></ProtectedRoute>} />
+                <Route path="/manager/leads" element={<ProtectedRoute roles={['MANAGER']}><LeadsPage /></ProtectedRoute>} />
 
                 {/* TEACHER Panel */}
                 <Route path="/teacher" element={<ProtectedRoute roles={['TEACHER']} children={<Navigate to="/teacher/dashboard" replace />} />} />
@@ -88,7 +86,7 @@ const App: React.FC = () => {
                 <Route path="/teacher/exams" element={<ProtectedRoute roles={['TEACHER']}><ExamsPage /></ProtectedRoute>} />
                 <Route path="/teacher/exams/create" element={<ProtectedRoute roles={['TEACHER']}><ExamsPage /></ProtectedRoute>} />
                 <Route path="/teacher/exams/:id" element={<ProtectedRoute roles={['TEACHER']}><ExamsPage /></ProtectedRoute>} />
-                <Route path="/teacher/:id/exams/review/:examId" element={<ProtectedRoute roles={['TEACHER']}><TeacherExamReview /></ProtectedRoute>} />
+                <Route path="/teacher/exams/:examId/review" element={<TeacherExamReview />} />
 
                 {/* STUDENT Panel */}
                 <Route path="/student" element={<ProtectedRoute roles={['STUDENT']} children={<Navigate to="/student/dashboard" replace />} />} />
