@@ -62,8 +62,9 @@ export interface Exam {
 export interface Question {
   id: string;
   text: string;
-  type: 'multiple_choice' | 'text';
+  type: 'multiple_choice' | 'multi_select' | 'text' | 'code';
   options: QuestionOption[];
+  max_choices?: number; // For multi_select
   order?: number;
 }
 

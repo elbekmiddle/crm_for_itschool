@@ -10,7 +10,7 @@ import AlreadySubmittedModal from '../components/AlreadySubmittedModal';
 import QuestionCard from '../components/QuestionCard';
 import AnswerInput from '../components/AnswerInput';
 import FlagButton from '../components/FlagButton';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, CheckCircle2, Loader2, Flag, AlertTriangle, Timer, Info } from 'lucide-react';
 
 const ExamPage: React.FC = () => {
@@ -39,6 +39,8 @@ const ExamPage: React.FC = () => {
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [showAlreadySubmitted, setShowAlreadySubmitted] = useState(false);
   const prevViolations = useRef(violations);
+
+  const [isBlurred, setIsBlurred] = useState(false);
 
   // Restore session on mount
   useEffect(() => {
@@ -97,24 +99,28 @@ const ExamPage: React.FC = () => {
         e.returnValue = ''; // Required for some browsers
       }
     };
-    const handleBlur = () => {
+    const handleLocalBlur = () => {
       if (isExamStarted && !isExamFinished) {
+        setIsBlurred(true);
         incrementViolations();
       }
     };
+    const handleLocalFocus = () => setIsBlurred(false);
 
     document.addEventListener('copy', prevent);
     document.addEventListener('paste', prevent);
     document.addEventListener('contextmenu', prevent);
     window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('blur', handleBlur);
+    window.addEventListener('blur', handleLocalBlur);
+    window.addEventListener('focus', handleLocalFocus);
 
     return () => {
       document.removeEventListener('copy', prevent);
       document.removeEventListener('paste', prevent);
       document.removeEventListener('contextmenu', prevent);
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('blur', handleLocalBlur);
+      window.removeEventListener('focus', handleLocalFocus);
     };
   }, [isExamStarted, isExamFinished, incrementViolations]);
 
@@ -161,6 +167,12 @@ const ExamPage: React.FC = () => {
       <SidebarNavigator />
 
       <div className="flex-1 flex flex-col h-screen relative">
+        {isBlurred && (
+           <div className="on-screen-mask">
+              <p className="animate-pulse">DIQQAT: EKRAN BLOKLANDI.<br/>DAVOM ETISH UCHUN TIZIMGA QAYTING.</p>
+           </div>
+        )}
+
         <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 z-20">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl flex items-center justify-center">
@@ -189,7 +201,7 @@ const ExamPage: React.FC = () => {
           <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${progress}%` }} />
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar p-6 lg:p-10">
+        <div className={`flex-1 overflow-y-auto no-scrollbar p-6 lg:p-10 transition-all duration-500 ${isBlurred ? 'cheat-blur' : ''}`}>
           <div className="max-w-4xl mx-auto space-y-8 animate-in slide-in-from-right-5 duration-300">
             <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none p-8 lg:p-12 relative">
               <div className="absolute -top-3 left-8 px-4 py-1.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg">

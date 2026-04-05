@@ -66,7 +66,7 @@ const ReviewPage: React.FC = () => {
 
       {/* Questions */}
       {reviewData.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-10">
           {reviewData.map((q: any, i: number) => {
             const isCorrect = q.is_correct;
             const isAnswered = q.student_answer !== undefined && q.student_answer !== null;

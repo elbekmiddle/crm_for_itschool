@@ -41,7 +41,7 @@ const ResultPage: React.FC = () => {
   if (loading) return <div className="min-h-screen flex justify-center items-center"><Loader2 className="w-8 h-8 text-primary-400 animate-spin" /></div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+    <div className="relative py-10 w-full flex items-center justify-center">
       <div className="w-full max-w-sm animate-in space-y-5">
 
         {/* Score card */}
