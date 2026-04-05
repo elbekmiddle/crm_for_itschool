@@ -17,8 +17,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(configService: ConfigService, private redisService: RedisService) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
-        cookieExtractor,
-        ExtractJwt.fromAuthHeaderAsBearerToken(), // Fallback uchun
+        ExtractJwt.fromAuthHeaderAsBearerToken(), // Prioritize Header (localStorage)
+        cookieExtractor, // Fallback for HttpOnly cookie usage
       ]),
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_SECRET') || 'super_secret_jwt_key_here',

@@ -168,21 +168,21 @@ export class AuthController {
   private setCookies(res: Response, tokens: { access_token: string; refresh_token: string }) {
     const isProduction = process.env.NODE_ENV === 'production';
     
-    // Access token - 15 daqiqa
+    // Access token - 30 kun (to match JWT_EXPIRES_IN)
     res.cookie('access_token', tokens.access_token, {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       path: '/',
     });
 
-    // Refresh token - 7 kun
+    // Refresh token - 60 kun (to match JWT_REFRESH_EXPIRES_IN)
     res.cookie('refresh_token', tokens.refresh_token, {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 60 * 24 * 60 * 60 * 1000, // 60 days
       path: '/',
     });
   }
