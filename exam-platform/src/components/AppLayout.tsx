@@ -440,26 +440,31 @@ const AppLayout: React.FC = () => {
       </main>
 
       {/* ── Mobile bottom nav ── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 z-30 px-2 py-2 px-2 flex items-center justify-around">
-        {navItems.slice(0, 5).map(({ to, icon: Icon, label }) => (
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 z-30 flex items-center justify-around px-1 py-1 shadow-2xl safe-area-bottom">
+        {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink key={to} to={to}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-0.5 px-3 py-3 rounded-xl transition-all ${
-                isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'
+              `flex-1 flex flex-col items-center gap-1 py-1 relative transition-all duration-300 ${
+                isActive ? 'text-indigo-600 dark:text-indigo-400 scale-105' : 'text-slate-400 dark:text-slate-500'
               }`
             }
           >
-            <Icon className="w-6 h-6" />
-            <span className="text-[9px] font-bold">{label}</span>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${location.pathname === to ? 'bg-indigo-50 dark:bg-indigo-900/40 shadow-sm' : ''}`}>
+              <Icon className={`${location.pathname === to ? 'w-6 h-6' : 'w-5 h-5'}`} />
+            </div>
+            <span className={`text-[8px] font-black uppercase tracking-tighter text-center whitespace-nowrap ${location.pathname === to ? 'opacity-100' : 'opacity-60'}`}>{label}</span>
+            {location.pathname === to && (
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-1 bg-indigo-600 rounded-b-full shadow-lg shadow-indigo-500/50" />
+            )}
           </NavLink>
         ))}
         {/* Logout in mobile bottom nav */}
         <button
           onClick={() => setShowLogoutModal(true)}
-          className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-red-400 transition-all"
+          className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl text-red-500 hover:text-red-600 transition-all duration-300"
         >
           <LogOut className="w-5 h-5" />
-          <span className="text-[9px] font-bold">Chiqish</span>
+          <span className="text-[8px] font-black uppercase tracking-tighter text-center">Chiqish</span>
         </button>
       </nav>
 

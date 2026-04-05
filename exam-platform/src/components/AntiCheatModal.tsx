@@ -18,22 +18,22 @@ const AntiCheatModal: React.FC<AntiCheatModalProps> = ({ isOpen, violations, onC
           <X className="w-5 h-5" />
         </button>
         
-        <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 pulse-glow">
-          <ShieldAlert className="w-10 h-10 text-red-600" />
+        <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse-glow border-8 border-red-50">
+          <ShieldAlert className="w-12 h-12 text-red-600" />
         </div>
 
-        <h3 className="text-2xl font-black text-slate-900 mb-2">Ogohlantirish!</h3>
-        <p className="text-slate-500 font-medium mb-2">
-          Imtihon paytida sahifani tark etmang.
+        <h3 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">OGOHLANTIRISH!</h3>
+        <p className="text-slate-500 font-bold mb-4 text-sm leading-relaxed px-4">
+          Imtihon paytida sahifani tark etmang yoki boshqa oynaga o'tmang.
         </p>
-        <div className="inline-flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-full text-sm font-black mb-6">
-          ⚠️ Ogohlantirish {violations} / 3
+        <div className="flex flex-col items-center gap-3 mb-8">
+           <div className={`text-4xl font-black ${violations >= 2 ? 'text-red-600 animate-bounce' : 'text-slate-800'}`}>
+              {violations} <span className="text-slate-300">/ 3</span>
+           </div>
+           <div className="text-[10px] font-black uppercase tracking-[0.3em] text-red-500 bg-red-50 px-4 py-1.5 rounded-full">
+              {violations === 1 ? 'Birinchi ogohlantirish' : 'OXIRGI OGOHLANTIRISH!'}
+           </div>
         </div>
-        {violations >= 2 && (
-          <p className="text-red-500 text-sm font-bold mb-4">
-            Keyingi safar imtihon avtomatik topshiriladi!
-          </p>
-        )}
         <button onClick={onClose} className="w-full btn-primary">
           Tushundim, davom etaman
         </button>

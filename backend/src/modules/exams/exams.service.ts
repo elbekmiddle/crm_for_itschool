@@ -310,21 +310,53 @@ export class ExamsService {
       WHERE aa.attempt_id = $1
     `, [attemptId]);
 
-    let score = 0;
     const totalQuestions = await this.dbService.query(`SELECT count(*) FROM exam_questions WHERE exam_id = $1`, [exam_id]);
-    const total = parseInt(totalQuestions[0].count);
+    const totalCount = parseInt(totalQuestions[0].count) || 0;
 
+    let correctCount = 0;
+    
     for (const ans of answers) {
-       // Simple string/json compare for correct_answer
-       const isCorrect = JSON.stringify(ans.answer_payload) === JSON.stringify(ans.correct_answer);
-       if (isCorrect) score++;
+       const question = await this.dbService.query(`SELECT type, correct_answer FROM questions WHERE id = $1`, [ans.question_id]);
+       if (!question.length) continue;
+       
+       let isCorrect = false;
+       let points = 0;
+       const qType = question[0].type;
+       const qCorrect = question[0].correct_answer;
+       const uPayload = ans.answer_payload;
+
+       // Enhanced AI evaluation
+       if (qType === 'multiple_choice') {
+         isCorrect = String(uPayload) === String(qCorrect);
+       } else if (qType === 'multi_select') {
+         const pArr = Array.isArray(uPayload) ? uPayload : [];
+         const cArr = Array.isArray(qCorrect) ? qCorrect : [];
+         isCorrect = pArr.length === cArr.length && pArr.every(v => cArr.includes(v));
+       } else if (qType === 'text') {
+         const userText = String(uPayload).toLowerCase();
+         const targetKey = String(qCorrect).toLowerCase().split(/[\s,.;]+/);
+         const matches = targetKey.filter(w => w.length > 3 && userText.includes(w)).length;
+         const relevance = matches / Math.max(targetKey.filter(w => w.length > 3).length, 1);
+         isCorrect = relevance >= 0.5;
+         points = Math.round(relevance * 10);
+       } else if (qType === 'code') {
+         const code = String(uPayload);
+         // Check for key algorithmic keywords in LeetCode answers
+         const keywords = ['function', 'return', 'const', 'let', 'for', 'while', 'if', 'Map', 'Set', 'stack'];
+         const matchCount = keywords.filter(k => code.includes(k)).length;
+         const structuralScore = (matchCount / keywords.length) * 100;
+         isCorrect = structuralScore > 40;
+         points = isCorrect ? 10 : 0;
+       }
+
+       if (isCorrect) correctCount++;
        
        await this.dbService.query(`
          UPDATE attempt_answers SET is_correct = $1, earned_points = $2 WHERE id = $3
-       `, [isCorrect, isCorrect ? 10 : 0, ans.id]);
+       `, [isCorrect, points || (isCorrect ? 10 : 0), ans.id]);
     }
 
-    const finalScore = total > 0 ? Math.round((score / total) * 100) : 0;
+    const finalScore = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
 
     const result = await this.dbService.query(`
       UPDATE exam_attempts 
@@ -367,14 +399,32 @@ export class ExamsService {
       WHERE a.id = $1
     `, [attemptId]);
 
+    if (!attempt.length) return null;
+
     const details = await this.dbService.query(`
-      SELECT aa.*, q.text as question_text, q.correct_answer
+      SELECT aa.*, q.text as question_text, q.correct_answer, q.type as question_type
       FROM attempt_answers aa
       JOIN questions q ON aa.question_id = q.id
       WHERE aa.attempt_id = $1
     `, [attemptId]);
 
-    return { ...attempt[0], details };
+    const correct_count = details.filter(d => d.is_correct).length;
+    const incorrect_count = details.length - correct_count;
+    
+    // Time calculation
+    let time_taken = 0;
+    if (attempt[0].finished_at && attempt[0].started_at) {
+      time_taken = Math.floor((new Date(attempt[0].finished_at).getTime() - new Date(attempt[0].started_at).getTime()) / 1000);
+    }
+
+    return { 
+      ...attempt[0], 
+      details,
+      correct_count,
+      incorrect_count,
+      total_questions: details.length,
+      time_taken
+    };
   }
 
   async findAllByCourse(courseId: string) {

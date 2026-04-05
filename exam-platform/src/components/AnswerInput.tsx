@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Play } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 // ── Multiple Choice Input ──
@@ -71,9 +72,13 @@ export const MultiSelectInput: React.FC<MultiSelectProps> = ({
   onToggle,
 }) => {
   const handleToggle = (id: string) => {
-    const next = selectedIds.includes(id)
+    const isSelected = selectedIds.includes(id);
+    if (!isSelected && selectedIds.length >= maxChoices) return;
+    
+    const next = isSelected
       ? selectedIds.filter(x => x !== id)
-      : (selectedIds.length < maxChoices ? [...selectedIds, id] : selectedIds);
+      : [...selectedIds, id];
+      
     onToggle(questionId, next);
   };
 
@@ -136,12 +141,92 @@ export const TextAnswerInput: React.FC<TextInputProps> = ({
   onChange,
 }) => (
   <textarea
-    className="w-full min-h-[200px] p-5 text-base bg-slate-50/80 border-2 border-slate-200 rounded-2xl outline-none focus:border-primary-500 focus:bg-white transition-all resize-none"
-    placeholder="Javobingizni bu yerga yozing..."
+    className="w-full min-h-[220px] p-6 text-base bg-white dark:bg-slate-900/50 border-2 border-slate-100 dark:border-slate-800 rounded-3xl outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all resize-none font-medium leading-relaxed dark:text-slate-200"
+    placeholder="Javobingizni bu yerga batafsil yozing..."
+    spellCheck={false}
     value={value}
     onChange={(e) => onChange(questionId, e.target.value)}
   />
 );
+
+export const CodeEditorInput: React.FC<TextInputProps> = ({
+  questionId,
+  value,
+  onChange,
+}) => {
+  const [output, setOutput] = useState<string | null>(null);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const textarea = e.currentTarget;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const nextValue = value.substring(0, start) + "  " + value.substring(end);
+      onChange(questionId, nextValue);
+      
+      // Set cursor after the tab (requires a timeout for React's re-render)
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + 2;
+      }, 0);
+    }
+  };
+
+  const handleRun = () => {
+    try {
+      const logs: string[] = [];
+      const originalLog = console.log;
+      console.log = (...args) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '));
+      
+      // Basic sandbox
+      const fn = new Function(value);
+      fn();
+      
+      console.log = originalLog;
+      setOutput(logs.join('\n') || 'Kod muvaffaqiyatli bajarildi (hech narsa print qilinmadi)');
+    } catch (err: any) {
+      setOutput(`Xatolik: ${err.message}`);
+    }
+  };
+
+  return (
+    <div className="relative rounded-[2.5rem] overflow-hidden border-2 border-slate-100 dark:border-slate-800 bg-slate-950 shadow-2xl flex flex-col">
+      <div className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+        <div className="flex gap-2">
+          <div className="w-3 h-3 bg-red-400/80 rounded-full" />
+          <div className="w-3 h-3 bg-amber-400/80 rounded-full" />
+          <div className="w-3 h-3 bg-green-400/80 rounded-full" />
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">JavaScript Editor</span>
+          <button 
+            onClick={handleRun}
+            className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2"
+          >
+            <Play className="w-3 h-3 fill-current" /> Sinab ko'rish
+          </button>
+        </div>
+      </div>
+      <textarea
+        className="w-full min-h-[350px] p-8 text-sm font-mono bg-transparent text-indigo-300 outline-none transition-all resize-none leading-relaxed selection:bg-indigo-500/30"
+        placeholder="// Kodingizni bu yerga yozing..."
+        spellCheck={false}
+        value={value}
+        onKeyDown={handleKeyDown}
+        onChange={(e) => onChange(questionId, e.target.value)}
+      />
+      {output && (
+        <div className="bg-slate-900/80 border-t border-slate-800 p-6 animate-in slide-in-from-bottom-2">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black text-indigo-400/60 uppercase tracking-widest">Natija (Console)</span>
+            <button onClick={() => setOutput(null)} className="text-[10px] font-black text-slate-500 hover:text-white uppercase transition-colors">Yopish</button>
+          </div>
+          <pre className="text-xs font-mono text-slate-300 whitespace-pre-wrap">{output}</pre>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ── Combined AnswerInput ──
 interface AnswerInputProps {
@@ -174,6 +259,16 @@ const AnswerInput: React.FC<AnswerInputProps> = ({
         selectedIds={Array.isArray(value) ? value : []}
         maxChoices={question.max_choices || 3}
         onToggle={(_, ids) => onChange(ids)}
+      />
+    );
+  }
+
+  if (question.type === 'code') {
+    return (
+      <CodeEditorInput
+        questionId={question.id}
+        value={value || ''}
+        onChange={(_, val) => onChange(val)}
       />
     );
   }

@@ -85,43 +85,43 @@ const UserDashboard: React.FC = () => {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statItems.map(({ icon: Icon, label, value, bg, icon_c, sub, trend }) => (
-          <div key={label} className="card p-4">
-            <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center mb-3`}>
-              <Icon className={`w-5 h-5 ${icon_c}`} />
+          <div key={label} className="card p-6 flex flex-col items-center text-center group hover:-translate-y-1 transition-all duration-300">
+            <div className={`w-16 h-16 ${bg} rounded-full flex items-center justify-center mb-4 ring-8 ring-white dark:ring-slate-800 shadow-sm transition-transform duration-500 group-hover:scale-110`}>
+              <Icon className={`w-8 h-8 ${icon_c}`} />
             </div>
-            <p className="label-subtle mb-1">{label}</p>
-            <div className="flex items-end gap-1">
-              <p className="text-2xl font-black text-slate-800 dark:text-slate-100">{value}</p>
-              {sub && <p className="text-xs text-slate-400 mb-0.5 font-semibold">{sub}</p>}
+            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{label}</p>
+            <div className="flex items-center justify-center gap-1">
+              <p className="text-3xl font-black text-slate-900 dark:text-slate-100 tabular-nums leading-none">{value}</p>
+              {sub && <p className="text-xs text-slate-400 font-bold self-end">{sub}</p>}
             </div>
-            {trend && <p className="text-[10px] text-green-600 font-bold mt-1">↑ {trend} bu hafta</p>}
           </div>
         ))}
       </div>
 
-      {/* Quick links */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <button onClick={() => navigate('/attendance')} className="card-hover p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
-            <CalendarCheck className="w-5 h-5 text-green-500" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <button onClick={() => navigate('/attendance')} className="card p-5 flex items-center gap-5 hover:border-indigo-300 transition-all group overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-green-400/5 rounded-full -mr-12 -mt-12 group-hover:scale-110 transition-transform duration-500" />
+          <div className="w-14 h-14 bg-green-50 dark:bg-green-950/30 rounded-full flex items-center justify-center shrink-0 ring-4 ring-green-50/50">
+            <CalendarCheck className="w-7 h-7 text-green-500" />
           </div>
-          <div className="text-left">
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Davomat</p>
-            <p className="text-[11px] text-slate-400">{attendanceStats?.attendance_percentage || 0}% hozir</p>
+          <div className="text-left relative z-10">
+            <p className="text-lg font-black text-slate-900 dark:text-slate-100 leading-none">Davomat</p>
+            <p className="text-xs font-semibold text-green-600 mt-1">{attendanceStats?.attendance_percentage || 0}% qatnashish</p>
           </div>
-          <ChevronRight className="w-4 h-4 text-slate-300 ml-auto" />
+          <ChevronRight className="w-5 h-5 text-slate-300 ml-auto group-hover:translate-x-1 transition-transform" />
         </button>
-        <button onClick={() => navigate('/course')} className="card-hover p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center">
-            <BookOpen className="w-5 h-5 text-primary-500" />
+        <button onClick={() => navigate('/course')} className="card p-5 flex items-center gap-5 hover:border-indigo-300 transition-all group overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-primary-400/5 rounded-full -mr-12 -mt-12 group-hover:scale-110 transition-transform duration-500" />
+          <div className="w-14 h-14 bg-primary-50 dark:bg-primary-950/30 rounded-full flex items-center justify-center shrink-0 ring-4 ring-primary-50/50">
+            <BookOpen className="w-7 h-7 text-primary-500" />
           </div>
-          <div className="text-left">
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Kursim</p>
-            <p className="text-[11px] text-slate-400">Ma'lumotlarni ko'ring</p>
+          <div className="text-left relative z-10">
+            <p className="text-lg font-black text-slate-900 dark:text-slate-100 leading-none">Kursim</p>
+            <p className="text-xs font-semibold text-slate-500 mt-1">Dars ma'lumotlari</p>
           </div>
-          <ChevronRight className="w-4 h-4 text-slate-300 ml-auto" />
+          <ChevronRight className="w-5 h-5 text-slate-300 ml-auto group-hover:translate-x-1 transition-transform" />
         </button>
       </div>
 

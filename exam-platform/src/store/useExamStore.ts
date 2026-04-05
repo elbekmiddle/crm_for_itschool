@@ -19,6 +19,7 @@ interface ExamState {
   isExamStarted: boolean;
   isExamFinished: boolean;
   violations: number;
+  finishReason: 'time_up' | 'manual' | 'cheating' | null;
   isLoading: boolean;
 
   // Lists
@@ -40,7 +41,7 @@ interface ExamState {
   nextQuestion: () => void;
   prevQuestion: () => void;
   jumpToQuestion: (index: number) => void;
-  finishExam: () => Promise<void>;
+  finishExam: (reason?: 'time_up' | 'manual' | 'cheating') => Promise<void>;
   fetchHistory: (studentId: string) => Promise<void>;
   restoreSession: () => void;
   reset: () => void;
@@ -62,6 +63,7 @@ export const useExamStore = create<ExamState>()(
       isExamStarted: false,
       isExamFinished: false,
       violations: 0,
+      finishReason: null,
       isLoading: false,
       exams: [],
       history: [],
@@ -185,7 +187,7 @@ export const useExamStore = create<ExamState>()(
         set({ timeLeft: Math.max(0, newTime) });
         
         if (newTime <= 0 && isExamStarted && !isExamFinished) {
-          get().finishExam();
+          get().finishExam('time_up');
         }
       },
 
@@ -193,7 +195,7 @@ export const useExamStore = create<ExamState>()(
         const newCount = get().violations + 1;
         set({ violations: newCount });
         if (newCount >= 3 && get().isExamStarted && !get().isExamFinished) {
-          get().finishExam();
+          get().finishExam('cheating');
         }
       },
 
@@ -213,15 +215,15 @@ export const useExamStore = create<ExamState>()(
 
       jumpToQuestion: (index) => set({ currentQuestionIndex: index }),
 
-      finishExam: async () => {
+      finishExam: async (reason: 'time_up' | 'manual' | 'cheating' = 'manual') => {
         const { attemptId, isExamFinished } = get();
         if (!attemptId || isExamFinished) return;
         
-        set({ isExamFinished: true, isExamStarted: false });
+        set({ isExamFinished: true, isExamStarted: false, finishReason: reason });
         localStorage.removeItem('exam-lock');
         
         try {
-          await api.post(`/exams/attempt/${attemptId}/submit`);
+          await api.post(`/exams/attempt/${attemptId}/submit`, { reason });
         } catch {
           console.error('Submit failed');
         }
@@ -284,6 +286,7 @@ export const useExamStore = create<ExamState>()(
         isExamStarted: state.isExamStarted,
         isExamFinished: state.isExamFinished,
         violations: state.violations,
+        finishReason: state.finishReason,
         pendingAnswers: state.pendingAnswers,
       }),
       merge: (persisted: any, current) => ({

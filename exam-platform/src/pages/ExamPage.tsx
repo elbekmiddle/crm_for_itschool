@@ -38,32 +38,57 @@ const ExamPage: React.FC = () => {
   const [showTimeUp, setShowTimeUp] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [showAlreadySubmitted, setShowAlreadySubmitted] = useState(false);
-  const prevViolations = useRef(violations);
-
   const [isBlurred, setIsBlurred] = useState(false);
+  const isInitialMount = useRef(true);
+  const prevViolations = useRef(violations);
 
   // Restore session on mount
   useEffect(() => {
     restoreSession();
   }, [restoreSession]);
 
-  // Check if already submitted
+  // Check if already submitted (ONLY on mount to avoid flicker after finish)
   useEffect(() => {
-    if (isExamFinished && !isExamStarted) {
+    if (isInitialMount.current && isExamFinished) {
       setShowAlreadySubmitted(true);
     }
-  }, [isExamFinished, isExamStarted]);
+    isInitialMount.current = false;
+  }, [isExamFinished]);
 
-  // Anti-cheat: Tab switch detection
+  // Anti-cheat: Tab switch/blur detection (merged for reliability)
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && !isExamFinished) {
+    const prevent = (e: Event) => e.preventDefault();
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isExamStarted && !isExamFinished) {
+        e.preventDefault();
+        e.returnValue = ''; // Required for some browsers
+      }
+    };
+    
+    const handleLocalBlur = () => {
+      if (isExamStarted && !isExamFinished) {
+        setIsBlurred(true);
         incrementViolations();
       }
     };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [incrementViolations, isExamFinished]);
+    const handleLocalFocus = () => setIsBlurred(false);
+
+    document.addEventListener('copy', prevent);
+    document.addEventListener('paste', prevent);
+    document.addEventListener('contextmenu', prevent);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('blur', handleLocalBlur);
+    window.addEventListener('focus', handleLocalFocus);
+
+    return () => {
+      document.removeEventListener('copy', prevent);
+      document.removeEventListener('paste', prevent);
+      document.removeEventListener('contextmenu', prevent);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('blur', handleLocalBlur);
+      window.removeEventListener('focus', handleLocalFocus);
+    };
+  }, [isExamStarted, isExamFinished, incrementViolations]);
 
   // Show anti-cheat modal on new violation
   useEffect(() => {
@@ -89,40 +114,6 @@ const ExamPage: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [isExamFinished, examId, navigate]);
-
-  // Disable copy/paste/context menu & Exit warning
-  useEffect(() => {
-    const prevent = (e: Event) => e.preventDefault();
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isExamStarted && !isExamFinished) {
-        e.preventDefault();
-        e.returnValue = ''; // Required for some browsers
-      }
-    };
-    const handleLocalBlur = () => {
-      if (isExamStarted && !isExamFinished) {
-        setIsBlurred(true);
-        incrementViolations();
-      }
-    };
-    const handleLocalFocus = () => setIsBlurred(false);
-
-    document.addEventListener('copy', prevent);
-    document.addEventListener('paste', prevent);
-    document.addEventListener('contextmenu', prevent);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('blur', handleLocalBlur);
-    window.addEventListener('focus', handleLocalFocus);
-
-    return () => {
-      document.removeEventListener('copy', prevent);
-      document.removeEventListener('paste', prevent);
-      document.removeEventListener('contextmenu', prevent);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('blur', handleLocalBlur);
-      window.removeEventListener('focus', handleLocalFocus);
-    };
-  }, [isExamStarted, isExamFinished, incrementViolations]);
 
   // Keyboard navigation
   useEffect(() => {

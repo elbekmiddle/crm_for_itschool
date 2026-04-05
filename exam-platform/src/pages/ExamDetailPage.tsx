@@ -64,9 +64,9 @@ const ExamDetailPage: React.FC = () => {
   );
 
   const rules = [
-    { icon: Clock, text: `Davomiyligi: ${exam.duration} daqiqa` },
-    { icon: HelpCircle, text: `${exam.questions_count} ta savol` },
-    { icon: ShieldAlert, text: 'Boshqa tabga o\'tish imtihonni bekor qilishi mumkin' },
+    { icon: Clock, text: `Davomiyligi: ${exam.duration || 0} daqiqa` },
+    { icon: HelpCircle, text: `${exam.questions_count || (exam.questions?.length) || 0} ta savol` },
+    { icon: ShieldAlert, text: 'Boshqa tabga o\'tish ogohlantirishga sabab bo\'ladi' },
     { icon: AlertTriangle, text: 'Faqat 1 urinish. Topshirilgach qaytarib bo\'lmaydi' },
     { icon: CheckCircle2, text: 'Vaqt tugaganda avtomatik topshiriladi' },
   ];
