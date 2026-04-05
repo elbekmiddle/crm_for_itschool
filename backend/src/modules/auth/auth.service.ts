@@ -75,6 +75,9 @@ export class AuthService {
       throw new UnauthorizedException('Email yoki parol noto\'g\'ri');
     }
     
+    // Update last login
+    await this.dbService.query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);
+
     try {
       const tokens = await this.generateTokens(user);
       return { 
@@ -238,6 +241,9 @@ export class AuthService {
     if (!isValid) {
       throw new UnauthorizedException('Parol noto\'g\'ri.');
     }
+
+    // Update student last login
+    await this.dbService.query('UPDATE students SET last_login_at = NOW() WHERE id = $1', [student.id]);
 
     const tokens = await this.generateTokens({ ...student, role: 'STUDENT' });
     return { ...tokens, user: { id: student.id, phone: student.phone, role: 'STUDENT', first_name: student.first_name, last_name: student.last_name } };

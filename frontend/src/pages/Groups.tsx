@@ -9,7 +9,7 @@ import {
 import { useConfirm } from '../context/ConfirmContext';
 
 const GroupsPage: React.FC = () => {
-  const { groups, courses, students, fetchGroups, fetchCourses, fetchStudents, createGroup, updateGroup, deleteGroup, addStudentToGroup, removeStudentFromGroup, fetchGroupStudents, isLoading } = useAdminStore();
+  const { user, groups, courses, students, fetchGroups, fetchCourses, fetchStudents, createGroup, updateGroup, deleteGroup, addStudentToGroup, removeStudentFromGroup, fetchGroupStudents, isLoading } = useAdminStore();
   const confirm = useConfirm();
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
@@ -85,9 +85,11 @@ const GroupsPage: React.FC = () => {
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">Guruhlar</h1>
           <p className="text-sm text-slate-400 mt-0.5">{groups.length} ta guruh boshqarilmoqda</p>
         </div>
-        <button onClick={openCreate} className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Yangi Guruh
-        </button>
+        {user?.role !== 'ADMIN' && (
+          <button onClick={openCreate} className="btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Yangi Guruh
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -165,9 +167,11 @@ const GroupsPage: React.FC = () => {
                   </div>
                 </div>
 
-                <button onClick={() => { setAddStudentModal(true); setSelectedStudentId(''); }} className="btn-primary w-full flex items-center justify-center gap-2">
-                  <UserPlus className="w-4 h-4" /> Talaba qo'shish
-                </button>
+                {user?.role !== 'ADMIN' && (
+                  <button onClick={() => { setAddStudentModal(true); setSelectedStudentId(''); }} className="btn-primary w-full flex items-center justify-center gap-2">
+                    <UserPlus className="w-4 h-4" /> Talaba qo'shish
+                  </button>
+                )}
               </div>
 
               {/* Group Students */}
@@ -224,12 +228,39 @@ const GroupsPage: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="input-label">Jadval</label>
-                <input value={form.schedule} onChange={(e) => setForm({ ...form, schedule: e.target.value })} className="input" placeholder="Du, Chor, Jum 14:00-16:00" />
+                <label className="input-label">Dars kunlari</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['Du', 'Se', 'Cho', 'Pa', 'Ju', 'Sha'].map(day => (
+                    <button 
+                      key={day}
+                      type="button"
+                      onClick={() => {
+                        const current = form.schedule.split(', ').filter(Boolean);
+                        const next = current.includes(day) ? current.filter(d => d !== day) : [...current, day];
+                        setForm({ ...form, schedule: next.join(', ') });
+                      }}
+                      className={cn(
+                        "px-2 py-1.5 rounded-lg text-[10px] font-black border transition-all",
+                        form.schedule.includes(day) ? "bg-primary-600 text-white border-primary-600" : "bg-white text-slate-400 border-slate-100"
+                      )}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div>
-                <label className="input-label">Maks. talabalar</label>
-                <input type="number" value={form.max_students} onChange={(e) => setForm({ ...form, max_students: e.target.value })} className="input" placeholder="20" />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="input-label">Maks. talabalar</label>
+                  <input type="number" value={form.max_students} onChange={(e) => setForm({ ...form, max_students: e.target.value })} className="input" placeholder="20" />
+                </div>
+                <div>
+                  <label className="input-label">Vaqti (ixtiyoriy)</label>
+                  <input placeholder="14:00" className="input" onChange={(e) => {
+                    const base = form.schedule.split(' (')[0];
+                    setForm({ ...form, schedule: e.target.value ? `${base} (${e.target.value})` : base });
+                  }} />
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">

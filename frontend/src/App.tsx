@@ -1,8 +1,8 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'react-hot-toast';
 import { ConfirmProvider } from './context/ConfirmContext';
+import { ToastProvider } from './context/ToastContext';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Loader2, GraduationCap } from 'lucide-react';
@@ -27,6 +27,9 @@ const ExamSession = lazy(() => import('./pages/ExamSession'));
 const ExamResult = lazy(() => import('./pages/ExamResult'));
 const TeacherExamReview = lazy(() => import('./pages/TeacherExamReview'));
 const LeadsPage = lazy(() => import('./pages/Leads'));
+const AdminLayout = lazy(() => import('./pages/admin/Layout'));
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
+
 const queryClient = new QueryClient();
 
 const LoadingScreen = () => (
@@ -44,29 +47,18 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ConfirmProvider>
-        <Toaster position="top-right" />
-        <Router>
-          <Suspense fallback={<LoadingScreen />}>
-            <Routes>
-              <Route path="/" element={<Navigate to="/login" replace />} />
-              <Route path="/login" element={<LoginPage />} />
-              
-              {/* Protected Routes */}
-              <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/settings" element={<SettingsPage />} />
+        <ToastProvider>
+          <Router>
+            <Suspense fallback={<LoadingScreen />}>
+              <Routes>
+                <Route path="/" element={<Navigate to="/login" replace />} />
+                <Route path="/login" element={<LoginPage />} />
+                
+                {/* Protected Routes */}
+                <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/settings" element={<SettingsPage />} />
 
-                {/* ADMIN Panel */}
-                <Route path="/admin" element={<ProtectedRoute roles={['ADMIN']} children={<Navigate to="/admin/dashboard" replace />} />} />
-                <Route path="/admin/dashboard" element={<ProtectedRoute roles={['ADMIN']}><Dashboard /></ProtectedRoute>} />
-                <Route path="/admin/users" element={<ProtectedRoute roles={['ADMIN']}><UsersPage /></ProtectedRoute>} />
-                <Route path="/admin/teachers" element={<ProtectedRoute roles={['ADMIN']}><UsersPage roleFilter="TEACHER" /></ProtectedRoute>} />
-                <Route path="/admin/managers" element={<ProtectedRoute roles={['ADMIN']}><UsersPage roleFilter="MANAGER" /></ProtectedRoute>} />
-                <Route path="/admin/students" element={<ProtectedRoute roles={['ADMIN']}><StudentsPage /></ProtectedRoute>} />
-                <Route path="/admin/courses" element={<ProtectedRoute roles={['ADMIN']}><CoursesPage /></ProtectedRoute>} />
-                <Route path="/admin/groups" element={<ProtectedRoute roles={['ADMIN']}><GroupsPage /></ProtectedRoute>} />
-                <Route path="/admin/analytics" element={<ProtectedRoute roles={['ADMIN']}><AnalyticsPage /></ProtectedRoute>} />
-                <Route path="/admin/leads" element={<ProtectedRoute roles={['ADMIN']}><LeadsPage /></ProtectedRoute>} />
 
                 {/* MANAGER Panel */}
                 <Route path="/manager" element={<ProtectedRoute roles={['MANAGER']} children={<Navigate to="/manager/dashboard" replace />} />} />
@@ -98,12 +90,29 @@ const App: React.FC = () => {
                 <Route path="/student/exams/:id/review" element={<ProtectedRoute roles={['STUDENT']}><ExamResult /></ProtectedRoute>} />
               </Route>
 
+              {/* ADMIN Panel (Dedicated Layout) */}
+              <Route path="/admin" element={<ProtectedRoute roles={['ADMIN']}><AdminLayout /></ProtectedRoute>}>
+                <Route index element={<Navigate to="dashboard" replace />} />
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="users" element={<UsersPage />} />
+                <Route path="teachers" element={<UsersPage roleFilter="TEACHER" />} />
+                <Route path="managers" element={<UsersPage roleFilter="MANAGER" />} />
+                <Route path="students" element={<StudentsPage />} />
+                <Route path="courses" element={<CoursesPage />} />
+                <Route path="groups" element={<GroupsPage />} />
+                <Route path="analytics" element={<AnalyticsPage />} />
+                <Route path="leads" element={<LeadsPage />} />
+                <Route path="payments" element={<PaymentsPage />} />
+                <Route path="settings" element={<SettingsPage />} />
+              </Route>
+
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </Suspense>
         </Router>
-      </ConfirmProvider>
-    </QueryClientProvider>
+      </ToastProvider>
+    </ConfirmProvider>
+  </QueryClientProvider>
   );
 };
 

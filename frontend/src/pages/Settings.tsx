@@ -5,9 +5,11 @@ import {
   Shield, Loader2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useToast } from '../context/ToastContext';
 
 const SettingsPage: React.FC = () => {
-  const { user } = useAdminStore();
+  const { user, uploadUserPhoto, updateUser } = useAdminStore();
+  const { showToast } = useToast();
   const [tab, setTab] = useState<'general' | 'security' | 'notifications'>('general');
   const [form, setForm] = useState({
     first_name: user?.first_name || '',
@@ -30,10 +32,19 @@ const SettingsPage: React.FC = () => {
     if (!user?.id) return;
     setSaving(true);
     try {
-      await useAdminStore.getState().updateUser(user.id, form);
-      alert("Profil muvaffaqiyatli saqlandi! ✨");
+      const normalizePhone = (p: string) => {
+        let clean = p.replace(/\D/g, '');
+        if (!clean) return '';
+        if (clean.length === 9) return '+998' + clean;
+        if (clean.length === 12 && clean.startsWith('998')) return '+' + clean;
+        return p.startsWith('+') ? p : '+' + p;
+      };
+      
+      const data = { ...form, phone: normalizePhone(form.phone) };
+      await updateUser(user.id, data);
+      showToast("Profil muvaffaqiyatli saqlandi! ✨", 'success');
     } catch (e) {
-      alert("Saqlashda xato yuz berdi.");
+      showToast("Saqlashda xato yuz berdi.", 'error');
     } finally {
       setSaving(false);
     }
@@ -74,13 +85,36 @@ const SettingsPage: React.FC = () => {
               <div className="card p-6">
                 <h2 className="section-title mb-5">Profil Ma'lumotlari</h2>
                 <div className="flex items-center gap-5 mb-6">
-                  <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center text-white text-2xl font-black">
-                    {user?.first_name?.[0]}{user?.last_name?.[0]}
+                  <div className="w-20 h-20 bg-slate-100 rounded-2xl flex items-center justify-center text-primary-600 text-2xl font-black relative group overflow-hidden border-2 border-slate-50">
+                    {user?.photo_url ? (
+                      <img src={user.photo_url} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{user?.first_name?.[0]}{user?.last_name?.[0]}</span>
+                    )}
+                    <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                       <Palette className="w-5 h-5 text-white" />
+                       <input 
+                         type="file" 
+                         className="hidden" 
+                         accept="image/*" 
+                         onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                               try {
+                                  await uploadUserPhoto(user!.id, file);
+                                  showToast("Rasm yuklandi", 'success');
+                               } catch (e) {
+                                  showToast("Rasm yuklashda xato", 'error');
+                               }
+                            }
+                         }} 
+                       />
+                    </label>
                   </div>
                   <div>
                     <p className="font-bold text-slate-700">{user?.first_name} {user?.last_name}</p>
                     <p className="text-xs text-slate-400 capitalize">{user?.role} · {user?.email}</p>
-                    <button className="text-xs font-bold text-primary-600 mt-1 hover:underline">Rasmni o'zgartirish</button>
+                    <p className="text-[10px] font-bold text-primary-500 uppercase tracking-widest mt-1">IT School Xizmatchisi</p>
                   </div>
                 </div>
 

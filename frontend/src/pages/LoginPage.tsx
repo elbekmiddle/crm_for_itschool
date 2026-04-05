@@ -4,11 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GraduationCap, Mail, Lock, Eye, EyeOff, Loader2, TrendingUp, Phone, ChevronRight, MessageSquare, ShieldCheck, ArrowLeft } from 'lucide-react';
 import api from '../lib/api';
 import { useAdminStore } from '../store/useAdminStore';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../context/ToastContext';
 
 type LoginStep = 'IDENTIFY' | 'PASSWORD' | 'TELEGRAM_CODE' | 'SET_PASSWORD';
 
 const LoginPage: React.FC = () => {
+  const { showToast } = useToast();
   const [loginValue, setLoginValue] = useState(''); // Email or Phone
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -37,14 +38,14 @@ const LoginPage: React.FC = () => {
         if (data.exists) {
            setStep('PASSWORD');
         } else {
-           toast.error("Ushbu raqam tizimda mavjud emas.");
+           showToast("Ushbu raqam tizimda mavjud emas.", "error");
         }
       } else {
         // Assume email/admin
         setStep('PASSWORD');
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Xatolik yuz berdi");
+      showToast(err.response?.data?.message || "Xatolik yuz berdi", "error");
     } finally {
       setLoading(false);
     }
@@ -80,9 +81,9 @@ const LoginPage: React.FC = () => {
         'STUDENT': '/student/dashboard'
       };
       navigate(routes[updatedUser.role] || '/dashboard');
-      toast.success("Xush kelibsiz!");
+      showToast("Xush kelibsiz!", "success");
     } catch (err: any) {
-      toast.error(err.response?.data?.message || err.message || "Parol noto'g'ri");
+      showToast(err.response?.data?.message || err.message || "Parol noto'g'ri", "error");
     } finally {
       setLoading(false);
     }
@@ -93,9 +94,9 @@ const LoginPage: React.FC = () => {
      try {
         await api.post('/auth/send-verify-code', { phone: loginValue });
         setStep('TELEGRAM_CODE');
-        toast.success("Kod Telegramga yuborildi");
+        showToast("Kod Telegramga yuborildi", "success");
      } catch (err: any) {
-        toast.error(err.response?.data?.message || "Telegram kodini yuborib bo'lmadi");
+        showToast(err.response?.data?.message || "Telegram kodini yuborib bo'lmadi", "error");
      } finally {
         setLoading(false);
      }
@@ -108,7 +109,7 @@ const LoginPage: React.FC = () => {
        await api.post('/auth/check-code', { phone: loginValue, code: verificationCode });
        setStep('SET_PASSWORD');
     } catch (err: any) {
-       toast.error(err.response?.data?.message || "Kod noto'g'ri");
+       showToast(err.response?.data?.message || "Kod noto'g'ri", "error");
     } finally {
        setLoading(false);
     }
@@ -121,9 +122,9 @@ const LoginPage: React.FC = () => {
        await api.post('/auth/verify-code', { phone: loginValue, code: verificationCode, password: newPassword });
        await fetchMe();
        navigate('/student/dashboard');
-       toast.success("Parol o'rnatildi va tizimga kirildi!");
+       showToast("Parol o'rnatildi va tizimga kirildi!", "success");
     } catch (err: any) {
-       toast.error(err.response?.data?.message || "Xatolik");
+       showToast(err.response?.data?.message || "Xatolik", "error");
     } finally {
        setLoading(false);
     }

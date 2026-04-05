@@ -84,24 +84,43 @@ const ExamResult: React.FC = () => {
                         <div 
                           key={key} 
                           className={cn(
-                            "p-4 rounded-xl border text-sm font-medium transition-all",
-                            isCorrect ? "bg-green-50 border-green-200 text-green-700" : 
+                            "p-4 rounded-xl border text-sm font-bold transition-all",
+                            isCorrect ? "bg-green-400 border-green-500 text-white shadow-lg shadow-green-500/20" : 
                             isSelected && !isCorrect ? "bg-red-50 border-red-200 text-red-700" :
                             "bg-white border-slate-100 text-slate-500"
                           )}
                         >
-                          <span className="mr-2 uppercase opacity-50">{key}:</span> {val}
-                          {isCorrect && <span className="ml-2 text-[10px] font-bold bg-green-200 px-1.5 py-0.5 rounded uppercase">To'g'ri</span>}
-                          {isSelected && !isCorrect && <span className="ml-2 text-[10px] font-bold bg-red-200 px-1.5 py-0.5 rounded uppercase">Sizning javob</span>}
+                          <span className={cn("mr-2 uppercase opacity-70", isCorrect ? "text-white" : "text-slate-400")}>{key}:</span> {val}
+                          {isCorrect && <span className="ml-2 text-[10px] font-black bg-white text-green-600 px-1.5 py-0.5 rounded uppercase shadow-sm">To'g'ri</span>}
+                          {isSelected && !isCorrect && <span className="ml-2 text-[10px] font-black bg-red-200 text-red-700 px-1.5 py-0.5 rounded uppercase">Sizning javob</span>}
                         </div>
                       );
                     })}
                   </div>
                 )}
                 
-                {!ans.is_correct && q?.explanation && (
+                {(!q?.options || Object.keys(q.options).length === 0) && (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Sizning javobingiz:</p>
+                    <div className={cn(
+                      "p-4 rounded-xl border text-sm",
+                      q?.type === 'code' ? "bg-slate-900 border-slate-800 text-green-400 font-mono whitespace-pre-wrap" : "bg-slate-50 border-slate-100 text-slate-600"
+                    )}>
+                      {typeof ans.answer_payload === 'string' ? ans.answer_payload : JSON.stringify(ans.answer_payload)}
+                    </div>
+                  </div>
+                )}
+                
+                {!ans.is_correct && q?.correct_answer && q?.type !== 'multiple_choice' && (
+                  <div className="mt-4 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <p className="text-[10px] font-black text-emerald-600 uppercase mb-1">To'g'ri javob namunasi / Kalit so'zlar:</p>
+                    <p className="text-xs text-emerald-700 leading-relaxed font-bold">{String(q.correct_answer)}</p>
+                  </div>
+                )}
+                
+                {q?.explanation && (
                   <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Izoh:</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Eslatma / Izoh:</p>
                     <p className="text-xs text-slate-600 leading-relaxed italic">{q.explanation}</p>
                   </div>
                 )}

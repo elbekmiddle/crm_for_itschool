@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
-import { Search, Bell, Settings, Menu } from 'lucide-react';
+import { Search, Bell, Settings, Menu, X, GraduationCap } from 'lucide-react';
 import { useAdminStore } from '../store/useAdminStore';
 import { useNotifications } from '../hooks/useNotifications';
 import { useSocketEvents } from '../hooks/useSocketEvents';

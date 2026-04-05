@@ -10,8 +10,8 @@ import { useConfirm } from '../context/ConfirmContext';
 
 const roleColors: Record<string, string> = {
   ADMIN: 'bg-red-50 text-red-600 border-red-200',
-  MANAGER: 'bg-purple-50 text-purple-600 border-purple-200',
-  TEACHER: 'bg-blue-50 text-blue-600 border-blue-200',
+  MANAGER: 'bg-amber-50 text-amber-600 border-amber-200',
+  TEACHER: 'bg-primary-50 text-primary-600 border-primary-200',
 };
 
 const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
@@ -28,7 +28,7 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
     : users;
 
   const openCreate = () => {
-    setForm({ first_name: '', last_name: '', email: '', phone: '', password: '', role: 'teacher' });
+    setForm({ first_name: '', last_name: '', email: '', phone: '', password: '', role: 'TEACHER' });
     setModal('create');
   };
 
@@ -38,10 +38,18 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
     setModal('edit');
   };
 
+  const normalizePhone = (p: string) => {
+    let clean = p.replace(/\D/g, '');
+    if (clean.length === 9) return '+998' + clean;
+    if (clean.length === 12 && clean.startsWith('998')) return '+' + clean;
+    return p.startsWith('+') ? p : '+' + p;
+  };
+
   const handleSave = async () => {
-    if (modal === 'create') await createUser(form);
+    const data = { ...form, phone: normalizePhone(form.phone) };
+    if (modal === 'create') await createUser(data);
     else if (editTarget) {
-      const payload: any = { ...form };
+      const payload: any = { ...data };
       if (!payload.password) delete payload.password;
       await updateUser(editTarget.id, payload);
     }
@@ -123,8 +131,8 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
               {filteredUsers.slice(0, 4).map((u: any) => (
                 <div key={u.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-all">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-primary-100 rounded-lg flex items-center justify-center text-xs font-black text-primary-600">
-                      {u.first_name?.[0]}{u.last_name?.[0]}
+                    <div className="w-9 h-9 bg-primary-100 rounded-lg flex items-center justify-center text-xs font-black text-primary-600 overflow-hidden">
+                      {u.photo_url ? <img src={u.photo_url} className="w-full h-full object-cover" /> : <span>{u.first_name?.[0]}{u.last_name?.[0]}</span>}
                     </div>
                     <div>
                       <p className="text-sm font-bold text-slate-700">{u.first_name} {u.last_name}</p>
@@ -168,7 +176,14 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
               <tbody>
                 {filteredUsers.map((u: any) => (
                   <tr key={u.id}>
-                    <td className="font-bold text-slate-700">{u.first_name} {u.last_name}</td>
+                    <td>
+                      <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center text-xs font-black text-primary-600 overflow-hidden">
+                            {u.photo_url ? <img src={u.photo_url} className="w-full h-full object-cover" /> : <span>{u.first_name?.[0]}{u.last_name?.[0]}</span>}
+                         </div>
+                         <p className="font-bold text-slate-700">{u.first_name} {u.last_name}</p>
+                      </div>
+                    </td>
                     <td className="text-xs text-slate-500">{u.email}</td>
                     <td className="font-mono text-xs">{u.phone}</td>
                     <td><span className={cn("status-pill", roleColors[u.role] || 'pill-active')}>{u.role}</span></td>

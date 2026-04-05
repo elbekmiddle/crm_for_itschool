@@ -75,7 +75,7 @@ const PaymentsPage: React.FC = () => {
                 return (
                   <div key={g.month + i} className="flex-1 flex flex-col items-center gap-1">
                     <div className="w-full bg-primary-100 rounded-lg relative overflow-hidden" style={{ height: `${Math.max(h, 10)}%` }}>
-                      <div className="absolute inset-0 bg-gradient-to-t from-primary-500/50 to-primary-300/20 rounded-lg" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-primary-600/50 to-primary-400/20 rounded-lg" />
                     </div>
                     <span className="text-[9px] font-bold text-slate-400">{g.month}</span>
                   </div>
@@ -150,7 +150,7 @@ const PaymentsPage: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="text-xs text-slate-500">{p.created_at ? new Date(p.created_at).toLocaleDateString('uz-UZ') : '—'}</td>
+                    <td className="text-xs text-slate-500">{p.paid_at ? new Date(p.paid_at).toLocaleDateString('uz-UZ') : '—'}</td>
                     <td className="font-bold text-green-600">{Number(p.amount).toLocaleString()} so'm</td>
                     <td><span className="course-badge bg-slate-100 text-slate-600 uppercase">{p.payment_method || 'Cash'}</span></td>
                     <td>

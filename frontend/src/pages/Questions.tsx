@@ -6,6 +6,8 @@ import {
   ChevronLeft, ChevronRight, Sparkles
 } from 'lucide-react';
 
+import { useToast } from '../context/ToastContext';
+
 const difficultyBars = (d: string) => {
   const m: Record<string, number> = { easy: 1, medium: 2, hard: 3 };
   const level = m[d?.toLowerCase()] || 1;
@@ -19,6 +21,7 @@ const difficultyBars = (d: string) => {
 };
 
 const QuestionsPage: React.FC = () => {
+  const { showToast } = useToast();
   const { questions, courses, lessons, fetchCourses, fetchLessons, fetchQuestions, createQuestion, questionStats, fetchQuestionStats, isLoading } = useAdminStore();
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedLessonId, setSelectedLessonId] = useState('');
@@ -45,10 +48,15 @@ const QuestionsPage: React.FC = () => {
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
   const handleCreate = async () => {
-    if (!selectedLessonId) return alert('Avval darsni tanlang');
-    await createQuestion({ ...form, lesson_id: selectedLessonId });
-    fetchQuestions(selectedLessonId);
-    setModal(false);
+    if (!selectedLessonId) return showToast('Avval darsni tanlang', 'error');
+    try {
+      await createQuestion({ ...form, lesson_id: selectedLessonId });
+      showToast("Savol muvaffaqiyatli qo'shildi", "success");
+      fetchQuestions(selectedLessonId);
+      setModal(false);
+    } catch (e: any) {
+      showToast(e.response?.data?.message || "Xatolik yuz berdi", "error");
+    }
   };
 
   return (

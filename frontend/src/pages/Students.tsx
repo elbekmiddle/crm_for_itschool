@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import { useConfirm } from '../context/ConfirmContext';
+import { useToast } from '../context/ToastContext';
 
 const statusPill = (s: string) => {
   const m: Record<string, string> = {
@@ -19,7 +20,8 @@ const statusPill = (s: string) => {
 const StudentsPage: React.FC = () => {
   const navigate = useNavigate();
   const confirm = useConfirm();
-  const { students, courses, fetchStudents, fetchCourses, createStudent, updateStudent, deleteStudent, enrollStudent, isLoading } = useAdminStore();
+  const { showToast } = useToast();
+  const { user, students, courses, fetchStudents, fetchCourses, createStudent, updateStudent, deleteStudent, enrollStudent, isLoading } = useAdminStore();
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
   const [enrollModal, setEnrollModal] = useState<any>(null);
@@ -51,16 +53,44 @@ const StudentsPage: React.FC = () => {
     setModal('edit');
   };
 
+  const normalizePhone = (p: string) => {
+    let clean = p.replace(/\D/g, '');
+    if (!clean) return '';
+    if (clean.length === 9) return '+998' + clean;
+    if (clean.length === 12 && clean.startsWith('998')) return '+' + clean;
+    return p.startsWith('+') ? p : '+' + p;
+  };
+
   const handleSave = async () => {
-    if (modal === 'create') await createStudent(form);
-    else if (editTarget) await updateStudent(editTarget.id, form);
-    setModal(null);
+    const data = { 
+      ...form, 
+      phone: normalizePhone(form.phone),
+      parent_phone: normalizePhone(form.parent_phone)
+    };
+    try {
+      if (modal === 'create') {
+        await createStudent(data);
+        showToast("O'quvchi muvaffaqiyatli yaratildi", "success");
+      } else if (editTarget) {
+        await updateStudent(editTarget.id, data);
+        showToast("Ma'lumotlar yangilandi", "success");
+      }
+      setModal(null);
+    } catch (e: any) {
+      showToast(e.response?.data?.message || "Xatolik yuz berdi", "error");
+    }
   };
 
   const handleEnroll = async () => {
     if (enrollModal && enrollCourseId) {
-      await enrollStudent(enrollModal.id, enrollCourseId);
-      setEnrollModal(null);
+      try {
+        await enrollStudent(enrollModal.id, enrollCourseId);
+        showToast("O'quvchi kursga muvaffaqiyatli yozildi!", "success");
+        setEnrollModal(null);
+      } catch (e: any) {
+        const msg = e.response?.data?.message || "Kursga yozishda xatolik yuz berdi";
+        showToast(msg, "error");
+      }
     }
   };
 
@@ -71,7 +101,14 @@ const StudentsPage: React.FC = () => {
       confirmText: "O'CHIRISH",
       type: 'danger'
     });
-    if (ok) await deleteStudent(id);
+    if (ok) {
+      try {
+        await deleteStudent(id);
+        showToast("O'quvchi tizimdan o'chirildi", "success");
+      } catch (e: any) {
+        showToast("O'chirishda xatolik yuz berdi", "error");
+      }
+    }
   };
 
   return (
@@ -79,16 +116,18 @@ const StudentsPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight">Talabalar</h1>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight text-uz">Talabalar</h1>
           <p className="text-sm text-slate-400 mt-0.5">{filtered.length} ta talaba ro'yxatda</p>
         </div>
         <div className="flex gap-3">
           <button className="btn-secondary flex items-center gap-2">
-            <Download className="w-4 h-4" /> Export
+            <Download className="w-4 h-4" /> Eksport
           </button>
-          <button onClick={openCreate} className="btn-primary flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Talaba qo'shish
-          </button>
+          {user?.role !== 'ADMIN' && (
+            <button onClick={openCreate} className="btn-primary flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Talaba qo'shish
+            </button>
+          )}
         </div>
       </div>
 

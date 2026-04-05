@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Patch, Req, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Patch, Req, ForbiddenException, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -47,6 +48,18 @@ export class UsersController {
       throw new ForbiddenException('Faqat adminlar rollarni o\'zgartirishi mumkin');
     }
     return this.usersService.update(id, body);
+  }
+
+  @Post(':id/upload-photo')
+  @UseInterceptors(FileInterceptor('photo'))
+  @ApiOperation({ summary: 'Upload user profile photo', description: 'Role restriction: Teacher/Manager/Admin' })
+  async uploadPhoto(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @Req() req: any) {
+    if (req.user.role === 'STUDENT') throw new ForbiddenException('Talabalar rasm yuklay olmaydi');
+    if (req.user.role !== 'ADMIN' && req.user.id !== id) {
+      throw new ForbiddenException('Siz faqat o\'z rasmizni yuklay olasiz');
+    }
+    const result = await this.usersService.uploadPhoto(id, file);
+    return { photo_url: result.photo_url };
   }
 
   @Permissions('ANALYTICS_VIEW')

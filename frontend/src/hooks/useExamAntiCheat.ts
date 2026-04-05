@@ -60,7 +60,7 @@ export const useExamAntiCheat = ({ onWarning, onAutoSubmit, maxWarnings = 3, exa
     channelRef.current.onmessage = (event) => {
       if (event.data.type === 'CHECK_EXISTENCE' || event.data.type === 'EXISTENCE_RESPONSE') {
         // Another tab of the same exam is open
-        alert("IT School Anti-cheat: Sizda ushbu imtihonning bir nechta oynasi ochilgan yoki boshqa tabda faol sessiya bor. Sessiya bitta oynada bo'lishi shart.");
+        console.warn("IT School Anti-cheat: Multiple tabs detected.");
         onAutoSubmit();
       }
     };

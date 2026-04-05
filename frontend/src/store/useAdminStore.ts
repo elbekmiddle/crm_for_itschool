@@ -96,6 +96,7 @@ interface AdminState {
 
 export const useAdminStore = create<AdminState>((set, get) => ({
   user: JSON.parse(localStorage.getItem('user') || 'null'),
+  isInitialized: false,
   stats: null,
   isLoading: false,
   error: null,
@@ -115,7 +116,10 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   setUser: (user) => {
     set({ user });
     if (user) localStorage.setItem('user', JSON.stringify(user));
-    else localStorage.removeItem('user');
+    else {
+      localStorage.removeItem('user');
+      localStorage.removeItem('access_token');
+    }
   },
 
   // ──── Analytics ────
@@ -144,31 +148,22 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   createStudent: async (data: any) => {
-    try { 
-      await api.post('/students', data); 
-      await get().fetchStudents(); 
-    } catch (e: any) { alert(e.response?.data?.message || "O'quvchi yaratishda xatolik yuz berdi"); }
+    await api.post('/students', data); 
+    await get().fetchStudents(); 
   },
 
   updateStudent: async (id, data) => {
-    try { 
-      await api.patch(`/students/${id}`, data); 
-      await get().fetchStudents(); 
-    } catch (e: any) { alert(e.response?.data?.message || 'Tahrirlashda xatolik yuz berdi'); }
+    await api.patch(`/students/${id}`, data); 
+    await get().fetchStudents(); 
   },
 
   deleteStudent: async (id) => {
-    try { 
-      await api.delete(`/students/${id}`); 
-      set({ students: get().students.filter(s => s.id !== id) }); 
-    } catch (e: any) { alert("O'chirishda xatolik yuz berdi"); }
+    await api.delete(`/students/${id}`); 
+    set({ students: get().students.filter(s => s.id !== id) }); 
   },
 
   enrollStudent: async (studentId, courseId) => {
-    try {
-      await api.post(`/students/${studentId}/enroll`, { course_id: courseId });
-      alert("O'quvchi kursga muvaffaqiyatli yozildi!");
-    } catch (e: any) { alert(e.response?.data?.message || 'Kursga yozishda xatolik yuz berdi'); }
+    await api.post(`/students/${studentId}/enroll`, { course_id: courseId });
   },
 
   // ──── Leads ────
@@ -181,11 +176,9 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   convertLead: async (id, data) => {
-    try {
-      await api.post(`/leads/${id}/convert`, data);
-      await get().fetchLeads();
-      await get().fetchStudents();
-    } catch (e: any) { alert(e.response?.data?.message || 'Convert qilishda xatolik yuz berdi'); }
+    await api.post(`/leads/${id}/convert`, data);
+    await get().fetchLeads();
+    await get().fetchStudents();
   },
 
   deleteLead: async (id) => {
@@ -205,18 +198,15 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   createCourse: async (data) => {
-    try { await api.post('/courses', data); await get().fetchCourses(); }
-    catch (e: any) { alert(e.response?.data?.message || 'Kurs yaratishda xatolik yuz berdi'); }
+    await api.post('/courses', data); await get().fetchCourses();
   },
 
   updateCourse: async (id, data) => {
-    try { await api.patch(`/courses/${id}`, data); await get().fetchCourses(); }
-    catch (e: any) { alert(e.response?.data?.message || 'Tahrirlashda xatolik yuz berdi'); }
+    await api.patch(`/courses/${id}`, data); await get().fetchCourses();
   },
 
   deleteCourse: async (id) => {
-    try { await api.delete(`/courses/${id}`); set({ courses: get().courses.filter(c => c.id !== id) }); }
-    catch (e: any) { alert("O'chirishda xatolik yuz berdi"); }
+    await api.delete(`/courses/${id}`); set({ courses: get().courses.filter(c => c.id !== id) });
   },
 
   // ──── Groups ────
@@ -229,28 +219,23 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   createGroup: async (data) => {
-    try { await api.post('/groups', data); await get().fetchGroups(); }
-    catch (e: any) { alert(e.response?.data?.message || 'Guruh yaratishda xatolik yuz berdi'); }
+    await api.post('/groups', data); await get().fetchGroups();
   },
 
   updateGroup: async (id, data) => {
-    try { await api.patch(`/groups/${id}`, data); await get().fetchGroups(); }
-    catch (e: any) { alert(e.response?.data?.message || 'Tahrirlashda xatolik yuz berdi'); }
+    await api.patch(`/groups/${id}`, data); await get().fetchGroups();
   },
 
   deleteGroup: async (id) => {
-    try { await api.delete(`/groups/${id}`); set({ groups: get().groups.filter(g => g.id !== id) }); }
-    catch (e: any) { alert("O'chirishda xatolik yuz berdi"); }
+    await api.delete(`/groups/${id}`); set({ groups: get().groups.filter(g => g.id !== id) });
   },
 
   addStudentToGroup: async (groupId, studentId) => {
-    try { await api.post(`/groups/${groupId}/add-student`, { student_id: studentId }); }
-    catch (e: any) { alert(e.response?.data?.message || "O'quvchi qo'shishda xatolik yuz berdi"); }
+    await api.post(`/groups/${groupId}/add-student`, { student_id: studentId });
   },
 
   removeStudentFromGroup: async (groupId, studentId) => {
-    try { await api.delete(`/groups/${groupId}/remove-student`, { data: { student_id: studentId } }); }
-    catch (e: any) { alert(e.response?.data?.message || 'Olib tashlashda xatolik yuz berdi'); }
+    await api.delete(`/groups/${groupId}/remove-student`, { data: { student_id: studentId } });
   },
 
   fetchGroupStudents: async (groupId) => {
@@ -271,23 +256,19 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   createExam: async (data) => {
-    try { await api.post('/exams', data); await get().fetchExams(); }
-    catch (e: any) { alert(e.response?.data?.message || 'Imtihon yaratishda xatolik yuz berdi'); }
+    await api.post('/exams', data); await get().fetchExams();
   },
 
   updateExam: async (id, data) => {
-    try { await api.patch(`/exams/${id}`, data); await get().fetchExams(); }
-    catch (e: any) { alert('Tahrirlashda xatolik yuz berdi'); }
+    await api.patch(`/exams/${id}`, data); await get().fetchExams();
   },
 
   deleteExam: async (id) => {
-    try { await api.delete(`/exams/${id}`); set({ exams: get().exams.filter(e => e.id !== id) }); }
-    catch (e: any) { alert("O'chirishda xatolik yuz berdi"); }
+    await api.delete(`/exams/${id}`); set({ exams: get().exams.filter(e => e.id !== id) });
   },
 
   publishExam: async (id) => {
-    try { await api.post(`/exams/${id}/publish`); await get().fetchExams(); }
-    catch (e: any) { alert('Nashr qilishda xatolik yuz berdi'); }
+    await api.post(`/exams/${id}/publish`); await get().fetchExams();
   },
 
   addQuestionsToExam: async (examId, questionIds) => {
@@ -323,18 +304,33 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   createUser: async (data) => {
-    try { await api.post('/users', data); await get().fetchUsers(); }
-    catch (e: any) { alert(e.response?.data?.message || 'Foydalanuvchi yaratishda xatolik yuz berdi'); }
+    await api.post('/users', data); await get().fetchUsers();
   },
 
   updateUser: async (id, data) => {
-    try { await api.patch(`/users/${id}`, data); await get().fetchUsers(); }
-    catch (e: any) { alert(e.response?.data?.message || 'Tahrirlashda xatolik yuz berdi'); }
+    await api.patch(`/users/${id}`, data); 
+    await get().fetchUsers();
+    if (get().user?.id === id) {
+       const { data: me } = await api.get('/auth/me');
+       set({ user: me });
+    }
+  },
+
+  uploadUserPhoto: async (id, file) => {
+    const formData = new FormData();
+    formData.append('photo', file);
+    const { data } = await api.post(`/users/${id}/upload-photo`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    await get().fetchUsers();
+    if (get().user?.id === id) {
+       set({ user: { ...get().user, photo_url: data.photo_url } });
+    }
+    return data.photo_url;
   },
 
   deleteUser: async (id) => {
-    try { await api.delete(`/users/${id}`); set({ users: get().users.filter(u => u.id !== id) }); }
-    catch (e: any) { alert("O'chirishda xatolik yuz berdi"); }
+    await api.delete(`/users/${id}`); set({ users: get().users.filter(u => u.id !== id) });
   },
 
   // ──── Payments ────
@@ -415,32 +411,6 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     } catch (e) { set({ questionStats: null }); }
   },
 
-  user: JSON.parse(localStorage.getItem('user') || 'null'),
-  isInitialized: false,
-  stats: null,
-  courses: [],
-  groups: [],
-  students: [],
-  selectedStudent: null,
-  attendance: [],
-  payments: [],
-  analytics: null,
-  leads: [],
-  questions: [],
-  questionStats: null,
-  isLoading: false,
-
-  setUser: (user) => {
-    set({ user });
-    if (user) {
-      localStorage.setItem('user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('user');
-    }
-  },
-
-  setLoading: (loading) => set({ isLoading: loading }),
-
   fetchMe: async () => {
     try {
       const { data } = await api.get('/auth/me');
@@ -448,6 +418,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       set({ isInitialized: true });
     } catch (e) {
       localStorage.removeItem('user');
+      localStorage.removeItem('access_token');
       set({ user: null, isInitialized: true });
     }
   },
@@ -460,6 +431,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       console.error('Logout xatosi:', e);
     } finally {
       localStorage.removeItem('user');
+      localStorage.removeItem('access_token');
       set({ user: null, isInitialized: true });
       window.location.href = '/login';
     }

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
+import { useToast } from '../context/ToastContext';
 import {
   Calendar, Loader2, CheckCircle, XCircle, ChevronDown,
   Users, Sparkles
@@ -34,6 +35,12 @@ const AttendancePage: React.FC = () => {
     await fetchAttendance(selectedGroupId);
   };
 
+  const { showToast } = useToast();
+
+  const handleSaveAll = () => {
+    showToast("Davomat ma'lumotlari muvaffaqiyatli saqlandi! ✨", "success");
+  };
+
   const presentCount = attendance.filter((a: any) => a.status?.toUpperCase() === 'PRESENT').length;
   const totalStudents = students.length || 1;
   const attendancePercent = Math.round((presentCount / totalStudents) * 100);
@@ -42,7 +49,7 @@ const AttendancePage: React.FC = () => {
     <div className="page-container animate-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <p className="label-subtle mb-1">GURUHLAR › SINF KO'RINISHI</p>
+          <p className="label-subtle mb-1">GURUHLAR › DAVOMAT</p>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">{selectedGroup?.name || 'Davomat'}</h1>
           {selectedGroup && <p className="text-sm text-slate-400 mt-0.5">{selectedGroup.course_name}</p>}
         </div>
@@ -64,8 +71,8 @@ const AttendancePage: React.FC = () => {
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <h2 className="section-title">Bugungi dars</h2>
-                    <span className="px-2 py-0.5 bg-green-100 text-green-600 text-[10px] font-bold rounded-full uppercase">Live Now</span>
+                    <h2 className="section-title">Bugungi dars davomati</h2>
+                    <span className="px-2 py-0.5 bg-green-100 text-green-600 text-[10px] font-bold rounded-full uppercase">LIVE</span>
                   </div>
                   <p className="text-xs text-slate-400">Sana: {today}</p>
                 </div>
@@ -91,7 +98,7 @@ const AttendancePage: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className={cn("status-pill", s.status === 'active' ? 'pill-active' : s.status === 'frozen' ? 'pill-frozen' : 'pill-active')}>
-                            {s.status || 'active'}
+                            {s.status === 'active' ? 'faol' : s.status === 'frozen' ? 'muzlatilgan' : 'faol'}
                           </span>
                           {s.status === 'frozen' ? (
                             <span className="text-xs text-slate-400 font-semibold">N/A</span>
@@ -106,7 +113,7 @@ const AttendancePage: React.FC = () => {
                                       : "border-slate-200 text-slate-500 hover:border-green-300 hover:text-green-600"
                                   )}
                                 >
-                                  Present
+                                  Keldi
                                 </button>
                                 <button
                                   onClick={() => handleMark(s.id, 'ABSENT')}
@@ -117,7 +124,7 @@ const AttendancePage: React.FC = () => {
                                       : "border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-600"
                                   )}
                                 >
-                                  Absent
+                                  Kelmagan
                                 </button>
                             </div>
                           )}
@@ -132,8 +139,8 @@ const AttendancePage: React.FC = () => {
               )}
 
               {students.length > 0 && (
-                <button className="btn-primary w-full mt-5 py-4 text-base">
-                  Davomatni Saqlash ✓
+                <button onClick={handleSaveAll} className="btn-primary w-full mt-5 py-4 text-base">
+                  Davomatni Yakunlash ✓
                 </button>
               )}
             </div>
