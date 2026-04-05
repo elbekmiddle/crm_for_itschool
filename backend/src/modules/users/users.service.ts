@@ -30,4 +30,11 @@ export class UsersService {
   async softDelete(id: string) {
     return delete_user(this.dbService, id);
   }
+
+  async uploadPhoto(id: string, file: Express.Multer.File) {
+    const result = await this.cloudinaryService.uploadImage(file);
+    const photo_url = result.secure_url;
+    await this.update(id, { photo_url });
+    return { photo_url };
+  }
 }

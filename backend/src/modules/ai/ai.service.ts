@@ -78,20 +78,34 @@ export class AiService {
 
   async generateExamQuestions(topic: string, level: string, count: number) {
     if (!this.openai) {
-      return [`Default Q1 for ${topic} (AI Offline)`, `Default Q2 for ${topic}`];
+      return Array.from({ length: count }).map((_, i) => ({
+        text: `Default Question ${i + 1} for ${topic} (AI Offline)`,
+        options: ["Option A", "Option B", "Option C", "Option D"],
+        correct_answer: 0
+      }));
     }
     try {
       const response = await this.openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: `Generate exactly ${count} ${level} difficulty questions about ${topic}. Output ONLY a raw JSON array of strings. Do not include markdown formatting or tags like \`\`\`json.` },
+          { role: "system", content: `Generate exactly ${count} ${level} difficulty multiple-choice questions about ${topic}. 
+            Output ONLY a valid JSON array of objects. Each object MUST have:
+            - "text": The question text
+            - "options": An array of 4 strings
+            - "correct_answer": The index (0-3) of the correct string in the options array.
+            Do not include markdown tags.` },
         ]
       });
       const text = response.choices[0].message.content.trim();
       const jsonArr = JSON.parse(text.replace(/```json/g, '').replace(/```/g, ''));
-      return Array.isArray(jsonArr) ? jsonArr : [text];
+      return Array.isArray(jsonArr) ? jsonArr : [{ text, options: [], correct_answer: 0 }];
     } catch(e) {
-      return [`Generated AI fallback 1 for ${topic}`, `Generated AI fallback 2 for ${topic}`];
+      console.error("AI Generation Error:", e);
+      return Array.from({ length: Math.min(count, 5) }).map((_, i) => ({
+        text: `Zahira savoli #${i + 1} (AI xatosi sababli): ${topic} mavzusida.`,
+        options: ["Javob A", "Javob B", "Javob C", "Javob D"],
+        correct_answer: 0
+      }));
     }
   }
 

@@ -2,67 +2,57 @@ import { Controller, Get, Post, Body, Param, UseGuards, Patch, Delete } from '@n
 import { CoursesService } from './courses.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 
-@ApiTags('courses', 'ADMIN', 'MANAGER', 'TEACHER')
+@ApiTags('courses')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 @Controller('courses')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
-  @Roles('ADMIN')
+  @Permissions('COURSE_CREATE')
   @Post()
-  @ApiOperation({ summary: 'Create a new course [ADMIN ONLY]' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: { name: { type: 'string', example: 'Vue.js Basics' }, price: { type: 'number', example: 120.00 } }
-    }
-  })
-  @ApiResponse({ status: 201, description: 'Course created successfully.' })
-  @ApiResponse({ status: 403, description: 'Forbidden: Only Admins can modify courses.' })
+  @ApiOperation({ summary: 'Create a new course', description: 'Permissions: COURSE_CREATE' })
   create(@Body() body: CreateCourseDto) {
     return this.coursesService.create(body);
   }
 
+  @Permissions('COURSE_READ')
   @Get()
-  @ApiOperation({ summary: 'Get all courses' })
-  @ApiResponse({ status: 200, description: 'Return all courses lists.' })
+  @ApiOperation({ summary: 'Get all courses', description: 'Permissions: COURSE_READ' })
   findAll() {
     return this.coursesService.findAll();
   }
 
+  @Permissions('COURSE_READ')
   @Get(':id')
-  @ApiOperation({ summary: 'Get course by ID' })
-  @ApiParam({ name: 'id', description: 'Course UUID' })
-  @ApiResponse({ status: 200, description: 'Return course object.' })
-  @ApiResponse({ status: 404, description: 'Course not found.' })
+  @ApiOperation({ summary: 'Get course by ID', description: 'Permissions: COURSE_READ' })
   findOne(@Param('id') id: string) {
     return this.coursesService.findOne(id);
   }
 
+  @Permissions('STUDENT_READ')
   @Get(':id/students')
-  @ApiOperation({ summary: 'Get all students in a course (Grouped & Individual)' })
-  @ApiParam({ name: 'id', description: 'Course UUID' })
-  @ApiResponse({ status: 200, description: 'Return list of students with their study types.' })
+  @ApiOperation({ summary: 'Get all students in a course', description: 'Permissions: STUDENT_READ' })
   getStudents(@Param('id') id: string) {
     return this.coursesService.getStudents(id);
   }
 
-  @Roles('ADMIN')
+  @Permissions('COURSE_UPDATE')
   @Patch(':id')
-  @ApiOperation({ summary: 'Update course details [ADMIN ONLY]' })
+  @ApiOperation({ summary: 'Update course details', description: 'Permissions: COURSE_UPDATE' })
   update(@Param('id') id: string, @Body() body: UpdateCourseDto) {
     return this.coursesService.update(id, body);
   }
 
-  @Roles('ADMIN')
+  @Permissions('COURSE_DELETE')
   @Delete(':id')
-  @ApiOperation({ summary: 'Soft delete a course' })
+  @ApiOperation({ summary: 'Delete a course', description: 'Permissions: COURSE_DELETE' })
   remove(@Param('id') id: string) {
     return this.coursesService.softDelete(id);
   }

@@ -2,8 +2,8 @@ import { Controller, Get, Post, Body, Param, UseGuards, Patch } from '@nestjs/co
 import { AttendanceService } from './attendance.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
 
 @ApiTags('attendance')
@@ -13,41 +13,23 @@ import { CreateAttendanceDto } from './dto/create-attendance.dto';
 export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
 
-  @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Permissions('ATTENDANCE_MARK')
   @Post()
-  @ApiOperation({ summary: 'Mark attendance for a given student' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        group_id: { type: 'string', example: 'uuid-group' },
-        student_id: { type: 'string', example: 'uuid-student' },
-        status: { type: 'string', example: 'PRESENT' },
-        lesson_id: { type: 'string', example: 'uuid-lesson', description: 'Optional ID explicitly matching lesson' }
-      }
-    }
-  })
-  @ApiResponse({ status: 201, description: 'Attendance logged successfully.' })
-  @ApiResponse({ status: 409, description: 'Conflict: Attendance for this student on this day already recorded.' })
+  @ApiOperation({ summary: 'Mark attendance for a given student', description: 'Permissions: ATTENDANCE_MARK' })
   markAttendance(@Body() body: CreateAttendanceDto) {
     return this.attendanceService.markAttendance(body);
   }
 
-  @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Permissions('ATTENDANCE_READ')
   @Get('group/:id')
-  @ApiOperation({ summary: 'Get full attendance trace for a group' })
-  @ApiParam({ name: 'id', description: 'Group UUID' })
-  @ApiResponse({ status: 200, description: 'Attendance log array matching group scope.' })
+  @ApiOperation({ summary: 'Get full attendance trace for a group', description: 'Permissions: ATTENDANCE_READ' })
   getGroupAttendance(@Param('id') id: string) {
     return this.attendanceService.getGroupAttendance(id);
   }
 
-  @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Permissions('ATTENDANCE_MARK')
   @Patch(':id')
-  @ApiOperation({ summary: 'Update attendance status' })
-  @ApiParam({ name: 'id', description: 'Attendance UUID' })
-  @ApiBody({ schema: { type: 'object', properties: { status: { type: 'string', example: 'ABSENT' } } } })
-  @ApiResponse({ status: 200, description: 'Attendance updated.' })
+  @ApiOperation({ summary: 'Update attendance status', description: 'Permissions: ATTENDANCE_MARK' })
   update(@Param('id') id: string, @Body('status') status: string) {
     return this.attendanceService.update(id, status);
   }

@@ -120,10 +120,8 @@ export class StudentsService {
   }
 
   async findSimilar(firstName: string, lastName: string) {
-    // Simple similar name detection (starts with first few letters or exact match case-insensitive)
     const firstNameSnippet = firstName.substring(0, 3);
     const lastNameSnippet = lastName.substring(0, 3);
-
     return this.dbService.query(
       `SELECT id, first_name, last_name, phone, status 
        FROM students 
@@ -133,4 +131,74 @@ export class StudentsService {
       [`%${firstNameSnippet}%`, `%${lastNameSnippet}%`]
     );
   }
+
+  async getAttendance(studentId: string) {
+    const records = await this.dbService.query(
+      `SELECT 
+         a.id,
+         a.student_id,
+         a.status,
+         a.notes,
+         a.lesson_date,
+         a.created_at,
+         g.name AS group_name,
+         c.name AS course_name
+       FROM attendance a
+       LEFT JOIN groups g ON a.group_id = g.id
+       LEFT JOIN courses c ON g.course_id = c.id
+       WHERE a.student_id = $1
+       ORDER BY a.lesson_date DESC NULLS LAST, a.created_at DESC`,
+      [studentId]
+    );
+
+    const present = records.filter((r: any) => r.status === 'PRESENT').length;
+    const absent = records.filter((r: any) => r.status === 'ABSENT').length;
+    const total = records.length;
+
+    return {
+      records,
+      stats: {
+        total_lessons: total,
+        present_count: present,
+        absent_count: absent,
+        attendance_percentage: total > 0 ? Math.round((present / total) * 100) : 0,
+      },
+    };
+  }
+
+  async getNotifications(studentId: string) {
+    return this.dbService.query(
+      `SELECT * FROM notifications WHERE student_id = $1 ORDER BY created_at DESC LIMIT 50`,
+      [studentId]
+    );
+  }
+
+  async markNotificationRead(id: string, studentId: string) {
+    return this.dbService.query(
+      `UPDATE notifications SET is_read = TRUE WHERE id = $1 AND student_id = $2`,
+      [id, studentId]
+    );
+  }
+
+  async getStats(studentId: string) {
+    const dashboard = await this.getDashboard(studentId);
+    if (!dashboard) return null;
+
+    const totalExams = dashboard.exams?.length || 0;
+    const avgScore = totalExams > 0 
+      ? Math.round(dashboard.exams.reduce((acc: number, ex: any) => acc + (ex.score || 0), 0) / totalExams)
+      : 0;
+
+    const totalPayments = dashboard.payments?.reduce((acc: number, p: any) => acc + (p.amount || 0), 0) || 0;
+
+    return {
+      total_exams: totalExams,
+      average_score: avgScore,
+      attendance_percentage: dashboard.attendance_percentage || 0,
+      missed_lessons: dashboard.absent_days || 0,
+      total_payments: totalPayments,
+      ai_status: dashboard.ai_status
+    };
+  }
 }
+

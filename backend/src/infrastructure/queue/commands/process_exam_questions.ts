@@ -6,18 +6,27 @@ export async function process_exam_questions(
   lessonId: string, 
   teacherId: string, 
   level: string, 
-  questions: string[]
+  questions: any[]
 ) {
   if (!questions || questions.length === 0) return { added: 0 };
 
-  // Batch insert questions
-  const qValues = questions.map((_, i) => `($1, $2, $3, $${i + 4})`).join(', ');
-  const qRes = await dbService.query(
-    `INSERT INTO questions (lesson_id, created_by, level, text) VALUES ${qValues} RETURNING id`,
-    [lessonId, teacherId, level, ...questions]
-  );
+  const questionIds: string[] = [];
 
-  const questionIds = qRes.map((q: any) => q.id);
+  for (const q of questions) {
+    const res = await dbService.query(`
+      INSERT INTO questions (lesson_id, created_by, level, text, options, correct_answer, status)
+      VALUES ($1, $2, $3, $4, $5, $6, 'draft') RETURNING id
+    `, [
+      lessonId, 
+      teacherId, 
+      level, 
+      q.text, 
+      JSON.stringify(q.options || []), 
+      JSON.stringify(q.correct_answer || 0)
+    ]);
+    questionIds.push(res[0].id);
+  }
+
   if (questionIds.length > 0) {
     const eqValues = questionIds.map((_, i) => `($1, $${i + 2})`).join(', ');
     await dbService.query(

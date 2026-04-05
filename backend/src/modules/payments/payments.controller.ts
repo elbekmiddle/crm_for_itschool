@@ -2,57 +2,42 @@ import { Controller, Get, Post, Body, Param, UseGuards, Delete } from '@nestjs/c
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 
-@ApiTags('payments', 'ADMIN', 'MANAGER', 'TEACHER')
+@ApiTags('payments')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  @Roles('ADMIN', 'MANAGER')
+  @Permissions('PAYMENT_CREATE')
   @Post()
-  @ApiOperation({ summary: 'Register a new payment' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        student_id: { type: 'string', example: 'uuid-student' },
-        group_id: { type: 'string', example: 'uuid-group' },
-        amount: { type: 'number', example: 100 }
-      }
-    }
-  })
-  @ApiResponse({ status: 201, description: 'Payment recorded and history updated.' })
+  @ApiOperation({ summary: 'Register a new payment', description: 'Permissions: PAYMENT_CREATE' })
   create(@Body() body: CreatePaymentDto) {
     return this.paymentsService.create(body);
   }
 
-  @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Permissions('PAYMENT_READ')
   @Get('student/:id')
-  @ApiOperation({ summary: 'Check student payment status and history' })
-  @ApiParam({ name: 'id', description: 'Student UUID' })
-  @ApiResponse({ status: 200, description: 'Returns { status: ACTIVE|FROZEN, payments: [...] }.' })
+  @ApiOperation({ summary: 'Check student payment status and history', description: 'Permissions: PAYMENT_READ' })
   getStudentPayments(@Param('id') id: string) {
     return this.paymentsService.getStudentPayments(id);
   }
 
-  @Roles('ADMIN', 'MANAGER')
+  @Permissions('PAYMENT_READ')
   @Get()
-  @ApiOperation({ summary: 'Get all payments' })
-  @ApiResponse({ status: 200, description: 'Returns all payments.' })
+  @ApiOperation({ summary: 'Get all payments', description: 'Permissions: PAYMENT_READ' })
   findAll() {
     return this.paymentsService.findAll();
   }
 
-  @Roles('ADMIN')
+  @Permissions('PAYMENT_DELETE')
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a payment' })
-  @ApiParam({ name: 'id', description: 'Payment UUID' })
-  @ApiResponse({ status: 200, description: 'Payment deleted.' })
+  @ApiOperation({ summary: 'Delete a payment', description: 'Permissions: PAYMENT_DELETE' })
   remove(@Param('id') id: string) {
     return this.paymentsService.remove(id);
   }

@@ -44,11 +44,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = translations[message];
     }
 
+    const error =
+      exception instanceof HttpException
+        ? exception.name
+        : 'INTERNAL_SERVER_ERROR';
+
     response.status(status).json({
+      success: false,
       statusCode: status,
-      timestamp: new Date().toISOString(),
-      path: request.url,
       message: message,
+      error: error,
     });
   }
 }

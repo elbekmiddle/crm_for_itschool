@@ -46,11 +46,21 @@ export async function get_student_dashboard(dbService: DbService, studentId: str
     [studentId]
   );
 
+  const exams = await dbService.query(
+    `SELECT er.score, er.submitted_at, e.title as exam_title, e.id as exam_id
+     FROM exam_results er
+     JOIN exams e ON er.exam_id = e.id
+     WHERE er.student_id = $1
+     ORDER BY er.submitted_at DESC`,
+    [studentId]
+  );
+
   return {
     ...student[0],
     courses,
     groups,
     payments,
-    attendance_trend: attendance_history
+    attendance_trend: attendance_history,
+    exams
   };
 }

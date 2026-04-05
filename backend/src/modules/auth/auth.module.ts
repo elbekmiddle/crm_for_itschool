@@ -5,10 +5,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from '../../common/strategies/jwt.strategy';
 import { ConfigService, ConfigModule } from '@nestjs/config';
+import { TelegramModule } from '../../infrastructure/notifications/telegram.module';
 
 @Module({
   imports: [
     PassportModule,
+    TelegramModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
