@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
 import { useStudentStore } from '../store/useStudentStore';
 import { useAuthStore } from '../store/useAuthStore';
-import { Wallet, CheckCircle2, AlertTriangle, CreditCard, Loader2 } from 'lucide-react';
+import { Wallet, CheckCircle2, AlertTriangle, CreditCard, Loader2, Sparkles, TrendingDown, TrendingUp, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { cn } from '../lib/utils';
 
 const PaymentsPage: React.FC = () => {
   const { payments, fetchPayments, isLoading } = useStudentStore();
@@ -15,71 +17,110 @@ const PaymentsPage: React.FC = () => {
   const totalDebt = unpaid.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
 
   return (
-    <div className="page-container space-y-6 pb-20 lg:pb-6 animate-in">
-      <div>
-        <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100">To'lovlar</h1>
-        <p className="text-slate-400 text-sm mt-1">Oylik to'lov tarixi</p>
-      </div>
+    <div className="page-container space-y-8 pb-32 lg:pb-12 h-full">
+      <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+          <div className="flex items-center gap-2 text-[var(--accent)] font-black text-[10px] uppercase tracking-[0.3em] mb-2">
+            <Sparkles className="w-3 h-3" />
+            <span>Moliyaviy Ma'lumotlar</span>
+          </div>
+          <h1 className="text-4xl font-black text-[var(--text-h)] tracking-tight">To'lovlar</h1>
+          <p className="text-[var(--text)] font-medium mt-1">Oylik to'lov tarixi va balans</p>
+        </motion.div>
+      </header>
 
       {isLoading ? (
-        <div className="card p-12 flex justify-center"><Loader2 className="w-7 h-7 text-primary-400 animate-spin" /></div>
+        <div className="flex flex-col items-center justify-center p-24 bg-[var(--bg-card)] rounded-[2.5rem] border border-[var(--border)]">
+          <Loader2 className="w-10 h-10 text-[var(--accent)] animate-spin" />
+          <p className="mt-4 text-[var(--text)] font-bold uppercase tracking-widest text-[10px]">Yuklanmoqda...</p>
+        </div>
       ) : (
         <>
           {/* Debt warning */}
           {totalDebt > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-              <div>
-                <p className="text-sm font-bold text-red-800">Qarzdorlik mavjud!</p>
-                <p className="text-xs text-red-600 mt-0.5">Umumiy qarz: {totalDebt.toLocaleString()} so'm. Iltimos imkon qadar to'lang.</p>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              className="bg-red-500/5 border-2 border-red-500/20 rounded-[2rem] p-6 flex items-center gap-5"
+            >
+              <div className="w-14 h-14 bg-red-500/10 rounded-2xl flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-7 h-7 text-red-500" />
               </div>
-            </div>
+              <div>
+                <p className="text-sm font-black text-red-500 uppercase tracking-tight">Qarzdorlik mavjud!</p>
+                <p className="text-xs text-[var(--text)] font-semibold mt-1">Umumiy qarz: <span className="font-black text-red-500">{totalDebt.toLocaleString()} so'm</span>. Iltimos imkon qadar to'lang.</p>
+              </div>
+            </motion.div>
           )}
 
-          {/* Summary */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="card p-4">
-              <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center mb-3">
-                <CheckCircle2 className="w-5 h-5 text-green-500" />
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              className="bg-[var(--bg-card)] p-8 rounded-[2.5rem] border border-[var(--border)] group hover:shadow-xl transition-all relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
+              <div className="relative z-10">
+                <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <TrendingUp className="w-7 h-7 text-emerald-500" />
+                </div>
+                <p className="text-[10px] font-black text-[var(--text)] uppercase tracking-[0.2em] mb-2">Jami to'langan</p>
+                <p className="text-3xl font-black text-emerald-500 tabular-nums tracking-tighter">
+                  {totalPaid.toLocaleString()} <span className="text-sm font-black text-emerald-500/50">so'm</span>
+                </p>
               </div>
-              <p className="label-subtle">Jami to'langan</p>
-              <p className="text-xl font-black text-green-600 mt-1">{totalPaid.toLocaleString()} <span className="text-xs font-bold text-green-500">so'm</span></p>
-            </div>
-            <div className="card p-4">
-              <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center mb-3">
-                <Wallet className="w-5 h-5 text-red-500" />
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              className="bg-[var(--bg-card)] p-8 rounded-[2.5rem] border border-[var(--border)] group hover:shadow-xl transition-all relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
+              <div className="relative z-10">
+                <div className="w-14 h-14 bg-red-500/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <TrendingDown className="w-7 h-7 text-red-500" />
+                </div>
+                <p className="text-[10px] font-black text-[var(--text)] uppercase tracking-[0.2em] mb-2">Qarz / Kutilmoqda</p>
+                <p className="text-3xl font-black text-red-500 tabular-nums tracking-tighter">
+                  {totalDebt.toLocaleString()} <span className="text-sm font-black text-red-500/50">so'm</span>
+                </p>
               </div>
-              <p className="label-subtle">Qarz</p>
-              <p className="text-xl font-black text-red-500 mt-1">{totalDebt.toLocaleString()} <span className="text-xs font-bold text-red-400">so'm</span></p>
-            </div>
+            </motion.div>
           </div>
 
           {/* Payment list */}
-          <div className="card overflow-hidden">
-            <div className="p-4 border-b border-slate-50">
-              <h2 className="section-title text-base">To'lov tarixi</h2>
+          <div className="bg-[var(--bg-card)] rounded-[2.5rem] border border-[var(--border)] overflow-hidden">
+            <div className="p-6 border-b border-[var(--divide)]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[var(--accent)]/10 rounded-xl flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-[var(--accent)]" />
+                </div>
+                <h2 className="text-xl font-black text-[var(--text-h)] tracking-tight">To'lov Tarixi</h2>
+              </div>
             </div>
             {payments.length > 0 ? (
-              <div className="divide-y divide-slate-50">
+              <div>
                 {payments.map((p: any, i: number) => {
                   const isPaid = p.status === 'PAID' || p.status === 'paid';
                   return (
-                    <div key={p.id || i} className="flex items-center gap-4 p-4">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isPaid ? 'bg-green-50' : 'bg-red-50'}`}>
-                        <CreditCard className={`w-4 h-4 ${isPaid ? 'text-green-500' : 'text-red-400'}`} />
+                    <div key={p.id || i} className="flex items-center gap-5 p-6 border-b border-[var(--divide)] last:border-b-0 row-hover transition-colors">
+                      <div className={cn(
+                        "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0",
+                        isPaid ? 'bg-emerald-500/10' : 'bg-red-500/10'
+                      )}>
+                        <CreditCard className={cn("w-5 h-5", isPaid ? 'text-emerald-500' : 'text-red-500')} />
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-[var(--text-h)] truncate">
                           {p.month || (p.created_at ? new Date(p.created_at).toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' }) : `To'lov #${i + 1}`)}
                         </p>
-                        <p className="text-xs text-slate-400 mt-0.5">{p.payment_method || 'Naqd'}</p>
+                        <p className="text-[10px] text-[var(--text)] font-bold uppercase tracking-widest mt-1">{p.payment_method || 'Naqd'}</p>
                       </div>
-                      <div className="text-right">
-                        <p className={`font-black text-sm ${isPaid ? 'text-green-600' : 'text-red-500'}`}>
-                          {Number(p.amount || 0).toLocaleString()} so'm
+                      <div className="text-right flex flex-col items-end gap-2">
+                        <p className={cn("font-black text-lg tabular-nums", isPaid ? 'text-emerald-500' : 'text-red-500')}>
+                          {Number(p.amount || 0).toLocaleString()} <span className="text-[10px] font-bold opacity-60">so'm</span>
                         </p>
-                        <span className={`status-pill ${isPaid ? 'pill-paid' : 'pill-unpaid'} mt-1`}>
-                          {isPaid ? "✓ To'langan" : '! Qoldi'}
+                        <span className={cn("status-pill", isPaid ? 'pill-paid' : 'pill-unpaid')}>
+                          {isPaid ? "✓ To'langan" : '! Kutilmoqda'}
                         </span>
                       </div>
                     </div>
@@ -87,9 +128,11 @@ const PaymentsPage: React.FC = () => {
                 })}
               </div>
             ) : (
-              <div className="p-8 text-center">
-                <Wallet className="w-10 h-10 text-slate-200 mx-auto mb-2" />
-                <p className="text-sm text-slate-400 font-semibold">To'lov ma'lumotlari yo'q</p>
+              <div className="flex flex-col items-center justify-center p-20">
+                <div className="w-20 h-20 bg-[var(--bg-muted)] rounded-full flex items-center justify-center mb-6">
+                  <Wallet className="w-8 h-8 text-[var(--text)] opacity-30" />
+                </div>
+                <p className="text-[var(--text)] font-black text-xs uppercase tracking-widest opacity-50">To'lov ma'lumotlari yo'q</p>
               </div>
             )}
           </div>

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsOptional, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsIn } from 'class-validator';
 
 export class CreateBlogPostDto {
   @IsString()
@@ -7,7 +7,7 @@ export class CreateBlogPostDto {
 
   @IsString()
   @IsNotEmpty()
-  content: string;
+  content: string; // JSON stringified rich content blocks
 
   @IsString()
   @IsOptional()
@@ -16,6 +16,11 @@ export class CreateBlogPostDto {
   @IsString()
   @IsOptional()
   category?: string;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(['draft', 'published'])
+  status?: string;
 }
 
 export class UpdateBlogPostDto {
@@ -25,13 +30,18 @@ export class UpdateBlogPostDto {
 
   @IsString()
   @IsOptional()
-  content?: string;
+  content?: string; // JSON stringified rich content blocks
 
   @IsString()
   @IsOptional()
   image_url?: string;
 
-  @IsEnum(['draft', 'published'])
+  @IsString()
   @IsOptional()
+  category?: string;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(['draft', 'published'])
   status?: string;
 }

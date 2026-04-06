@@ -39,7 +39,11 @@ const GroupsPage: React.FC = () => {
   };
 
   const handleSave = async () => {
-    const payload = { ...form, max_students: Number(form.max_students) || 30 };
+    const payload: any = { ...form, max_students: Number(form.max_students) || 30 };
+    // Auto-assign teacher_id for Teacher role
+    if (user?.role === 'TEACHER' && modal === 'create') {
+      payload.teacher_id = user.id;
+    }
     if (modal === 'create') await createGroup(payload);
     else if (editTarget) await updateGroup(editTarget.id, payload);
     setModal(null);
@@ -85,7 +89,7 @@ const GroupsPage: React.FC = () => {
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">Guruhlar</h1>
           <p className="text-sm text-slate-400 mt-0.5">{groups.length} ta guruh boshqarilmoqda</p>
         </div>
-        {user?.role !== 'ADMIN' && (
+        {(user?.role === 'TEACHER' || user?.role === 'ADMIN') && (
           <button onClick={openCreate} className="btn-primary flex items-center gap-2">
             <Plus className="w-4 h-4" /> Yangi Guruh
           </button>
@@ -167,7 +171,7 @@ const GroupsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {user?.role !== 'ADMIN' && (
+                {(user?.role === 'TEACHER' || user?.role === 'ADMIN') && (
                   <button onClick={() => { setAddStudentModal(true); setSelectedStudentId(''); }} className="btn-primary w-full flex items-center justify-center gap-2">
                     <UserPlus className="w-4 h-4" /> Talaba qo'shish
                   </button>

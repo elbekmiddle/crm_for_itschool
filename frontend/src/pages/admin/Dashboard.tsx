@@ -2,7 +2,8 @@ import React, { useEffect } from 'react';
 import { 
   Users, UserCheck, GraduationCap, TrendingUp, 
   ArrowUpRight, ArrowDownRight, Activity, Calendar,
-  PieChart, DollarSign, Target, MessageSquare, Loader2
+  PieChart, DollarSign, Target, MessageSquare, Loader2,
+  Sparkles, Zap, Award, BarChart3
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAdminStore } from '../../store/useAdminStore';
@@ -44,14 +45,19 @@ const AdminDashboard: React.FC = () => {
   if (isLoading && !stats) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        <div className="flex flex-col items-center gap-4">
+           <div className="w-16 h-16 bg-[#aa3bff]/10 rounded-2xl flex items-center justify-center">
+             <Loader2 className="w-8 h-8 animate-spin text-[#aa3bff]" />
+           </div>
+           <p className="text-[10px] font-black text-[#aa3bff] uppercase tracking-widest animate-pulse">Analitika yuklanmoqda...</p>
+        </div>
       </div>
     );
   }
 
   const primaryStats = [
-    { label: 'Jami O\'quvchilar', value: Number(stats?.totalStudents || 0), icon: GraduationCap, color: 'text-primary-600', bg: 'bg-primary-50', trend: '+12.5%', isUp: true },
-    { label: 'Faol Guruhlar', value: Number(stats?.totalGroups || 0), icon: Calendar, color: 'text-primary-600', bg: 'bg-primary-50', trend: '+2.4%', isUp: true },
+    { label: 'Jami O\'quvchilar', value: Number(stats?.totalStudents || 0), icon: GraduationCap, color: 'text-[#aa3bff]', bg: 'bg-[#aa3bff]/10', trend: '+12.5%', isUp: true },
+    { label: 'Faol Guruhlar', value: Number(stats?.totalGroups || 0), icon: Calendar, color: 'text-indigo-600', bg: 'bg-indigo-50', trend: '+2.4%', isUp: true },
     { label: 'Yangi Lidlar', value: Number(stats?.pendingPayments || 0), icon: MessageSquare, color: 'text-amber-600', bg: 'bg-amber-50', trend: '+18.2%', isUp: true },
     { label: 'Oylik Mavjudlik', value: `${Number(stats?.attendanceAvg || 0)}%`, icon: UserCheck, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '-1.2%', isUp: false },
   ];
@@ -63,12 +69,15 @@ const AdminDashboard: React.FC = () => {
         fill: true,
         label: 'Yangi o\'quvchilar',
         data: stats?.growthTrend?.map((g: any) => g.count) || [30, 45, 57, 48, 63, 72],
-        borderColor: '#84BD38',
-        backgroundColor: 'rgba(132, 189, 56, 0.1)',
-        tension: 0.4,
-        pointRadius: 4,
-        pointBackgroundColor: '#84BD38',
-        borderWidth: 3,
+        borderColor: '#aa3bff',
+        backgroundColor: 'rgba(170, 59, 255, 0.08)',
+        tension: 0.45,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        pointBackgroundColor: '#fff',
+        pointBorderColor: '#aa3bff',
+        pointBorderWidth: 3,
+        borderWidth: 4,
       }
     ],
   };
@@ -76,59 +85,81 @@ const AdminDashboard: React.FC = () => {
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+      intersect: false,
+      mode: 'index' as const,
+    },
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#1e293b',
-        padding: 12,
-        titleFont: { size: 14, weight: 'bold' as const },
-        bodyFont: { size: 13 },
-        cornerRadius: 8,
+        backgroundColor: '#08060d',
+        padding: 16,
+        titleFont: { size: 14, weight: 'bold' as const, family: 'Outfit' },
+        bodyFont: { size: 13, family: 'Inter' },
+        cornerRadius: 16,
         displayColors: false,
+        usePointStyle: true,
       }
     },
     scales: {
       y: {
         beginAtZero: true,
-        grid: { display: false },
-        ticks: { color: '#94a3b8', font: { size: 11 } }
+        grid: { color: 'rgba(0, 0, 0, 0.02)', drawBorder: false },
+        ticks: { color: '#6b6375', font: { size: 11, weight: 'bold' as any } }
       },
       x: {
         grid: { display: false },
-        ticks: { color: '#94a3b8', font: { size: 11 } }
+        ticks: { color: '#6b6375', font: { size: 11, weight: 'bold' as any } }
       }
     }
   };
 
   return (
-    <div className="space-y-6 animate-in">
+    <div className="space-y-8 animate-in pb-12">
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-br from-primary-600 to-primary-800 rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl shadow-primary-500/20">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
-        <div className="absolute bottom-0 left-1/3 w-48 h-48 bg-white/10 rounded-full blur-3xl -mb-24" />
-        <div className="relative z-10 max-w-2xl">
-          <p className="text-primary-200 text-sm font-black uppercase tracking-widest mb-2 opacity-80 uppercase">IT Academy Admin Panel</p>
-          <h1 className="text-4xl font-black mb-3 leading-tight tracking-tighter">Barcha tizim mo'tadil ishlamoqda.</h1>
-          <p className="text-primary-100 text-lg font-medium leading-relaxed opacity-90">
-             Bugungi kunda <span className="font-black text-white underline decoration-amber-400">{stats?.totalStudents || 0} ta yangi talaba</span> ro'yxatdan o'tdi va <span className="font-black text-white underline decoration-emerald-400">{(stats?.totalRevenue || 0).toLocaleString()} UZS</span> to'lov amalga oshirildi.
-          </p>
+      <div className="bg-gradient-to-br from-[#aa3bff] via-[#9329e6] to-[#08060d] rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl shadow-[#aa3bff]/20">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-48 -mt-48" />
+        <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-white/5 rounded-full blur-[80px] -mb-32" />
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center text-center lg:text-left">
+          <div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 mb-6">
+               <Sparkles className="w-4 h-4 text-amber-400" />
+               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/90">Academy Analytics Engine · v4.2</span>
+            </div>
+            <h1 className="text-5xl font-black mb-6 leading-[1.1] tracking-tighter">Barcha tizimlar <br/> <span className="text-[#c084fc] drop-shadow-sm">mo'tadil</span> ishlamoqda.</h1>
+            <p className="text-[#ece0ff] text-xl font-medium leading-relaxed opacity-90 max-w-xl">
+               Bugun <span className="font-black text-white underline decoration-[#c084fc] decoration-4 underline-offset-4">{stats?.totalStudents || 0} ta yangi talaba</span> qo'shildi va umumiy <span className="font-black text-white decoration-emerald-400">{(stats?.totalRevenue || 0).toLocaleString()} UZS</span> tushum qayd etildi.
+            </p>
+          </div>
+          <div className="hidden lg:grid grid-cols-2 gap-4">
+             <div className="bg-white/5 backdrop-blur-sm p-6 rounded-3xl border border-white/10 transform hover:scale-105 transition-all duration-500">
+                <Zap className="w-10 h-10 text-amber-400 mb-4" />
+                <p className="text-sm font-black opacity-60 uppercase tracking-widest mb-1">Server Power</p>
+                <p className="text-3xl font-black tabular-nums tracking-tighter text-white">99.8%</p>
+             </div>
+             <div className="bg-white/5 backdrop-blur-sm p-6 rounded-3xl border border-white/10 transform hover:scale-105 transition-all duration-500 delay-100">
+                <Award className="w-10 h-10 text-emerald-400 mb-4" />
+                <p className="text-sm font-black opacity-60 uppercase tracking-widest mb-1">Growth Rate</p>
+                <p className="text-3xl font-black tabular-nums tracking-tighter text-white">+24.5%</p>
+             </div>
+          </div>
         </div>
       </div>
 
       {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {primaryStats.map(({ label, value, icon: Icon, color, bg, trend, isUp }) => (
-          <div key={label} className="card p-6 flex flex-col group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-            <div className={`absolute top-0 right-0 w-16 h-16 ${bg} opacity-10 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-700`} />
-            <div className={`w-14 h-14 ${bg} rounded-full flex items-center justify-center mb-4 ring-8 ring-white dark:ring-slate-800 shadow-sm transition-transform duration-500 group-hover:scale-110`}>
-              <Icon className={`w-7 h-7 ${color}`} />
+          <div key={label} className="card p-8 flex flex-col group hover:-translate-y-2 transition-all duration-500 relative overflow-hidden bg-white/50 dark:bg-[#1f2028]/50 backdrop-blur-md">
+            <div className={`absolute top-0 right-0 w-24 h-24 ${bg} opacity-10 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-[2] duration-[1.5s]`} />
+            <div className={`w-16 h-16 ${bg} rounded-2xl flex items-center justify-center mb-6 ring-8 ring-[#f4f3ec] dark:ring-[#16171d] shadow-sm transition-all duration-500 group-hover:rotate-6 group-hover:scale-110`}>
+              <Icon className={`w-8 h-8 ${color}`} />
             </div>
-            <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{label}</p>
-            <div className="flex items-center gap-2">
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white tabular-nums leading-none tracking-tighter">{value}</h2>
+            <p className="text-[11px] font-black text-[#6b6375] dark:text-[#9ca3af] uppercase tracking-[0.2em] mb-2">{label}</p>
+            <div className="flex items-end justify-between">
+              <h2 className="text-4xl font-black text-[#08060d] dark:text-white tabular-nums leading-none tracking-tighter">{value}</h2>
               <div className={cn(
-                "flex items-center text-[10px] font-black px-1.5 py-0.5 rounded-md",
-                isUp ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
+                "flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-xl shadow-inner",
+                isUp ? "bg-emerald-100/50 text-emerald-600" : "bg-red-100/50 text-red-600"
               )}>
                 {isUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                 {trend}
@@ -138,57 +169,57 @@ const AdminDashboard: React.FC = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Analytics Chart */}
-        <div className="lg:col-span-2 card p-8 space-y-6">
-          <div className="flex items-center justify-between">
-             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
-                   <Activity className="w-5 h-5" />
+        <div className="lg:col-span-2 card p-10 space-y-8 bg-white/50 dark:bg-[#1f2028]/50 backdrop-blur-md border border-[#e5e4e7] dark:border-[#2e303a]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+             <div className="flex items-center gap-5">
+                <div className="w-14 h-14 bg-[#aa3bff]/10 text-[#aa3bff] rounded-2xl flex items-center justify-center shadow-inner">
+                   <BarChart3 className="w-7 h-7" />
                 </div>
                 <div>
-                   <h3 className="section-title text-xl">O'sish Tendentsiyasi</h3>
-                   <p className="text-xs text-slate-400 font-medium">Yangi ro'yxatga olishlar (so'nggi 6 oy)</p>
+                   <h3 className="text-2xl font-black text-[#08060d] dark:text-white tracking-tight mb-1">O'sish Tendentsiyasi</h3>
+                   <p className="text-xs text-[#6b6375] dark:text-[#9ca3af] font-bold uppercase tracking-widest opacity-60">Yangi ro'yxatga olishlar (so'nggi 6 oy)</p>
                 </div>
              </div>
-             <div className="flex gap-2">
+             <div className="flex bg-[#f4f3ec] dark:bg-[#16171d] p-1.5 rounded-[1.25rem] border border-[#e5e4e7] dark:border-[#2e303a]">
                 {['Hafta', 'Oy', 'Yil'].map(t => (
                    <button key={t} className={cn(
-                     "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-colors",
-                     t === 'Oy' ? "bg-primary-600 border-primary-600 text-white shadow-lg shadow-primary-500/20" : "border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
+                     "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300",
+                     t === 'Oy' ? "bg-white dark:bg-[#1f2028] text-[#aa3bff] shadow-lg shadow-black/5" : "text-[#6b6375] hover:text-[#aa3bff]"
                    )}>
                       {t}
                    </button>
                 ))}
              </div>
           </div>
-          <div className="h-72 w-full mt-4">
+          <div className="h-[400px] w-full mt-4">
              <Line data={chartData} options={chartOptions} />
           </div>
         </div>
 
         {/* Top Courses */}
-        <div className="card p-8 space-y-6">
+        <div className="card p-10 space-y-8 bg-[#f4f3ec]/30 dark:bg-[#1f2028]/30 backdrop-blur-md border border-[#e5e4e7] dark:border-[#2e303a]">
            <div className="flex items-center justify-between">
-              <h3 className="section-title text-xl">Ommabop kurslar</h3>
-              <button className="text-[10px] font-black text-primary-600 uppercase tracking-widest hover:underline">Barchasi</button>
+              <h3 className="text-2xl font-black text-[#08060d] dark:text-white tracking-tight">Ommabop kurslar</h3>
+              <button className="text-[10px] font-black text-[#aa3bff] uppercase tracking-widest hover:scale-105 transition-all">Barchasi</button>
            </div>
-           <div className="space-y-4">
+           <div className="space-y-5">
               {stats?.topCourses?.map((course: any, i: number) => (
-                 <div key={i} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                    <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 bg-primary-100 dark:bg-primary-950 text-primary-600 dark:text-primary-400 rounded-xl flex items-center justify-center font-black text-xs">
+                 <div key={i} className="flex items-center justify-between p-4 rounded-3xl hover:bg-white dark:hover:bg-[#1f2028] transition-all duration-300 border border-transparent hover:border-[#e5e4e7] dark:hover:border-[#2e303a] group">
+                    <div className="flex items-center gap-5">
+                       <div className="w-12 h-12 bg-white dark:bg-[#16171d] text-[#aa3bff] rounded-2xl flex items-center justify-center font-black text-sm shadow-[0_4px_10px_rgba(0,0,0,0.03)] transition-transform group-hover:rotate-6">
                           {i + 1}
                        </div>
                        <div>
-                          <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{course.name}</p>
-                          <p className="text-[10px] text-slate-400 font-medium">{course.student_count} ta talaba</p>
+                          <p className="text-base font-black text-[#08060d] dark:text-[#f3f4f6] tracking-tight">{course.name}</p>
+                          <p className="text-[10px] text-[#6b6375] dark:text-[#9ca3af] font-black uppercase tracking-widest mt-1">{course.student_count} ta faol talaba</p>
                        </div>
                     </div>
                     <div className="text-right">
-                       <div className="w-24 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                       <div className="w-24 h-2 bg-[#f4f3ec] dark:bg-[#16171d] rounded-full overflow-hidden shadow-inner">
                           <div 
-                            className="h-full bg-primary-500 rounded-full" 
+                            className="h-full bg-gradient-to-r from-[#aa3bff] to-[#c084fc] rounded-full transition-all duration-1000" 
                             style={{ width: `${(course.student_count / (stats?.totalStudents || 1)) * 100}%` }} 
                           />
                        </div>
@@ -196,64 +227,67 @@ const AdminDashboard: React.FC = () => {
                  </div>
               ))}
               {!stats?.topCourses?.length && (
-                 <p className="text-center py-8 text-slate-400 text-sm">Ma'lumot topilmadi</p>
+                 <div className="flex flex-col items-center justify-center py-12 gap-4">
+                    <PieChart className="w-10 h-10 text-[#6b6375] opacity-20" />
+                    <p className="text-[#6b6375] font-bold text-xs uppercase tracking-widest opacity-40">Ma'lumot topilmadi</p>
+                 </div>
               )}
            </div>
         </div>
       </div>
 
       {/* Leaderboard Table (Top Students) */}
-      <div className="card p-8">
-         <div className="flex items-center justify-between mb-8">
-            <h3 className="section-title text-xl">Top Talabalar</h3>
-            <div className="flex items-center gap-4">
-               <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Zo'r natija</span>
+      <div className="card p-10 bg-white dark:bg-[#1f2028] shadow-2xl border-[#e5e4e7] dark:border-[#2e303a]">
+         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-6">
+            <h3 className="text-2xl font-black text-[#08060d] dark:text-white tracking-tight">Akademik Leaderboard</h3>
+            <div className="flex items-center gap-6">
+               <div className="flex items-center gap-2.5">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+                  <span className="text-[10px] font-black text-[#6b6375] uppercase tracking-widest">Master</span>
                </div>
-               <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-indigo-500" />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Yaxshi natija</span>
+               <div className="flex items-center gap-2.5">
+                  <div className="w-3 h-3 rounded-full bg-[#aa3bff] shadow-[0_0_8px_#aa3bff]" />
+                  <span className="text-[10px] font-black text-[#6b6375] uppercase tracking-widest">Active</span>
                </div>
             </div>
          </div>
-         <div className="overflow-x-auto">
+         <div className="overflow-x-auto no-scrollbar">
             <table className="w-full text-left">
                <thead>
-                  <tr className="border-b border-slate-50 dark:border-slate-800 pb-4">
-                     <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Talaba</th>
-                     <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">O'rtacha Ball</th>
-                     <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Davomat %</th>
-                     <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                  <tr className="border-b border-[#f4f3ec] dark:border-[#2e303a]">
+                     <th className="pb-6 text-[10px] font-black text-[#6b6375] uppercase tracking-[0.2em]">Talaba</th>
+                     <th className="pb-6 text-[10px] font-black text-[#6b6375] uppercase tracking-[0.2em]">O'rtacha Ball</th>
+                     <th className="pb-6 text-[10px] font-black text-[#6b6375] uppercase tracking-[0.2em]">Davomat</th>
+                     <th className="pb-6 text-[10px] font-black text-[#6b6375] uppercase tracking-[0.2em]">Status</th>
                   </tr>
                </thead>
-               <tbody>
+               <tbody className="divide-y divide-[#f4f3ec] dark:divide-[#2e303a]">
                   {stats?.topStudents?.map((s: any, i: number) => (
-                     <tr key={i} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="py-4">
-                           <div className="flex items-center gap-3">
+                     <tr key={i} className="group hover:bg-[#f4f3ec]/30 dark:hover:bg-[#16171d]/30 transition-all duration-300">
+                        <td className="py-6">
+                           <div className="flex items-center gap-4">
                               <div className={cn(
-                                "w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs transition-transform group-hover:scale-110",
-                                i === 0 ? "bg-amber-100 text-amber-600 shadow-lg shadow-amber-500/20" : 
-                                i === 1 ? "bg-slate-100 text-slate-600" :
-                                i === 2 ? "bg-orange-100 text-orange-600" : "bg-primary-50 text-primary-600"
+                                "w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg transition-all duration-500 group-hover:scale-110 group-hover:rotate-6",
+                                i === 0 ? "bg-amber-100 text-amber-600 shadow-xl shadow-amber-500/10" : 
+                                i === 1 ? "bg-[#f4f3ec] dark:bg-[#16171d] text-[#6b6375]" :
+                                i === 2 ? "bg-orange-100 text-orange-600 shadow-xl shadow-orange-500/10" : "bg-[#aa3bff]/5 text-[#aa3bff]"
                               )}>
-                                 {i < 3 ? '🏆' : s.first_name?.[0]}
+                                 {i < 3 ? ['🥇', '🥈', '🥉'][i] : s.first_name?.[0]}
                               </div>
                               <div>
-                                 <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{s.first_name} {s.last_name}</p>
-                                 <p className="text-[10px] text-slate-400">{s.email || '—'}</p>
+                                 <p className="text-base font-black text-[#08060d] dark:text-[#f3f4f6] tracking-tight">{s.first_name} {s.last_name}</p>
+                                 <p className="text-[10px] text-[#6b6375] font-black uppercase tracking-widest mt-1 opacity-60">{s.email || 'CONTACT NOT SHARED'}</p>
                               </div>
                            </div>
                         </td>
-                        <td className="py-4 font-black text-slate-900 dark:text-white tabular-nums">{s.avg_score}%</td>
-                        <td className="py-4 font-black text-slate-900 dark:text-white tabular-nums">{s.attendance_pct}%</td>
-                        <td className="py-4">
+                        <td className="py-6 font-black text-[#08060d] dark:text-white tabular-nums text-lg">{s.avg_score}%</td>
+                        <td className="py-6 font-black text-[#6b6375] dark:text-[#9ca3af] tabular-nums">{s.attendance_pct}%</td>
+                        <td className="py-6">
                            <span className={cn(
-                             "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm",
-                             Number(s.avg_score) >= 90 ? "bg-emerald-100 text-emerald-600" : "bg-indigo-100 text-indigo-600"
+                             "px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.1em] shadow-sm",
+                             Number(s.avg_score) >= 90 ? "bg-emerald-100 text-emerald-600" : "bg-[#aa3bff]/10 text-[#aa3bff]"
                            )}>
-                              {Number(s.avg_score) >= 90 ? 'Ekspert' : 'Faol'}
+                              {Number(s.avg_score) >= 90 ? 'Master' : 'Pro Active'}
                            </span>
                         </td>
                      </tr>
@@ -267,3 +301,4 @@ const AdminDashboard: React.FC = () => {
 };
 
 export default AdminDashboard;
+

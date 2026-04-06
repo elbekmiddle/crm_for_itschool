@@ -26,7 +26,7 @@ const StudentsPage: React.FC = () => {
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
   const [enrollModal, setEnrollModal] = useState<any>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
-  const [form, setForm] = useState({ first_name: '', last_name: '', phone: '', email: '', parent_name: '', parent_phone: '' });
+  const [form, setForm] = useState({ first_name: '', last_name: '', phone: '', email: '', parent_name: '', parent_phone: '', status: 'active', study_type: 'group' });
   const [enrollCourseId, setEnrollCourseId] = useState('');
   const [page, setPage] = useState(1);
   const [courseFilter, setCourseFilter] = useState('');
@@ -43,13 +43,13 @@ const StudentsPage: React.FC = () => {
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
   const openCreate = () => {
-    setForm({ first_name: '', last_name: '', phone: '', email: '', parent_name: '', parent_phone: '' });
+    setForm({ first_name: '', last_name: '', phone: '', email: '', parent_name: '', parent_phone: '', status: 'active', study_type: 'group' });
     setModal('create');
   };
 
   const openEdit = (s: any) => {
     setEditTarget(s);
-    setForm({ first_name: s.first_name, last_name: s.last_name, phone: s.phone, email: s.email || '', parent_name: s.parent_name || '', parent_phone: s.parent_phone || '' });
+    setForm({ first_name: s.first_name, last_name: s.last_name, phone: s.phone, email: s.email || '', parent_name: s.parent_name || '', parent_phone: s.parent_phone || '', status: s.status || 'active', study_type: s.study_type || 'group' });
     setModal('edit');
   };
 
@@ -123,7 +123,7 @@ const StudentsPage: React.FC = () => {
           <button className="btn-secondary flex items-center gap-2">
             <Download className="w-4 h-4" /> Eksport
           </button>
-          {user?.role !== 'ADMIN' && (
+          {(user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
             <button onClick={openCreate} className="btn-primary flex items-center gap-2">
               <Plus className="w-4 h-4" /> Talaba qo'shish
             </button>
@@ -295,6 +295,24 @@ const StudentsPage: React.FC = () => {
                 <div>
                   <label className="input-label">Ota-ona telefoni</label>
                   <input value={form.parent_phone} onChange={(e) => setForm({ ...form, parent_phone: e.target.value })} className="input" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="input-label">Holati</label>
+                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="select">
+                    <option value="active">Faol</option>
+                    <option value="frozen">Muzlatilgan</option>
+                    <option value="dropped">Chiqib ketgan</option>
+                    <option value="graduated">Tugatgan</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="input-label">Ta'lim turi</label>
+                  <select value={form.study_type} onChange={(e) => setForm({ ...form, study_type: e.target.value })} className="select">
+                    <option value="group">Guruhli</option>
+                    <option value="individual">Individual</option>
+                  </select>
                 </div>
               </div>
             </div>

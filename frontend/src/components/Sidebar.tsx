@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -12,51 +12,47 @@ import {
   Settings,
   LogOut,
   X,
-  UserPlus
+  UserPlus,
+  FileText,
 } from 'lucide-react';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
 import { useConfirm } from '../context/ConfirmContext';
 
+/**
+ * Role-based navigation:
+ * ADMIN  → Dedicated layout (pages/admin/Layout.tsx), not rendered here
+ * MANAGER → Dashboard, Students (create/manage), Payments, Courses, Groups (view), Leads
+ * TEACHER → Dashboard, Groups (create/manage students), Attendance, Exams
+ * STUDENT → Dashboard, Profile, Exams
+ */
 const getNavItems = (role: string) => {
-  const common = [
-    { to: `/${role.toLowerCase()}/dashboard`, icon: LayoutDashboard, label: 'Bosh sahifa' },
-  ];
-
-  if (role === 'ADMIN') return [
-    ...common,
-    { to: '/admin/users', icon: Users, label: 'Foydalanuvchilar' },
-    { to: '/admin/teachers', icon: Users, label: "O'qituvchilar" },
-    { to: '/admin/managers', icon: Users, label: 'Menejerlar' },
-    { to: '/admin/students', icon: GraduationCap, label: "O'quvchilar" },
-    { to: '/admin/courses', icon: BookOpen, label: 'Kurslar' },
-    { to: '/admin/groups', icon: Users, label: 'Guruhlar' },
-    {to: '/admin/leads', icon: UserPlus, label: 'Leadlar (Arizalar)'},
-    { to: '/admin/analytics', icon: BarChart3, label: 'Analitika' },
-  ];
-
   if (role === 'MANAGER') return [
-    ...common,
+    { to: '/manager/dashboard', icon: LayoutDashboard, label: 'Bosh sahifa' },
     { to: '/manager/students', icon: GraduationCap, label: "O'quvchilar" },
     { to: '/manager/payments', icon: Wallet, label: "To'lovlar" },
     { to: '/manager/courses', icon: BookOpen, label: 'Kurslar' },
-    { to: '/manager/leads', icon: UserPlus, label: 'Leadlar (Arizalar)' },
+    { to: '/manager/groups', icon: Users, label: 'Guruhlar' },
+    { to: '/manager/leads', icon: UserPlus, label: 'Lidlar' },
   ];
 
   if (role === 'TEACHER') return [
-    ...common,
+    { to: '/teacher/dashboard', icon: LayoutDashboard, label: 'Bosh sahifa' },
     { to: '/teacher/groups', icon: Users, label: 'Guruhlar' },
     { to: '/teacher/attendance', icon: Calendar, label: 'Davomat' },
     { to: '/teacher/exams', icon: ClipboardList, label: 'Imtihonlar' },
   ];
 
   if (role === 'STUDENT') return [
-    ...common,
+    { to: '/student/dashboard', icon: LayoutDashboard, label: 'Bosh sahifa' },
     { to: '/student/profile', icon: Users, label: 'Profil' },
     { to: '/student/exams', icon: ClipboardList, label: 'Imtihonlar' },
   ];
 
-  return common;
+  // ADMIN should never reach this sidebar (uses own layout), but fallback:
+  return [
+    { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  ];
 };
 
 interface SidebarProps {
@@ -82,6 +78,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
       navigate('/login');
     }
   };
+
+  const navItems = getNavItems(user?.role || '');
 
   return (
     <>
@@ -116,18 +114,33 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
           </button>
         </div>
 
+        {/* Role Badge */}
+        {isOpen && (
+          <div className="px-4 pt-4 pb-2">
+            <div className={cn(
+              "px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-center transition-all",
+              user?.role === 'MANAGER' ? "bg-purple-50 text-purple-600 border border-purple-100" :
+              user?.role === 'TEACHER' ? "bg-blue-50 text-blue-600 border border-blue-100" :
+              user?.role === 'STUDENT' ? "bg-green-50 text-green-600 border border-green-100" :
+              "bg-primary-50 text-primary-600 border border-primary-100"
+            )}>
+              {user?.role || 'GUEST'} Panel
+            </div>
+          </div>
+        )}
+
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto no-scrollbar">
-          {getNavItems(user?.role || '').map((item) => (
+          {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               onClick={() => { if (window.innerWidth < 768) onToggle(); }}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all",
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200",
                   isActive
-                    ? "bg-primary-50 text-primary-700"
+                    ? "bg-primary-50 text-primary-700 shadow-sm shadow-primary-100"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-700",
                   !isOpen && "md:justify-center md:px-0"
                 )
@@ -145,7 +158,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
             to="/settings"
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all",
+                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200",
                 isActive ? "bg-primary-50 text-primary-700" : "text-slate-500 hover:bg-slate-50",
                 !isOpen && "md:justify-center md:px-0"
               )
@@ -157,7 +170,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
           <button
             onClick={handleLogout}
             className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-red-500 hover:bg-red-50 transition-all w-full",
+              "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-red-500 hover:bg-red-50 transition-all duration-200 w-full",
               !isOpen && "md:justify-center md:px-0"
             )}
           >

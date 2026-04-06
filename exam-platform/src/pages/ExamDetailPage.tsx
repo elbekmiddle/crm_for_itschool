@@ -1,20 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useExamStore } from '../store/useExamStore';
-import { Clock, HelpCircle, AlertTriangle, ShieldAlert, Play, Loader2, ArrowLeft, CheckCircle2, ChevronRight, XCircle } from 'lucide-react';
+import { Clock, HelpCircle, AlertTriangle, ShieldAlert, Play, Loader2, ArrowLeft, CheckCircle2, ChevronRight, XCircle, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { cn } from '../lib/utils';
 import api from '../lib/api';
 
-// ─── Simple Status Modal (instead of alert) ──────────────────────────────────
+// ─── Simple Status Modal ──────────────────────────────────────────────────────
 const StatusModal: React.FC<{ msg: string; onClose: () => void }> = ({ msg, onClose }) => (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
-    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-    <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-6 w-full max-w-xs text-center border border-slate-100 dark:border-slate-800">
-      <div className="w-14 h-14 bg-red-50 dark:bg-red-950/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
-        <XCircle className="w-7 h-7 text-red-500" />
+  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="absolute inset-0 bg-[#08060d]/60 backdrop-blur-md" onClick={onClose} />
+    <div className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl p-8 w-full max-w-sm text-center border border-[var(--border)]">
+      <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+        <XCircle className="w-8 h-8 text-red-500" />
       </div>
-      <h3 className="font-black text-slate-900 dark:text-white mb-2">Xatolik</h3>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{msg}</p>
-      <button onClick={onClose} className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold text-sm transition-transform active:scale-95">
+      <h3 className="font-black text-[var(--text-h)] text-xl mb-2">Xatolik</h3>
+      <p className="text-sm text-[var(--text)] mb-8 font-medium">{msg}</p>
+      <button onClick={onClose} className="w-full py-4 bg-[var(--text-h)] text-[var(--bg)] rounded-2xl font-black text-sm transition-transform active:scale-95 uppercase tracking-widest">
         Tushundim
       </button>
     </div>
@@ -55,11 +57,17 @@ const ExamDetailPage: React.FC = () => {
     }
   };
 
-  if (loadingExam) return <div className="page-container flex justify-center py-20"><Loader2 className="w-8 h-8 text-primary-400 animate-spin" /></div>;
+  if (loadingExam) return (
+    <div className="page-container flex flex-col items-center justify-center py-24">
+      <Loader2 className="w-10 h-10 text-[var(--accent)] animate-spin" />
+      <p className="mt-4 text-[var(--text)] font-bold uppercase tracking-widest text-[10px]">Yuklanmoqda...</p>
+    </div>
+  );
+
   if (!exam) return (
     <div className="page-container text-center py-20">
-      <p className="text-slate-400">Imtihon topilmadi</p>
-      <button onClick={() => navigate('/exams')} className="btn-secondary mt-4">Orqaga</button>
+      <p className="text-[var(--text)] font-black uppercase tracking-widest text-sm">Imtihon topilmadi</p>
+      <button onClick={() => navigate('/exams')} className="btn-secondary mt-6">Orqaga</button>
     </div>
   );
 
@@ -72,50 +80,61 @@ const ExamDetailPage: React.FC = () => {
   ];
 
   return (
-    <div className="page-container max-w-2xl mx-auto space-y-6 pb-20 lg:pb-6 animate-in">
-      <button onClick={() => navigate('/exams')} className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary-600 transition-all">
+    <div className="page-container max-w-2xl mx-auto space-y-8 pb-32 lg:pb-12">
+      <button onClick={() => navigate('/exams')} className="flex items-center gap-2 text-sm font-black text-[var(--text)] hover:text-[var(--accent)] transition-all uppercase tracking-widest">
         <ArrowLeft className="w-4 h-4" /> Orqaga
       </button>
 
       {/* Hero */}
-      <div className="bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl p-6 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-12 -mt-12" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        className="bg-gradient-to-br from-[#7d1fc7] via-[#9329e6] to-[#aa3bff] rounded-[2.5rem] p-10 text-white relative overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
         <div className="relative z-10">
-          <span className="status-pill bg-white/15 text-white border-white/20 mb-3 inline-flex">Imtihon</span>
-          <h1 className="text-2xl font-black">{exam.title}</h1>
-          <div className="flex items-center gap-4 mt-3 text-primary-200 text-sm">
-            <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" />{exam.duration} daqiqa</span>
-            <span className="flex items-center gap-1.5"><HelpCircle className="w-4 h-4" />{exam.questions_count} savol</span>
+          <div className="flex items-center gap-2 mb-4">
+            <span className="px-4 py-2 bg-white/15 backdrop-blur-md text-white border border-white/10 rounded-2xl text-[9px] font-black uppercase tracking-widest">Imtihon</span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-4">{exam.title}</h1>
+          <div className="flex items-center gap-6 text-white/70">
+            <span className="flex items-center gap-2 text-sm font-bold"><Clock className="w-4 h-4" />{exam.duration} daqiqa</span>
+            <span className="flex items-center gap-2 text-sm font-bold"><HelpCircle className="w-4 h-4" />{exam.questions_count} savol</span>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Description */}
       {exam.description && (
-        <div className="card p-5">
-          <p className="text-sm text-slate-600 leading-relaxed">{exam.description}</p>
+        <div className="bg-[var(--bg-card)] p-8 rounded-[2.5rem] border border-[var(--border)]">
+          <p className="text-sm text-[var(--text)] leading-relaxed font-medium">{exam.description}</p>
         </div>
       )}
 
       {/* Rules */}
-      <div className="card p-5 space-y-4">
-        <h2 className="font-black text-slate-900 text-base">📋 Qoidalar</h2>
-        <div className="space-y-3">
+      <div className="bg-[var(--bg-card)] rounded-[2.5rem] border border-[var(--border)] overflow-hidden">
+        <div className="p-6 border-b border-[var(--divide)]">
+          <h2 className="font-black text-[var(--text-h)] text-xl tracking-tight flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-[var(--accent)]" /> Qoidalar
+          </h2>
+        </div>
+        <div className="p-6 space-y-4">
           {rules.map(({ icon: Icon, text }) => (
-            <div key={text} className="flex items-start gap-3">
-              <div className="w-7 h-7 bg-slate-50 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
-                <Icon className="w-3.5 h-3.5 text-slate-500" />
+            <div key={text} className="flex items-start gap-4 p-4 rounded-2xl row-hover transition-colors">
+              <div className="w-10 h-10 bg-[var(--bg-muted)] rounded-xl flex items-center justify-center shrink-0">
+                <Icon className="w-4 h-4 text-[var(--text)]" />
               </div>
-              <p className="text-sm text-slate-700 font-medium">{text}</p>
+              <p className="text-sm text-[var(--text-h)] font-semibold pt-2">{text}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* Warning */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-        <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-        <p className="text-sm font-semibold text-amber-800">
+      <div className="bg-amber-500/5 border-2 border-amber-500/15 rounded-[2rem] p-6 flex items-start gap-5">
+        <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center shrink-0">
+          <AlertTriangle className="w-6 h-6 text-amber-500" />
+        </div>
+        <p className="text-sm font-semibold text-[var(--text-h)] pt-2">
           Imtihonni boshlagandan so'ng, imtihon sahifasini tark etish ogohlantirish sifatida hisoblanadi.
           3 ta ogohlantirish — avtomatik topshirish.
         </p>
@@ -123,39 +142,45 @@ const ExamDetailPage: React.FC = () => {
 
       {/* Start button */}
       {!showConfirm ? (
-        <button 
-          onClick={() => setShowConfirm(true)} 
-          className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-600/20"
+        <button
+          onClick={() => setShowConfirm(true)}
+          className="w-full py-5 bg-[var(--accent)] hover:brightness-110 text-white rounded-[2rem] font-black text-base flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-2xl shadow-[var(--accent)]/20 uppercase tracking-widest"
         >
           <Play className="w-6 h-6" /> Imtihonni boshlash
         </button>
       ) : (
-        <div className="card p-6 space-y-5 border-2 border-indigo-200 animate-in slide-in-from-bottom-5 duration-300">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-              <Play className="w-5 h-5 text-indigo-600" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-[var(--bg-card)] p-8 rounded-[2.5rem] border-2 border-[var(--accent)]/30 space-y-6"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-[var(--accent)]/10 rounded-2xl flex items-center justify-center">
+              <Play className="w-7 h-7 text-[var(--accent)]" />
             </div>
-            <h3 className="font-black text-slate-900">Tayyormisiz?</h3>
+            <div>
+              <h3 className="font-black text-[var(--text-h)] text-xl tracking-tight">Tayyormisiz?</h3>
+              <p className="text-[10px] text-[var(--text)] font-black uppercase tracking-widest mt-1">Qaytarib bo'lmaydi</p>
+            </div>
           </div>
-          <p className="text-sm text-slate-500 font-medium leading-relaxed">
+          <p className="text-sm text-[var(--text)] font-medium leading-relaxed">
             Imtihonni boshlagandan so'ng uni to'xtatib bo'lmaydi. Vaqt avtomatik hisoblanadi.
           </p>
-          <div className="flex gap-3">
-            <button 
-              onClick={() => setShowConfirm(false)} 
-              className="flex-1 py-4 rounded-2xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors"
+          <div className="flex gap-4">
+            <button
+              onClick={() => setShowConfirm(false)}
+              className="flex-1 py-4 rounded-2xl border border-[var(--border)] text-[var(--text)] font-black text-sm hover:bg-[var(--hover-bg)] transition-colors uppercase tracking-widest"
             >
               Bekor qilish
             </button>
-            <button 
-              onClick={handleStart} 
-              disabled={starting} 
-              className="flex-1 py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20"
+            <button
+              onClick={handleStart}
+              disabled={starting}
+              className="flex-1 py-4 rounded-2xl bg-[var(--accent)] text-white font-black text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-lg shadow-[var(--accent)]/20 uppercase tracking-widest"
             >
-              {starting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Boshlash <ChevronRight className="w-4 h-4" /></>}
+              {starting ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Boshlash <ChevronRight className="w-4 h-4" /></>}
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {errorModal && <StatusModal msg={errorModal} onClose={() => setErrorModal('')} />}

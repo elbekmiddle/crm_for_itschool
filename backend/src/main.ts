@@ -18,7 +18,13 @@ async function bootstrap() {
   app.use(compression());
   
   const isProduction = process.env.NODE_ENV === 'production';
-  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'];
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+		'http://localhost:5173',
+		'http://localhost:5174',
+		'http://localhost:5175',
+		'http://192.168.1.137:5173',
+		'http://192.168.1.137:5174'
+	]
   
   app.enableCors({
     origin: (origin, callback) => {

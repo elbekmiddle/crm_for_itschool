@@ -84,7 +84,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 </Button>
                 <Button 
                   variant={type === 'danger' ? 'danger' : 'primary'} 
-                  onClick={() => { onConfirm(); onClose(); }} 
+                  onClick={onConfirm} 
                   className="flex-1 py-5"
                 >
                   {confirmText}

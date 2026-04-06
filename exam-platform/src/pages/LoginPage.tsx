@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  GraduationCap, Phone, Lock, Eye, EyeOff,
-  Loader2, AlertCircle, ArrowRight, CheckCircle2,
-  Shield, RefreshCw, Send, ChevronRight
+  Phone, Lock, Eye, EyeOff,
+  Loader2, AlertCircle, CheckCircle2,
+  RefreshCw, Send, ChevronRight, Sparkles,
+  Zap, Globe, ShieldCheck
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import api from '../lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '../lib/utils';
 
 const isDev = import.meta.env.DEV;
-const devLog = (...args: any[]) => { if (isDev) console.log('[LoginPage]', ...args); };
 
 // ─── Step types ──────────────────────────────────────────────────────────────
 type Step = 'main' | 'code' | 'set-password';
@@ -59,19 +61,13 @@ export default function LoginPage() {
     setError('');
     const normalizedPhone = normalizePhone(phone);
     if (!password) { setError("Parolni kiriting"); return; }
-    devLog('loginWithPassword:', normalizedPhone);
     setLoading(true);
     try {
       await loginWithPassword(normalizedPhone, password);
       navigate('/dashboard');
     } catch (err: any) {
       const msg = err.response?.data?.message || err.response?.data?.data?.message || err.message || '';
-      devLog('loginWithPassword error:', msg);
-      if (msg.includes('Parol o\'rnatilmagan') || msg.includes('Parol noto\'g\'ri') || msg.includes('not found') || msg.includes('yo\'q')) {
-        setError(msg || "Telefon raqam yoki parol noto'g'ri");
-      } else {
-        setError(msg || "Kirishda xatolik");
-      }
+      setError(msg || "Telefon raqam yoki parol noto'g'ri");
     } finally {
       setLoading(false);
     }
@@ -90,7 +86,6 @@ export default function LoginPage() {
       setStep('code');
       setResendTimer(60);
       setInfo('Telegram botdan 6 xonali kodni oling');
-      devLog('Code sent to:', normalizedPhone);
     } catch (err: any) {
       const msg = err.response?.data?.message || err.response?.data?.data?.message || err.message || '';
       setError(msg || "Kod yuborishda xatolik. Telegram bot ulanganligi tekshiring.");
@@ -102,18 +97,16 @@ export default function LoginPage() {
   // ─── Step 3: Verify code ──────────────────────────────────────────────────────
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     setError('');
     if (code.length < 6) { setError("6 ta raqamli kodni kiriting"); return; }
     setLoading(true);
     try {
       await api.post('/auth/check-code', { phone: normalizePhone(phone), code });
-      devLog('Code verified, moving to set-password step');
       setStep('set-password');
     } catch (err: any) {
       const msg = err.response?.data?.message || err.response?.data?.data?.message || '';
       if (err.response?.status === 404) {
-        setStep('set-password'); // endpoint not found fallback
+        setStep('set-password');
       } else {
         setError(msg || "Kod noto'g'ri. Telegram botdan tekshiring.");
       }
@@ -125,15 +118,12 @@ export default function LoginPage() {
   // ─── Step 4: Set new password ─────────────────────────────────────────────────
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     setError('');
     if (newPassword.length < 6) { setError("Parol kamida 6 ta belgi bo'lishi kerak"); return; }
     if (newPassword !== confirmPassword) { setError("Parollar mos emas"); return; }
-    const normalizedPhone = normalizePhone(phone);
-    devLog('verifyCode & setPassword — phone:', normalizedPhone, 'code:', code);
     setLoading(true);
     try {
-      await verifyCode(normalizedPhone, code, newPassword);
+      await verifyCode(normalizePhone(phone), code, newPassword);
       navigate('/dashboard');
     } catch (err: any) {
       const msg = err.response?.data?.message || err.response?.data?.data?.message || err.message || '';
@@ -151,223 +141,240 @@ export default function LoginPage() {
 
   // ─── UI helpers ───────────────────────────────────────────────────────────────
   const stepTitle: Record<Step, string> = {
-    'main': 'Kirish',
-    'code': 'Tasdiqlash kodi',
-    'set-password': 'Yangi parol',
+    'main': 'Tizimga Kirish',
+    'code': 'Tasdiqlash Kodi',
+    'set-password': 'Parol O\'rnatish',
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-[#08060d] overflow-hidden font-sans">
       {/* ── Left branding panel ── */}
-      <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 relative overflow-hidden flex-col justify-between p-12">
+      <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-[#08060d] via-[#16171d] to-[#08060d] relative overflow-hidden flex-col justify-between p-16">
+        {/* Animated Background blobs */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#aa3bff]/10 rounded-full blur-[120px] -mr-32 -mt-32 animate-pulse" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-600/10 rounded-full blur-[100px] -ml-32 -mb-32" />
+        
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-16">
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg p-2">
+          <div className="flex items-center gap-4 mb-24 group">
+            <div className="w-16 h-16 bg-white rounded-[1.5rem] flex items-center justify-center shadow-2xl p-3 transform transition-transform group-hover:rotate-12 group-hover:scale-110">
                <img 
-                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Logo_IT_Park_Uzbekistan.svg/3840px-Logo_IT_Park_Uzbekistan.svg.png" 
+                 src="/Images/Logo.png" 
                  alt="IT Park" 
                  className="w-full h-full object-contain"
                />
             </div>
             <div>
-              <span className="text-white font-black text-xl uppercase tracking-tighter">IT Academy</span>
-              <p className="text-[10px] text-white/40 uppercase tracking-[0.2em] font-bold">Exam Portal</p>
+              <span className="text-white font-black text-2xl uppercase tracking-tighter block leading-none">IT Academy</span>
+              <p className="text-[10px] text-[#aa3bff] uppercase tracking-[0.4em] font-black mt-2">Exam Platform v2.0</p>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <h1 className="text-4xl font-black text-white leading-tight">
-              Bilimingizni<br />
-              <span className="text-indigo-400">sinab ko'ring</span>
+          <div className="space-y-12">
+            <h1 className="text-7xl font-black text-white leading-none tracking-tighter">
+              Potential <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#aa3bff] to-[#c084fc]">Unleashed.</span>
             </h1>
-            <p className="text-white/50 text-base leading-relaxed">
-              Imtihonlar, davomat va to'lovlarni<br />bir joyda kuzating.
+            <p className="text-[#9ca3af] text-xl font-medium leading-relaxed max-w-md">
+              Kelajakni biz bilan quring. <br />
+              Imtihonlar, natijalar va akademik rivojlanish markazi.
             </p>
           </div>
         </div>
 
-        {/* Feature list */}
-        <div className="relative z-10 space-y-3">
+        {/* Dynamic Feature list */}
+        <div className="relative z-10 grid grid-cols-2 gap-8">
           {[
-            { icon: '📝', text: 'Online imtihonlar' },
-            { icon: '📊', text: 'Davomat nazorati' },
-            { icon: '💳', text: "To'lov tarixi" },
-            { icon: '🤖', text: 'Telegram orqali kirish' },
-          ].map((f) => (
-            <div key={f.text} className="flex items-center gap-3 text-white/60 text-sm">
-              <span>{f.icon}</span>
-              <span>{f.text}</span>
+            { icon: Zap, text: 'Real-time Natijalar', color: 'text-[#aa3bff]' },
+            { icon: ShieldCheck, text: 'Xavfsiz Tizim', color: 'text-emerald-400' },
+            { icon: Globe, text: 'Global Standart', color: 'text-indigo-400' },
+            { icon: Sparkles, text: 'AI Analitika', color: 'text-amber-400' },
+          ].map((f, i) => (
+            <div key={i} className="flex items-center gap-4 group cursor-default">
+              <div className="w-12 h-12 bg-white/5 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/5 group-hover:bg-[#aa3bff]/10 transition-colors">
+                <f.icon className={cn("w-6 h-6", f.color)} />
+              </div>
+              <span className="text-white/60 font-black text-sm uppercase tracking-widest">{f.text}</span>
             </div>
           ))}
         </div>
 
-        {/* Decorative blobs */}
-        <div className="absolute top-1/4 right-0 w-64 h-64 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/4 left-0 w-48 h-48 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+        {/* Glassmorphism foot note */}
+        <div className="relative z-10 mt-12 p-6 bg-white/5 backdrop-blur-xl border border-white/5 rounded-3xl">
+           <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mb-2 leading-none">Status System</p>
+           <div className="flex items-center gap-3">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]" />
+              <p className="text-emerald-400 text-xs font-black uppercase tracking-widest leading-none">Barcha tizimlar faol · 200 OK</p>
+           </div>
+        </div>
       </div>
 
       {/* ── Right form panel ── */}
-      <div className="flex-1 flex items-center justify-center p-6 bg-slate-50 dark:bg-slate-950">
-        <div className="w-full max-w-md">
+      <div className="flex-1 flex items-center justify-center p-8 bg-[#08060d] relative overflow-hidden">
+        {/* Mobile decorative elements */}
+        <div className="lg:hidden absolute top-0 right-0 w-64 h-64 bg-[#aa3bff]/10 rounded-full blur-[80px] -mr-32 -mt-32" />
+        
+        <div className="w-full max-w-lg relative z-10">
 
           {/* Logo (mobile only) */}
-          <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center p-2 shadow-sm border border-slate-100">
-               <img 
-                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Logo_IT_Park_Uzbekistan.svg/3840px-Logo_IT_Park_Uzbekistan.svg.png" 
-                 alt="IT Park" 
-                 className="w-full h-full object-contain"
-               />
+          <div className="lg:hidden flex items-center gap-4 mb-16 justify-center">
+            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center p-3 shadow-2xl">
+               <img src="/Images/Logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
-            <span className="text-slate-900 dark:text-white font-black text-2xl uppercase tracking-tighter">IT Academy</span>
+            <span className="text-white font-black text-3xl uppercase tracking-tighter">IT Academy</span>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl shadow-slate-200/50 dark:shadow-black/30 p-8 border border-slate-100 dark:border-slate-800">
-
+          <div className="bg-[#16171d]/80 backdrop-blur-2xl rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] p-12 border border-[#2e303a]">
             {/* Step indicator */}
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-1">
+            <div className="mb-12">
+              <div className="flex items-center gap-4">
                 {(['main', 'code', 'set-password'] as Step[]).map((s, i) => (
-                  <React.Fragment key={s}>
-                    <div className={`w-2 h-2 rounded-full transition-all ${s === step ? 'bg-indigo-600 w-4' : i < (['main', 'code', 'set-password'] as Step[]).indexOf(step) ? 'bg-green-500' : 'bg-slate-200 dark:bg-slate-700'}`} />
-                    {i < 2 && <div className={`flex-1 h-px ${i < (['main', 'code', 'set-password'] as Step[]).indexOf(step) ? 'bg-green-500' : 'bg-slate-200 dark:bg-slate-700'}`} />}
-                  </React.Fragment>
+                  <div 
+                    key={s} 
+                    className={cn(
+                      "h-1.5 rounded-full transition-all duration-500 flex-1",
+                      s === step ? "bg-[#aa3bff] shadow-[0_0_12px_#aa3bff]" : 
+                      (['main', 'code', 'set-password'] as Step[]).indexOf(step) > i ? "bg-emerald-500" : "bg-[#2e303a]"
+                    )} 
+                  />
                 ))}
               </div>
-              <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-3">{stepTitle[step]}</h2>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-                {step === 'main' && 'Hisobingizga kiring'}
-                {step === 'code' && 'Telegram botdan kodni oling'}
-                {step === 'set-password' && 'Hisobingiz uchun yangi parol o\'rnatish'}
-              </p>
+              <div className="flex justify-between items-center mt-10">
+                 <div>
+                    <h2 className="text-4xl font-black text-white tracking-tight mb-2">{stepTitle[step]}</h2>
+                    <p className="text-[#9ca3af] font-medium text-sm">
+                      {step === 'main' && 'Nexus Engine onlayn. Ma\'lumotlarni kiriting.'}
+                      {step === 'code' && 'Tasdiqlash kodi Telegram botga yuborildi.'}
+                      {step === 'set-password' && 'Akkauntingiz uchun maxfiy parol kiriting.'}
+                    </p>
+                 </div>
+                 <div className="w-14 h-14 bg-[#aa3bff]/10 rounded-[1.5rem] flex items-center justify-center">
+                    {step === 'main' && <ShieldCheck className="w-7 h-7 text-[#aa3bff]" />}
+                    {step === 'code' && <Send className="w-7 h-7 text-[#aa3bff]" />}
+                    {step === 'set-password' && <Lock className="w-7 h-7 text-[#aa3bff]" />}
+                 </div>
+              </div>
             </div>
 
-            {/* ── Error / Info ── */}
-            {error && (
-              <div className="mb-4 flex items-start gap-2.5 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-2xl p-3.5 text-sm border border-red-100 dark:border-red-900/50">
-                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-            {info && !error && (
-              <div className="mb-4 flex items-start gap-2.5 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 rounded-2xl p-3.5 text-sm border border-green-100 dark:border-green-900/50">
-                <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>{info}</span>
-              </div>
-            )}
+            {/* Notifications / Errors */}
+            <AnimatePresence mode="wait">
+              {error && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                  className="mb-8 flex items-start gap-4 bg-red-500/10 text-red-500 rounded-2xl p-5 text-sm border border-red-500/20 shadow-lg shadow-red-500/5 font-bold"
+                >
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <span>{error}</span>
+                </motion.div>
+              )}
+              {info && !error && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                  className="mb-8 flex items-start gap-4 bg-emerald-500/10 text-emerald-500 rounded-2xl p-5 text-sm border border-emerald-500/20 shadow-lg shadow-emerald-500/5 font-bold"
+                >
+                  <CheckCircle2 className="w-5 h-5 shrink-0" />
+                  <span>{info}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {/* ══ STEP: main (phone + password) ══════════════════════════════════ */}
+            {/* ══ STEP: main ══════════════════════════════════════════════════════ */}
             {step === 'main' && (
-              <form onSubmit={handleMainLogin} className="space-y-4">
-                {/* Phone */}
+              <form onSubmit={handleMainLogin} className="space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                    Telefon raqam
+                  <label className="block text-[10px] font-black text-[#6b6375] uppercase tracking-[0.3em] mb-3 ml-1">
+                    Telefon Raqam
                   </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <div className="relative group">
+                    <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6b6375] group-focus-within:text-[#aa3bff] transition-colors" />
                     <input
                       type="tel"
                       value={phone}
                       onChange={e => { setPhone(e.target.value); setError(''); }}
                       placeholder="+998 90 123 45 67"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium"
-                      autoComplete="tel"
+                      className="w-full pl-14 pr-6 py-4 rounded-2xl border-2 border-[#2e303a] bg-[#1f2028] text-white placeholder-white/10 focus:outline-none focus:border-[#aa3bff] transition-all text-sm font-black shadow-inner"
                       required
                     />
                   </div>
                 </div>
 
-                {/* Password */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  <label className="block text-[10px] font-black text-[#6b6375] uppercase tracking-[0.3em] mb-3 ml-1">
                     Parol
                   </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <div className="relative group">
+                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6b6375] group-focus-within:text-[#aa3bff] transition-colors" />
                     <input
                       type={showPwd ? 'text' : 'password'}
                       value={password}
                       onChange={e => { setPassword(e.target.value); setError(''); }}
-                      placeholder="Parolni kiriting"
-                      className="w-full pl-10 pr-12 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium"
-                      autoComplete="current-password"
+                      placeholder="••••••••"
+                      className="w-full pl-14 pr-14 py-4 rounded-2xl border-2 border-[#2e303a] bg-[#1f2028] text-white placeholder-white/10 focus:outline-none focus:border-[#aa3bff] transition-all text-sm font-black shadow-inner"
                       required
                     />
                     <button type="button" onClick={() => setShowPwd(v => !v)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
-                      {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      className="absolute right-5 top-1/2 -translate-y-1/2 text-[#6b6375] hover:text-white transition-colors">
+                      {showPwd ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
 
-                {/* Submit */}
                 <button type="submit" disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 mt-2">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Kirish</span><ArrowRight className="w-4 h-4" /></>}
+                  className="w-full flex items-center justify-center gap-4 bg-[#aa3bff] hover:bg-[#9329e6] disabled:opacity-60 text-white font-black py-5 rounded-2xl shadow-2xl shadow-[#aa3bff]/30 active:scale-[0.98] transition-all uppercase tracking-widest text-xs mt-6">
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Tizimga Kirish</span><ChevronRight className="w-5 h-5" /></>}
                 </button>
 
-                {/* Verify link */}
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <p className="text-slate-500 dark:text-slate-400 text-sm text-center mb-2">
-                    Hisobingiz tasdiqlanmaganmi yoki parolni unutdingizmi?
-                  </p>
-                  <button type="button" onClick={handleSendCode} disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400 font-semibold text-sm py-2.5 px-4 rounded-2xl border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors">
-                    <Send className="w-3.5 h-3.5" />
-                    Telegram orqali tasdiqlash
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                {/* Reset Flow Toggle */}
+                <div className="pt-8 mt-4 border-t border-[#2e303a]">
+                   <button type="button" onClick={handleSendCode} disabled={loading}
+                     className="w-full flex items-center justify-center gap-3 text-[#aa3bff] font-black text-[10px] uppercase tracking-[0.2em] py-5 rounded-2xl border-2 border-[#aa3bff]/10 hover:bg-[#aa3bff]/5 transition-all">
+                     <Send className="w-4 h-4" />
+                     Parolni unutdingizmi? (Telegram orqali)
+                   </button>
                 </div>
               </form>
             )}
 
             {/* ══ STEP: code ══════════════════════════════════════════════════════ */}
             {step === 'code' && (
-              <form onSubmit={handleVerifyCode} className="space-y-4">
-                {/* Phone display (read-only) */}
-                <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-slate-800 rounded-2xl px-4 py-3 border border-slate-200 dark:border-slate-700">
-                  <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                  <span className="text-slate-700 dark:text-slate-300 text-sm font-mono font-medium">{phone}</span>
+              <form onSubmit={handleVerifyCode} className="space-y-8">
+                <div className="flex items-center gap-4 bg-[#1f2028] rounded-2xl px-6 py-5 border-2 border-[#2e303a] shadow-inner">
+                  <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
+                     <Phone className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <span className="text-white text-lg font-black tracking-widest">{phone}</span>
                   <button type="button" onClick={() => { setStep('main'); setCode(''); setError(''); }}
-                    className="ml-auto text-indigo-600 text-xs font-semibold hover:underline">
-                    O'zgartirish
+                    className="ml-auto text-[#aa3bff] text-[10px] font-black uppercase tracking-widest hover:underline">
+                    Xato?
                   </button>
                 </div>
 
-                {/* Code input */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                    Telegram kodi
+                  <label className="block text-[10px] font-black text-[#6b6375] uppercase tracking-[0.3em] mb-4 text-center">
+                    6 Xonali Kod
                   </label>
-                  <div className="relative">
-                    <Shield className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={6}
-                      value={code}
-                      onChange={e => { setCode(e.target.value.replace(/\D/g, '')); setError(''); }}
-                      placeholder="000000"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-center text-xl font-mono tracking-[0.5em] font-bold"
-                      autoFocus
-                    />
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1.5 text-center">
-                    Telegram botdan (@bots_tester_bot) kelgan 6 ta raqamni kiriting
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={code}
+                    onChange={e => { setCode(e.target.value.replace(/\D/g, '')); setError(''); }}
+                    placeholder="000 000"
+                    className="w-full py-6 rounded-[2rem] border-2 border-[#2e303a] bg-[#1f2028] text-white focus:outline-none focus:border-[#aa3bff] text-center text-5xl font-black tracking-[0.3em] shadow-inner placeholder-white/5"
+                    autoFocus
+                  />
+                  <p className="text-[10px] text-[#6b6375] mt-6 text-center font-black uppercase tracking-[0.15em] leading-relaxed">
+                    Telegram botdan (@bots_tester_bot) <br/> yuborilgan tasdiqlash kodini kiriting
                   </p>
                 </div>
 
                 <button type="submit" disabled={loading || code.length < 6}
-                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-indigo-500/25">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Tasdiqlash</span><ArrowRight className="w-4 h-4" /></>}
+                  className="w-full flex items-center justify-center gap-4 bg-[#aa3bff] hover:bg-[#9329e6] disabled:opacity-60 text-white font-black py-5 rounded-2xl shadow-2xl shadow-[#aa3bff]/30 active:scale-[0.98] transition-all uppercase tracking-widest text-xs">
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Kodini Tasdiqlash</span>}
                 </button>
 
-                {/* Resend */}
                 <button type="button" onClick={handleResend} disabled={resendTimer > 0 || loading}
-                  className="w-full flex items-center justify-center gap-1.5 text-slate-500 text-sm py-2 rounded-xl hover:text-indigo-600 transition-colors disabled:opacity-50">
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  className="w-full flex items-center justify-center gap-3 text-[#6b6375] font-black text-[10px] uppercase tracking-widest hover:text-[#aa3bff] transition-colors py-2">
+                  <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
                   {resendTimer > 0 ? `Qayta yuborish (${resendTimer}s)` : 'Kodni qayta yuborish'}
                 </button>
               </form>
@@ -375,70 +382,78 @@ export default function LoginPage() {
 
             {/* ══ STEP: set-password ══════════════════════════════════════════════ */}
             {step === 'set-password' && (
-              <form onSubmit={handleSetPassword} className="space-y-4">
-                {/* New password */}
+              <form onSubmit={handleSetPassword} className="space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                    Yangi parol
+                  <label className="block text-[10px] font-black text-[#6b6375] uppercase tracking-[0.3em] mb-3 ml-1">
+                    Yangi Parol
                   </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <div className="relative group">
+                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6b6375] group-focus-within:text-[#aa3bff] transition-colors" />
                     <input
                       type={showNewPwd ? 'text' : 'password'}
                       value={newPassword}
                       onChange={e => { setNewPassword(e.target.value); setError(''); }}
                       placeholder="Kamida 6 ta belgi"
-                      className="w-full pl-10 pr-12 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium"
+                      className="w-full pl-14 pr-14 py-4 rounded-2xl border-2 border-[#2e303a] bg-[#1f2028] text-white focus:outline-none focus:border-[#aa3bff] transition-all text-sm font-black shadow-inner"
                       autoFocus
                     />
                     <button type="button" onClick={() => setShowNewPwd(v => !v)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                      {showNewPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      className="absolute right-5 top-1/2 -translate-y-1/2 text-[#6b6375] hover:text-white">
+                      {showNewPwd ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
 
-                {/* Confirm password */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                    Parolni tasdiqlang
+                  <label className="block text-[10px] font-black text-[#6b6375] uppercase tracking-[0.3em] mb-3 ml-1">
+                    Tasdiqlash
                   </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <div className="relative group">
+                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6b6375] group-focus-within:text-[#aa3bff] transition-colors" />
                     <input
                       type={showNewPwd ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={e => { setConfirmPassword(e.target.value); setError(''); }}
                       placeholder="Parolni takrorlang"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium"
+                      className="w-full pl-14 pr-14 py-4 rounded-2xl border-2 border-[#2e303a] bg-[#1f2028] text-white focus:outline-none focus:border-[#aa3bff] transition-all text-sm font-black shadow-inner"
                     />
                   </div>
                   {newPassword && confirmPassword && (
-                    <p className={`text-xs mt-1 ${newPassword === confirmPassword ? 'text-green-500' : 'text-red-500'}`}>
-                      {newPassword === confirmPassword ? '✓ Parollar mos' : '✗ Parollar mos emas'}
+                    <p className={cn("text-[9px] font-black uppercase tracking-widest mt-3 ml-1", newPassword === confirmPassword ? 'text-emerald-500' : 'text-red-500')}>
+                      {newPassword === confirmPassword ? '✓ Parollar mos keladi' : '✗ Parollar mos emas'}
                     </p>
                   )}
                 </div>
 
-                <button type="submit" disabled={loading || newPassword.length < 6 || newPassword !== confirmPassword}
-                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-indigo-500/25">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Parolni saqlash va kirish</span><ArrowRight className="w-4 h-4" /></>}
-                </button>
+                <div className="pt-4">
+                  <button type="submit" disabled={loading || newPassword.length < 6 || newPassword !== confirmPassword}
+                    className="w-full flex items-center justify-center gap-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-black py-5 rounded-2xl shadow-2xl shadow-emerald-500/20 active:scale-[0.98] transition-all uppercase tracking-widest text-xs">
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Parolni O'rnatish va Kirish</span>}
+                  </button>
+                </div>
 
                 <button type="button" onClick={() => { setStep('code'); setError(''); }}
-                  className="w-full text-slate-500 text-sm py-2 hover:text-slate-700 transition-colors">
-                  ← Kodga qaytish
+                  className="w-full text-[#6b6375] font-black text-[10px] uppercase tracking-widest hover:text-white transition-colors mt-2">
+                  ← Orqaga (Kodni tahrirlash)
                 </button>
               </form>
             )}
 
           </div>
 
-          <p className="text-center text-xs text-slate-400 mt-6">
-            © 2024 IT School · Exam Platform v2.0
-          </p>
+          <div className="mt-12 text-center">
+            <p className="text-[10px] font-black text-[#6b6375] tracking-[0.3em] uppercase opacity-40">
+              Nexus Secure Authentication Node v2.04
+            </p>
+            <div className="flex justify-center gap-6 mt-4 opacity-20">
+               <span className="w-1.5 h-1.5 bg-[#aa3bff] rounded-full" />
+               <span className="w-1.5 h-1.5 bg-[#aa3bff] rounded-full" />
+               <span className="w-1.5 h-1.5 bg-[#aa3bff] rounded-full" />
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+

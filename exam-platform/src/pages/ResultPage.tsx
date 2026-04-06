@@ -38,13 +38,13 @@ const ResultPage: React.FC = () => {
   const badge = score >= 80 ? 'Ajoyib natija!' : score >= 50 ? 'Yaxshi harakat!' : 'Ko\'proq o\'rgan!';
   const color = score >= 80 ? 'from-green-500 to-emerald-600' : score >= 50 ? 'from-amber-400 to-orange-500' : 'from-red-500 to-rose-600';
 
-  if (loading) return <div className="min-h-screen flex justify-center items-center"><Loader2 className="w-8 h-8 text-primary-400 animate-spin" /></div>;
+  if (loading) return <div className="min-h-screen flex justify-center items-center"><Loader2 className="w-8 h-8 text-[var(--accent)] animate-spin" /></div>;
 
   return (
-    <div className="min-h-[90vh] w-full flex items-center justify-center bg-slate-50/50 dark:bg-transparent overflow-hidden relative">
+    <div className="min-h-[90vh] w-full flex items-center justify-center bg-[var(--bg)] overflow-hidden relative">
       {/* Background Decorative Blobs */}
-      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary-400/10 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-400/10 rounded-full blur-[100px] translate-x-1/2 translate-y-1/2 pointer-events-none" />
+      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[var(--accent)]/10 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[100px] translate-x-1/2 translate-y-1/2 pointer-events-none" />
 
       <div className="w-full max-w-sm animate-in space-y-5 relative z-10 px-4">
 
@@ -79,19 +79,19 @@ const ResultPage: React.FC = () => {
         <div className="grid grid-cols-2 gap-4">
           <div className="card p-6 flex flex-col items-center text-center relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-12 h-12 bg-green-500/5 rounded-full -mr-6 -mt-6" />
-            <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mb-3 ring-4 ring-green-50/50">
+            <div className="w-14 h-14 bg-emerald-500/10 rounded-full flex items-center justify-center mb-3 ring-4 ring-emerald-500/5">
               <CheckCircle2 className="w-7 h-7 text-green-500" />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">To'g'ri</p>
-            <p className="text-3xl font-black text-green-600 tabular-nums">{result?.correct ?? result?.correct_count ?? '—'}</p>
+            <p className="text-[10px] font-black text-[var(--text)] uppercase tracking-widest mb-1">To'g'ri</p>
+            <p className="text-3xl font-black text-emerald-500 tabular-nums">{result?.correct ?? result?.correct_count ?? '—'}</p>
           </div>
 
           <div className="card p-6 flex flex-col items-center text-center relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-12 h-12 bg-red-500/5 rounded-full -mr-6 -mt-6" />
-            <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mb-3 ring-4 ring-red-50/50">
+            <div className="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center mb-3 ring-4 ring-red-500/5">
               <XCircle className="w-7 h-7 text-red-400" />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Noto'g'ri</p>
+            <p className="text-[10px] font-black text-[var(--text)] uppercase tracking-widest mb-1">Noto'g'ri</p>
             <p className="text-3xl font-black text-red-500 tabular-nums">
               {result?.incorrect ?? result?.incorrect_count ?? (result?.total && (result?.correct || result?.correct_count) ? result.total - (result.correct || result.correct_count) : '—')}
             </p>
@@ -99,20 +99,20 @@ const ResultPage: React.FC = () => {
 
           <div className="card p-6 flex flex-col items-center text-center relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-12 h-12 bg-primary-500/5 rounded-full -mr-6 -mt-6" />
-            <div className="w-14 h-14 bg-primary-50 rounded-full flex items-center justify-center mb-3 ring-4 ring-primary-50/50">
+            <div className="w-14 h-14 bg-[var(--accent)]/10 rounded-full flex items-center justify-center mb-3 ring-4 ring-[var(--accent)]/5">
               <Trophy className="w-7 h-7 text-primary-500" />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Jami savol</p>
-            <p className="text-3xl font-black text-slate-800 tabular-nums">{result?.total ?? result?.total_questions ?? questions?.length ?? '—'}</p>
+            <p className="text-[10px] font-black text-[var(--text)] uppercase tracking-widest mb-1">Jami savol</p>
+            <p className="text-3xl font-black text-[var(--text-h)] tabular-nums">{result?.total ?? result?.total_questions ?? questions?.length ?? '—'}</p>
           </div>
 
           <div className="card p-6 flex flex-col items-center text-center relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-12 h-12 bg-amber-500/5 rounded-full -mr-6 -mt-6" />
-            <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center mb-3 ring-4 ring-amber-50/50">
+            <div className="w-14 h-14 bg-amber-500/10 rounded-full flex items-center justify-center mb-3 ring-4 ring-amber-500/5">
               <Clock className="w-7 h-7 text-amber-500" />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Sarf vaqt</p>
-            <p className="text-3xl font-black text-slate-800 tabular-nums">{result?.time_taken ? `${result.time_taken}s` : '—'}</p>
+            <p className="text-[10px] font-black text-[var(--text)] uppercase tracking-widest mb-1">Sarf vaqt</p>
+            <p className="text-3xl font-black text-[var(--text-h)] tabular-nums">{result?.time_taken ? `${result.time_taken}s` : '—'}</p>
           </div>
         </div>
 
