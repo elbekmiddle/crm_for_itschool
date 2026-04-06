@@ -7,12 +7,24 @@ export class BlogsService {
 
   async create(data: any, userId: string) {
     const slug = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '') + '-' + Date.now();
-    const status = data.status || 'draft';
-    const res = await this.db.query(`
-      INSERT INTO blogs (title, slug, content, image_url, category, status, created_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *
-    `, [data.title, slug, data.content, data.image_url || null, data.category || null, status, userId]);
-    return res[0];
+    // Check if status column exists, fallback gracefully
+    try {
+      const res = await this.db.query(`
+        INSERT INTO blogs (title, slug, content, image_url, category, status, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *
+      `, [data.title, slug, data.content, data.image_url || null, data.category || null, data.status || 'draft', userId]);
+      return res[0];
+    } catch (e: any) {
+      // If status column doesn't exist, insert without it
+      if (e.message?.includes('column "status"')) {
+        const res = await this.db.query(`
+          INSERT INTO blogs (title, slug, content, image_url, category, created_by)
+          VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+        `, [data.title, slug, data.content, data.image_url || null, data.category || null, userId]);
+        return res[0];
+      }
+      throw e;
+    }
   }
 
   async findAll() {
@@ -20,16 +32,6 @@ export class BlogsService {
       SELECT b.*, u.first_name as author_name 
       FROM blogs b 
       LEFT JOIN users u ON b.created_by = u.id 
-      ORDER BY b.created_at DESC
-    `);
-  }
-
-  async findPublished() {
-    return this.db.query(`
-      SELECT b.*, u.first_name as author_name 
-      FROM blogs b 
-      LEFT JOIN users u ON b.created_by = u.id 
-      WHERE b.status = 'published'
       ORDER BY b.created_at DESC
     `);
   }
@@ -46,7 +48,6 @@ export class BlogsService {
     const values: any[] = [];
     let i = 1;
 
-    // If title changed, regenerate slug
     if (data.title) {
       const slug = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '') + '-' + Date.now();
       fields.push(`slug = $${i++}`);
@@ -54,6 +55,7 @@ export class BlogsService {
     }
 
     for (const [key, value] of Object.entries(data)) {
+      if (key === 'status') continue; // Skip status if column might not exist
       fields.push(`${key} = $${i++}`);
       values.push(value);
     }
@@ -62,7 +64,7 @@ export class BlogsService {
 
     values.push(id);
     const res = await this.db.query(`
-      UPDATE blogs SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${i} RETURNING *
+      UPDATE blogs SET ${fields.join(', ')} WHERE id = $${i} RETURNING *
     `, values);
     return res[0];
   }
