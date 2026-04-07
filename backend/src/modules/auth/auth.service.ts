@@ -42,6 +42,34 @@ export class AuthService {
     return `+${normalized}`;
   }
 
+  /** GET /auth/me — always fresh from DB (names, phone, photo). */
+  async getProfileForRequest(reqUser: { id: string; role: string }) {
+    if (!reqUser?.id) {
+      throw new UnauthorizedException('Sessiya topilmadi');
+    }
+    if (reqUser.role === 'STUDENT') {
+      const rows = await get_student_by_id_with_auth_data(this.dbService, reqUser.id);
+      if (!rows.length) {
+        throw new UnauthorizedException('Foydalanuvchi topilmadi');
+      }
+      const s = rows[0] as any;
+      return {
+        id: s.id,
+        role: 'STUDENT' as const,
+        first_name: s.first_name,
+        last_name: s.last_name,
+        phone: s.phone,
+        email: s.email ?? null,
+        parent_name: s.parent_name,
+      };
+    }
+    const rows = await get_user_by_id_for_auth(this.dbService, reqUser.id);
+    if (!rows.length) {
+      throw new UnauthorizedException('Foydalanuvchi topilmadi');
+    }
+    return rows[0];
+  }
+
   async logout(token: string) {
     try {
       const decoded = this.jwtService.decode(token) as any;
@@ -59,7 +87,7 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     this.logger.debug(`[login] email: ${loginDto.email}`);
     const users = await this.dbService.query(
-      'SELECT id, email, password, role, first_name, last_name, phone, telegram_chat_id FROM users WHERE email = $1',
+      'SELECT id, email, password, role, first_name, last_name FROM users WHERE email = $1',
       [loginDto.email]
     );
     
@@ -75,8 +103,12 @@ export class AuthService {
       throw new UnauthorizedException('Email yoki parol noto\'g\'ri');
     }
     
-    // Update last login
-    await this.dbService.query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);
+    // Backward compatibility: older schemas may not have last_login_at yet.
+    try {
+      await this.dbService.query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);
+    } catch (error) {
+      this.logger.warn(`[login] Skipping last_login_at update: ${error.message}`);
+    }
 
     try {
       const tokens = await this.generateTokens(user);
@@ -278,7 +310,7 @@ export class AuthService {
   private async generateTokens(user: any) {
     const rolePermissions = {
       'ADMIN': ['*'],
-      'MANAGER': ['STUDENT_READ', 'STUDENT_CREATE', 'STUDENT_UPDATE', 'STUDENT_ENROLL', 'COURSE_READ', 'GROUP_READ', 'GROUP_CREATE', 'GROUP_UPDATE', 'PAYMENT_READ', 'PAYMENT_CREATE', 'ANALYTICS_VIEW'],
+      'MANAGER': ['STUDENT_READ', 'STUDENT_CREATE', 'STUDENT_UPDATE', 'STUDENT_ENROLL', 'COURSE_READ', 'GROUP_READ', 'GROUP_UPDATE', 'PAYMENT_READ', 'PAYMENT_CREATE', 'ANALYTICS_VIEW'],
       'TEACHER': ['STUDENT_READ', 'STUDENT_CREATE', 'STUDENT_UPDATE', 'GROUP_READ', 'GROUP_CREATE', 'GROUP_UPDATE', 'ATTENDANCE_MARK', 'ATTENDANCE_READ', 'EXAM_MANAGE', 'PAYMENT_READ', 'ANALYTICS_VIEW'],
       'STUDENT': ['STUDENT_READ', 'EXAM_PASS', 'EXAM_READ', 'ATTENDANCE_READ', 'PAYMENT_READ', 'COURSE_READ']
     };
@@ -302,7 +334,7 @@ export class AuthService {
 
   async recoverPassword(email: string) {
     const users = await this.dbService.query(
-      'SELECT id, email, first_name, phone, telegram_chat_id FROM users WHERE email = $1',
+      'SELECT id, email, first_name FROM users WHERE email = $1',
       [email]
     );
     if (!users.length) throw new NotFoundException('Foydalanuvchi topilmadi');

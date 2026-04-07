@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -9,6 +10,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   // Cookie parser - HTTPOnly cookie'lar uchun
   app.use(cookieParser());
@@ -16,16 +18,16 @@ async function bootstrap() {
   // Production Security & Performance
   app.use(helmet());
   app.use(compression());
-  
+
   const isProduction = process.env.NODE_ENV === 'production';
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
-		'http://localhost:5173',
-		'http://localhost:5174',
-		'http://localhost:5175',
-		'http://192.168.1.137:5173',
-		'http://192.168.1.137:5174'
-	]
-  
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    'http://192.168.1.137:5173',
+    'http://192.168.1.137:5174'
+  ]
+
   app.enableCors({
     origin: (origin, callback) => {
       // In development, allow all origins
@@ -39,7 +41,7 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-refresh-token'],
   });
-  
+
   app.setGlobalPrefix('api/v1');
 
   // Global Logic
@@ -56,12 +58,12 @@ async function bootstrap() {
     .addTag('exams')
     .addBearerAuth()
     .build();
-  
+
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/v1/docs', app, document);
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}/api/docs`);
+  console.log(`Application is running on: http://localhost:${port}/api/v1/docs`);
 }
 bootstrap();

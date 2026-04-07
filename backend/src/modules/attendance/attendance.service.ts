@@ -19,7 +19,13 @@ export class AttendanceService {
 
   async markAttendance(data: any) {
     const result = await mark_attendance(this.dbService, data);
-    
+    this.socketsGateway.emitDashboardRefresh({
+      source: 'attendance',
+      action: 'marked',
+      groupId: data.group_id,
+      status: data.status,
+    });
+
     // If student is ABSENT, maybe get a funny AI status and notify
     if (data.status === 'ABSENT') {
        const aiComment = await this.aiService.getStudentHumorStatus({
@@ -58,7 +64,9 @@ export class AttendanceService {
   }
 
   async update(id: string, status: string) {
-    return update_attendance(this.dbService, id, status);
+    const row = await update_attendance(this.dbService, id, status);
+    this.socketsGateway.emitDashboardRefresh({ source: 'attendance', action: 'updated' });
+    return row;
   }
 }
 

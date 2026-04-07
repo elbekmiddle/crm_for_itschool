@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { Pool } from 'pg';
 import { ConfigService } from '@nestjs/config';
 import { DbService } from './db.service';
+import { SchemaBootstrapService } from './schema-bootstrap.service';
 
 @Global()
 @Module({
@@ -18,11 +19,12 @@ import { DbService } from './db.service';
           database: configService.get<string>('DB_NAME', 'it_school_crm'),
           max: 20,
           idleTimeoutMillis: 30000,
-          connectionTimeoutMillis: 2000,
+          connectionTimeoutMillis: 10000,
         });
       },
     },
     DbService,
+    SchemaBootstrapService,
   ],
   exports: ['DATABASE_POOL', DbService],
 })

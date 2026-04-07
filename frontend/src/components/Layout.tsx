@@ -1,129 +1,205 @@
-import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
-import { Search, Bell, Settings, Menu, X, GraduationCap } from 'lucide-react';
+import { Search, Bell, Settings, Menu, X, GraduationCap, Moon, Sun } from 'lucide-react';
 import { useAdminStore } from '../store/useAdminStore';
 import { useNotifications } from '../hooks/useNotifications';
 import { useSocketEvents } from '../hooks/useSocketEvents';
 import { cn } from '../lib/utils';
+import { formatPersonName } from '../lib/displayName';
 
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isAppLoading, setIsAppLoading] = useState(true);
+  const [dark, setDark] = useState(() => {
+    const t = localStorage.getItem('theme');
+    if (t === 'light') return false;
+    return true;
+  });
   const { user } = useAdminStore();
+  const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, clearAll } = useNotifications();
+  const notifWrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (!notifWrapRef.current?.contains(e.target as Node)) setShowNotifications(false);
+    };
+    if (showNotifications) document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [showNotifications]);
 
   React.useEffect(() => {
-    const timer = setTimeout(() => setIsAppLoading(false), 1500);
+    const timer = setTimeout(() => setIsAppLoading(false), 800);
     return () => clearTimeout(timer);
   }, []);
 
-  useSocketEvents(user?.id);
+  useEffect(() => {
+    const root = document.documentElement;
+    if (dark) {
+      root.classList.add('dark');
+      root.classList.remove('light');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      root.classList.add('light');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [dark]);
 
-  const initials = user
-    ? `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase()
-    : 'AD';
+  useSocketEvents();
+
+  const displayName = formatPersonName(user?.first_name, user?.last_name, user?.email);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
       <div className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'}`}>
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 py-3 flex items-center justify-between gap-4">
+        <header className="sticky top-0 z-40 flex min-h-[73px] items-center justify-between gap-4 border-b border-[var(--border)] bg-[var(--bg-card)] px-6 py-3 backdrop-blur-xl transition-colors duration-200">
           <div className="flex items-center gap-4 flex-1">
             <button
+              type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-all"
+              className="p-2 rounded-xl hover:bg-[var(--hover-bg)] text-[var(--text)]/60 transition-all cursor-pointer"
             >
               <Menu className="w-5 h-5" />
             </button>
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text)]/35 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Qidirish... (⌘K)"
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-600 outline-none focus:bg-white focus:border-primary-300 transition-all"
+                className="w-full pl-11 pr-4 py-2.5 bg-[var(--bg-muted)] border border-[var(--border)] rounded-xl text-sm text-[var(--text-h)] outline-none focus:border-[var(--accent-border)] transition-all placeholder:text-[var(--text)]/40"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-2 relative">
-            <button 
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="p-2.5 rounded-xl hover:bg-slate-100 relative text-slate-400 transition-all"
+            <button
+              type="button"
+              onClick={() => setDark(!dark)}
+              className="cursor-pointer rounded-xl p-2.5 text-[var(--text)]/60 transition-all duration-200 hover:bg-[var(--hover-bg)] hover:text-[var(--text-h)]"
+              title={dark ? 'Yorug\' rejim' : 'Tungi rejim'}
             >
-              <Bell className="w-[18px] h-[18px]" />
-              {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[8px] text-white font-black">{unreadCount}</span>}
+              {dark ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
             </button>
+            <div className="relative" ref={notifWrapRef}>
+              <button
+                type="button"
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative cursor-pointer rounded-xl p-2.5 text-[var(--text)]/60 transition-all duration-200 hover:bg-[var(--hover-bg)] hover:text-[var(--text-h)]"
+              >
+                <Bell className="h-[18px] w-[18px]" />
+                {unreadCount > 0 && (
+                  <span className="absolute right-1.5 top-1.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-0.5 text-[8px] font-black text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
 
-            {showNotifications && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setShowNotifications(false)} />
-                <div className="relative w-full max-w-md bg-white border border-slate-100 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                  <div className="p-6 bg-gradient-to-br from-primary-600 to-indigo-700 flex items-center justify-between text-white">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center">
-                        <Bell className="w-5 h-5 font-bold" />
-                      </div>
-                      <div>
-                        <h3 className="font-black text-lg">Bildirishnomalar</h3>
-                        <p className="text-white/80 text-[10px] font-bold uppercase tracking-wider">{unreadCount} ta yangi xabar</p>
-                      </div>
-                    </div>
-                    <button onClick={() => setShowNotifications(false)} className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-2xl flex items-center justify-center transition-colors">
-                      <X className="w-5 h-5 font-black" />
-                    </button>
-                  </div>
-                  <div className="max-h-[400px] overflow-y-auto p-4 space-y-2 no-scrollbar bg-slate-50/50">
-                    {notifications.map(n => (
-                      <div 
-                        key={n.id} 
-                        onClick={() => markAsRead(n.id)}
-                        className={cn(
-                          "p-4 rounded-[1.5rem] bg-white border border-slate-100 cursor-pointer shadow-sm transition-all hover:border-primary-200",
-                          !n.read ? "ring-1 ring-primary-500/10" : ""
-                        )}
-                      >
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <p className={cn("text-sm font-black", !n.read ? "text-primary-700" : "text-slate-700")}>{n.title}</p>
-                          {!n.read && <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse" />}
+              <AnimatePresence>
+                {showNotifications && (
+                  <>
+                    <motion.button
+                      type="button"
+                      aria-label="Yopish"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="fixed inset-0 z-[90] cursor-default bg-[var(--bg)]/70 backdrop-blur-xl"
+                      onClick={() => setShowNotifications(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: -12, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                      className="fixed left-1/2 top-[5.5rem] z-[100] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-[var(--bg-card)] shadow-2xl sm:top-[4.75rem]"
+                    >
+                      <div className="flex items-center justify-between bg-gradient-to-br from-[#9329e6] to-indigo-800 p-5 text-white">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20">
+                            <Bell className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-black">Bildirishnomalar</h3>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-white/80">{unreadCount} ta yangi</p>
+                          </div>
                         </div>
-                        <p className="text-[12px] text-slate-500 leading-relaxed mb-2">{n.message}</p>
-                        <p className="text-[9px] text-slate-300 font-bold uppercase tracking-tighter">
-                          {new Date(n.timestamp).toLocaleString('uz-UZ')}
-                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setShowNotifications(false)}
+                          className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 transition-colors duration-200 hover:bg-white/20"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
                       </div>
-                    ))}
-                    {notifications.length === 0 && (
-                      <div className="py-20 text-center">
-                         <div className="w-16 h-16 bg-slate-100 rounded-3xl mx-auto mb-4 flex items-center justify-center">
-                           <Bell className="w-8 h-8 text-slate-300" />
-                         </div>
-                         <p className="text-xs text-slate-400 font-bold italic tracking-wide">Xabarlar yo'q</p>
+                      <div className="max-h-[min(400px,60vh)] space-y-2 overflow-y-auto bg-[var(--bg-muted)]/50 p-4 no-scrollbar">
+                        {notifications.map((n) => (
+                          <button
+                            key={n.id}
+                            type="button"
+                            onClick={() => markAsRead(n.id)}
+                            className={cn(
+                              'w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-4 text-left shadow-sm transition-all duration-200 hover:border-[var(--accent-border)]',
+                              !n.read && 'ring-1 ring-[var(--accent)]/20',
+                            )}
+                          >
+                            <div className="mb-1 flex items-center justify-between gap-2">
+                              <p className={cn('text-sm font-black', !n.read ? 'text-[var(--accent)]' : 'text-[var(--text-h)]')}>{n.title}</p>
+                              {!n.read && <div className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent)]" />}
+                            </div>
+                            <p className="mb-2 text-[12px] leading-relaxed text-[var(--text)]">{n.message}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-tighter text-[var(--text)]/40">
+                              {new Date(n.timestamp).toLocaleString('uz-UZ')}
+                            </p>
+                          </button>
+                        ))}
+                        {notifications.length === 0 && (
+                          <div className="py-16 text-center">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-[var(--hover-bg)]">
+                              <Bell className="h-8 w-8 text-[var(--text)]/25" />
+                            </div>
+                            <p className="text-xs font-bold italic tracking-wide text-[var(--text)]/50">Xabarlar yo&apos;q</p>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  {notifications.length > 0 && (
-                    <div className="p-3 border-t border-slate-100 bg-white">
-                      <button onClick={clearAll} className="w-full py-2 text-[11px] font-black uppercase text-red-500 tracking-widest hover:bg-red-50 rounded-xl transition-colors">Hammasini tozalash</button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+                      {notifications.length > 0 && (
+                        <div className="border-t border-[var(--border)] bg-[var(--bg-card)] p-3">
+                          <button
+                            type="button"
+                            onClick={clearAll}
+                            className="w-full rounded-xl py-2 text-[11px] font-black uppercase tracking-widest text-red-500 transition-colors duration-200 hover:bg-red-500/10"
+                          >
+                            Hammasini tozalash
+                          </button>
+                        </div>
+                      )}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
 
-            <button className="p-2.5 rounded-xl hover:bg-slate-100 text-slate-400 transition-all">
+            <button
+              type="button"
+              onClick={() => navigate('/settings')}
+              className="p-2.5 rounded-xl hover:bg-[var(--hover-bg)] text-[var(--text)]/60 transition-all cursor-pointer"
+            >
               <Settings className="w-[18px] h-[18px]" />
             </button>
-            <div className="flex items-center gap-3 pl-3 ml-1 border-l border-slate-100">
-              <div className="text-right">
-                <p className="text-sm font-black text-slate-700 leading-none">
-                  {user?.first_name || 'Admin'} {user?.last_name || ''}
+            <div className="flex items-center gap-3 pl-3 ml-1 border-l border-[var(--border)]">
+              <div className="text-right min-w-0">
+                <p className="text-sm font-black text-[var(--text-h)] leading-none truncate max-w-[160px]">
+                  {displayName}
                 </p>
-                <p className="text-[10px] font-black text-primary-500 uppercase tracking-widest mt-0.5">
-                  {user?.role || 'Administrator'}
+                <p className="text-[10px] font-black text-[var(--accent)] uppercase tracking-widest mt-0.5">
+                  {user?.role || '—'}
                 </p>
               </div>
             </div>
@@ -136,7 +212,7 @@ const Layout: React.FC = () => {
         </main>
         {/* App Loader */}
         {isAppLoading && (
-          <div className="fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center">
+          <div className="fixed inset-0 z-[200] bg-[var(--bg)] flex flex-col items-center justify-center">
             <div className="w-20 h-20 relative">
               <div className="absolute inset-0 border-4 border-primary-50 rounded-full" />
               <div className="absolute inset-0 border-4 border-primary-600 rounded-full border-t-transparent animate-spin" />

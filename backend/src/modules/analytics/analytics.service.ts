@@ -18,14 +18,22 @@ export class AnalyticsService {
   ) {}
 
   async getDashboard() {
-    const cacheKey = 'analytics:dashboard';
+    const cacheKey = 'analytics:dashboard:v2';
     const cached = await this.redisService.get(cacheKey);
     if (cached) return typeof cached === 'string' ? JSON.parse(cached) : cached;
 
     const data = await dashboard_stats(this.dbService);
 
-    await this.redisService.set(cacheKey, data, { ex: 60 });
-    return data;
+    let ai_insight: string | null = null;
+    try {
+      ai_insight = await this.aiService.summarizeDashboardSnapshot(data as Record<string, unknown>);
+    } catch {
+      ai_insight = null;
+    }
+
+    const payload = { ...data, ai_insight };
+    await this.redisService.set(cacheKey, payload, { ex: 60 });
+    return payload;
   }
 
   async getStudentAnalytics(studentId: string) {

@@ -1,12 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
+import { formatPersonName } from '../lib/displayName';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
 import {
   Users, BookOpen, UserCheck, Wallet,
   TrendingUp, Sparkles, ChevronRight,
   Loader2, BarChart3, Calendar
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 
 /* ─── Stat Card ─── */
 const StatCard: React.FC<{
@@ -33,6 +46,13 @@ const StatCard: React.FC<{
     <p className={cn("text-3xl font-black tracking-tight", danger ? "text-red-600" : "text-slate-800")}>{value}</p>
   </div>
 );
+
+const courseEngagementPct = (course: any) => {
+  const sc = Number(course?.student_count) || 0;
+  if (sc <= 0) return 0;
+  const cap = Number(course?.max_students) || 28;
+  return Math.min(100, Math.round((sc / Math.max(cap, 1)) * 100));
+};
 
 const Dashboard: React.FC = () => {
   const { user, stats, courses, groups, fetchStats, fetchCourses, fetchGroups, fetchTeacherDashboard, isLoading } = useAdminStore();
@@ -383,7 +403,19 @@ const Dashboard: React.FC = () => {
           <div className="card p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="section-title">Mening Kurslarim</h2>
-              <button onClick={() => navigate('/courses')} className="text-sm font-bold text-primary-600 hover:underline flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    user?.role === 'MANAGER'
+                      ? '/manager/courses'
+                      : user?.role === 'TEACHER'
+                        ? '/teacher/groups'
+                        : '/admin/courses',
+                  )
+                }
+                className="text-sm font-bold text-primary-600 hover:underline flex items-center gap-1 cursor-pointer"
+              >
                 Barchasini ko'rish <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -400,13 +432,13 @@ const Dashboard: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-400 font-semibold">Curriculum Progress</span>
-                    <span className="font-bold text-primary-600">{course.progress ?? Math.floor(Math.random() * 50 + 40)}%</span>
+                    <span className="text-slate-400 font-semibold">To'ldirish (talaba / guruh)</span>
+                    <span className="font-bold text-primary-600">{courseEngagementPct(course)}%</span>
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
                     <div
                       className="bg-primary-500 h-1.5 rounded-full transition-all"
-                      style={{ width: `${course.progress ?? Math.floor(Math.random() * 50 + 40)}%` }}
+                      style={{ width: `${courseEngagementPct(course)}%` }}
                     />
                   </div>
                 </div>
@@ -417,30 +449,47 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Attendance Trends */}
+          {/* Activity from analytics (student registrations by month) */}
           <div className="card p-6">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="section-title">Davomat Tendentsiyasi</h2>
-                <p className="text-sm text-slate-400 mt-0.5">O'rtacha davomat: <span className="text-green-600 font-bold">{stats?.attendanceAvg || 0}%</span></p>
+                <h2 className="section-title">Faollik</h2>
+                <p className="text-sm text-slate-400 mt-0.5">
+                  O'rtacha davomat (30 kun):{' '}
+                  <span className="text-green-600 font-bold">{stats?.attendanceAvg ?? 0}%</span>
+                </p>
               </div>
               <div className="bg-slate-100 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-500">So'nggi 6 oy</div>
             </div>
-            <div className="flex items-end gap-2 h-32">
-              {(stats?.growthTrend || []).map((g: any, i: number) => {
-                const maxCount = Math.max(...(stats?.growthTrend?.map((t: any) => t.count) || [1]), 1);
-                const h = (g.count / maxCount) * 100;
-                return (
-                  <div key={g.month + i} className="flex-1 flex flex-col items-center gap-1">
-                    <div className="w-full bg-primary-100 rounded-lg relative overflow-hidden" style={{ height: `${Math.max(h, 10)}%` }}>
-                      <div className="absolute inset-0 bg-gradient-to-t from-primary-500/40 to-primary-300/20 rounded-lg" />
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-400">{g.month}</span>
-                  </div>
-                );
-              })}
-              {(stats?.growthTrend || []).length === 0 && (
-                 <div className="w-full h-full flex items-center justify-center text-slate-300 text-xs font-bold italic">Ma'lumotlar yuklanmoqda...</div>
+            <div className="h-48">
+              {(stats?.growthTrend || []).length > 0 ? (
+                <Line
+                  data={{
+                    labels: stats!.growthTrend!.map((g: any) => g.month),
+                    datasets: [
+                      {
+                        label: "Yangi talabalar",
+                        data: stats!.growthTrend!.map((g: any) => g.count),
+                        borderColor: '#9329e6',
+                        backgroundColor: 'rgba(147, 41, 230, 0.08)',
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 4,
+                      },
+                    ],
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                      y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' } },
+                      x: { grid: { display: false } },
+                    },
+                  }}
+                />
+              ) : (
+                <div className="h-full flex items-center justify-center text-slate-400 text-sm">Ma'lumot yo'q</div>
               )}
             </div>
           </div>
@@ -453,7 +502,11 @@ const Dashboard: React.FC = () => {
             <h2 className="section-title mb-4">Faol Guruhlar</h2>
             <div className="space-y-3">
               {groups.slice(0, 4).map((group: any) => (
-                <div key={group.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all cursor-pointer" onClick={() => navigate('/groups')}>
+                <div
+                  key={group.id}
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all duration-200 cursor-pointer active:scale-[0.98]"
+                  onClick={() => navigate(user?.role === 'MANAGER' ? '/manager/groups' : user?.role === 'TEACHER' ? '/teacher/groups' : '/groups')}
+                >
                   <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center text-xs font-black text-primary-600">
                     {group.name?.[0] || 'G'}
                   </div>
@@ -468,22 +521,40 @@ const Dashboard: React.FC = () => {
               ))}
               {groups.length === 0 && <p className="text-sm text-slate-400 text-center py-4">Guruhlar yo'q</p>}
             </div>
-            <button onClick={() => navigate('/groups')} className="w-full mt-4 py-3 border-2 border-dashed border-slate-200 rounded-xl text-sm font-bold text-slate-400 hover:border-primary-300 hover:text-primary-600 transition-all">
-              + Yangi Guruh
-            </button>
+            {user?.role === 'TEACHER' && (
+              <button
+                type="button"
+                onClick={() => navigate('/teacher/groups')}
+                className="w-full mt-4 py-3 border-2 border-dashed border-slate-200 rounded-xl text-sm font-bold text-slate-400 hover:border-primary-300 hover:text-primary-600 transition-all cursor-pointer"
+              >
+                + Yangi Guruh
+              </button>
+            )}
           </div>
 
-          {/* AI Insight */}
+          {/* Insight from real stats */}
           <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-6 text-white">
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="w-5 h-5" />
-              <span className="text-xs font-black uppercase tracking-widest">AI Insight 🤖</span>
+              <span className="text-xs font-black uppercase tracking-widest">AI Insight</span>
             </div>
             <p className="text-sm font-semibold leading-relaxed opacity-95">
-              "Bugun talabalar davomati 94% — juda zo'r natija! Eng faol talaba — <strong>Ahmad Karimov</strong>."
-            </p>
-            <p className="text-[10px] font-bold uppercase tracking-widest mt-3 opacity-70">
-              ● Hafta talabasi: Ahmad K.
+              O'rtacha davomat: <strong>{stats?.attendanceAvg ?? 0}%</strong>.{' '}
+              {stats?.topStudents?.[0] ? (
+                <>
+                  Eng yuqori natija:{' '}
+                  <strong>
+                    {formatPersonName(
+                      stats.topStudents[0].first_name,
+                      stats.topStudents[0].last_name,
+                      stats.topStudents[0].email,
+                    )}
+                  </strong>
+                  .
+                </>
+              ) : (
+                'Hozircha tahlil uchun yetarli ma\'lumot yo\'q.'
+              )}
             </p>
           </div>
 

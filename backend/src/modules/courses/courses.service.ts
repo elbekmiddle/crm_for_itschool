@@ -11,8 +11,8 @@ import { delete_course } from './commands/delete_course';
 export class CoursesService {
   constructor(private readonly dbService: DbService) {}
 
-  async create(data: any) {
-    return create_course(this.dbService, data);
+  async create(data: any, user?: { id: string; role: string }) {
+    return create_course(this.dbService, data, user);
   }
 
   async findAll() {

@@ -11,16 +11,20 @@ import { delete_student } from './commands/delete_student';
 import { enroll_student } from './commands/enroll_student';
 import { get_student_dashboard } from './queries/get_student_dashboard';
 import { AiService } from '../ai/ai.service';
+import { SocketsGateway } from '../sockets/sockets.gateway';
 
 @Injectable()
 export class StudentsService {
   constructor(
     private readonly dbService: DbService,
-    private readonly aiService: AiService
+    private readonly aiService: AiService,
+    private readonly socketsGateway: SocketsGateway,
   ) {}
 
   async create(createStudentDto: CreateStudentDto, createdBy: string) {
-    return create_student(this.dbService, createStudentDto, createdBy);
+    const row = await create_student(this.dbService, createStudentDto, createdBy);
+    this.socketsGateway.emitDashboardRefresh({ source: 'student', action: 'created' });
+    return row;
   }
 
   async findAll(page: number = 1, limit: number = 20, user?: any) {
@@ -32,15 +36,21 @@ export class StudentsService {
   }
 
   async update(id: string, updateStudentDto: UpdateStudentDto) {
-    return update_student(this.dbService, id, updateStudentDto);
+    const row = await update_student(this.dbService, id, updateStudentDto);
+    this.socketsGateway.emitDashboardRefresh({ source: 'student', action: 'updated' });
+    return row;
   }
 
   async remove(id: string) {
-    return delete_student(this.dbService, id);
+    const row = await delete_student(this.dbService, id);
+    this.socketsGateway.emitDashboardRefresh({ source: 'student', action: 'deleted' });
+    return row;
   }
 
   async enroll(id: string, courseId: string) {
-    return enroll_student(this.dbService, id, courseId);
+    const row = await enroll_student(this.dbService, id, courseId);
+    this.socketsGateway.emitDashboardRefresh({ source: 'student', action: 'enrolled' });
+    return row;
   }
 
   async getDashboard(id: string) {
@@ -79,6 +89,7 @@ export class StudentsService {
       const enrollment = await this.enroll(id, newCourseId);
 
       await this.dbService.query('COMMIT');
+      this.socketsGateway.emitDashboardRefresh({ source: 'student', action: 'transfer_course' });
       return { success: true, enrollment };
     } catch (error) {
       await this.dbService.query('ROLLBACK');
@@ -112,6 +123,7 @@ export class StudentsService {
       );
 
       await this.dbService.query('COMMIT');
+      this.socketsGateway.emitDashboardRefresh({ source: 'student', action: 'transfer_group' });
       return result[0];
     } catch (error) {
       await this.dbService.query('ROLLBACK');

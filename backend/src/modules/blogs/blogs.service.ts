@@ -28,12 +28,12 @@ export class BlogsService {
   }
 
   async findAll() {
-    return this.db.query(`
+    return this.db.querySafe(`
       SELECT b.*, u.first_name as author_name 
       FROM blogs b 
       LEFT JOIN users u ON b.created_by = u.id 
       ORDER BY b.created_at DESC
-    `);
+    `, [], []);
   }
 
   async findOne(slug: string) {

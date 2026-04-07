@@ -39,14 +39,28 @@ const GroupsPage: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (courses.length === 0) {
+      alert('Avval kamida bitta kurs yarating, keyin guruh qo‘shing.');
+      return;
+    }
+    if (!form.course_id) {
+      alert('Guruh yaratish uchun kurs tanlash majburiy.');
+      return;
+    }
+
     const payload: any = { ...form, max_students: Number(form.max_students) || 30 };
     // Auto-assign teacher_id for Teacher role
     if (user?.role === 'TEACHER' && modal === 'create') {
       payload.teacher_id = user.id;
     }
-    if (modal === 'create') await createGroup(payload);
-    else if (editTarget) await updateGroup(editTarget.id, payload);
-    setModal(null);
+    try {
+      if (modal === 'create') await createGroup(payload);
+      else if (editTarget) await updateGroup(editTarget.id, payload);
+      setModal(null);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Guruhni saqlashda xatolik yuz berdi';
+      alert(Array.isArray(message) ? message.join(', ') : message);
+    }
   };
 
   const handleAddStudent = async () => {
@@ -89,7 +103,7 @@ const GroupsPage: React.FC = () => {
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">Guruhlar</h1>
           <p className="text-sm text-slate-400 mt-0.5">{groups.length} ta guruh boshqarilmoqda</p>
         </div>
-        {(user?.role === 'TEACHER' || user?.role === 'ADMIN') && (
+        {user?.role === 'TEACHER' && (
           <button onClick={openCreate} className="btn-primary flex items-center gap-2">
             <Plus className="w-4 h-4" /> Yangi Guruh
           </button>
@@ -123,6 +137,7 @@ const GroupsPage: React.FC = () => {
                       <p className="text-lg font-black text-slate-700">{group.student_count || 0}</p>
                       <p className="text-[10px] text-slate-400 font-bold uppercase">Talaba</p>
                     </div>
+                    {user?.role === 'TEACHER' && (
                     <div className="flex gap-1">
                       <button onClick={(e) => { e.stopPropagation(); openEdit(group); }} className="p-2 rounded-lg hover:bg-slate-100">
                         <Pencil className="w-4 h-4 text-slate-400" />
@@ -131,6 +146,7 @@ const GroupsPage: React.FC = () => {
                         <Trash2 className="w-4 h-4 text-red-400" />
                       </button>
                     </div>
+                    )}
                   </div>
                 </div>
 
@@ -171,7 +187,7 @@ const GroupsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {(user?.role === 'TEACHER' || user?.role === 'ADMIN') && (
+                {user?.role === 'TEACHER' && (
                   <button onClick={() => { setAddStudentModal(true); setSelectedStudentId(''); }} className="btn-primary w-full flex items-center justify-center gap-2">
                     <UserPlus className="w-4 h-4" /> Talaba qo'shish
                   </button>
@@ -193,9 +209,11 @@ const GroupsPage: React.FC = () => {
                           <p className="text-[10px] text-slate-400">{s.phone}</p>
                         </div>
                       </div>
-                      <button onClick={() => handleRemoveStudent(s.id)} className="p-1.5 rounded-lg hover:bg-red-50">
-                        <UserMinus className="w-3.5 h-3.5 text-red-400" />
-                      </button>
+                      {user?.role === 'TEACHER' && (
+                        <button onClick={() => handleRemoveStudent(s.id)} className="p-1.5 rounded-lg hover:bg-red-50">
+                          <UserMinus className="w-3.5 h-3.5 text-red-400" />
+                        </button>
+                      )}
                     </div>
                   ))}
                   {groupStudents.length === 0 && <p className="text-sm text-center text-slate-400 py-4">Talabalar yo'q</p>}
@@ -230,6 +248,11 @@ const GroupsPage: React.FC = () => {
                   <option value="">Kursni tanlang</option>
                   {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
+                {courses.length === 0 && (
+                  <p className="text-xs text-amber-500 mt-2">
+                    Kurslar mavjud emas. Avval `Kurslar` bo‘limida kurs yarating.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="input-label">Dars kunlari</label>
@@ -269,7 +292,9 @@ const GroupsPage: React.FC = () => {
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <button onClick={() => setModal(null)} className="btn-secondary">Bekor qilish</button>
-              <button onClick={handleSave} className="btn-primary">{modal === 'create' ? 'Yaratish' : 'Saqlash'}</button>
+              <button onClick={handleSave} className="btn-primary" disabled={courses.length === 0}>
+                {modal === 'create' ? 'Yaratish' : 'Saqlash'}
+              </button>
             </div>
           </div>
         </div>

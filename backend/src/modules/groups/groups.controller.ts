@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Patch, Request, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Patch, Request, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -25,7 +25,11 @@ export class GroupsController {
   @Permissions('GROUP_CREATE')
   @Post()
   @ApiOperation({ summary: 'Create a new group', description: 'Permissions: GROUP_CREATE' })
-  create(@Body() body: CreateGroupDto) {
+  create(@Body() body: CreateGroupDto, @Request() req: any) {
+    // IT School: guruhni faqat o‘qituvchi yaratadi (admin/manager faqat ko‘radi)
+    if (req.user?.role !== 'TEACHER') {
+      throw new ForbiddenException('Guruhni faqat o‘qituvchi yaratishi mumkin');
+    }
     return this.groupsService.create(body);
   }
 
@@ -33,10 +37,11 @@ export class GroupsController {
   @Post(':id/add-student')
   @ApiOperation({ summary: 'Add a student to a group', description: 'Permissions: GROUP_UPDATE' })
   async addStudent(@Param('id') id: string, @Body('student_id') studentId: string, @Request() req) {
-    if (req.user.role === 'TEACHER') {
-      const isOwner = await this.groupsService.isGroupOwner(id, req.user.id);
-      if (!isOwner) throw new UnauthorizedException('Siz faqat o\'z guruhlaringizni boshqara olasiz');
+    if (req.user.role !== 'TEACHER') {
+      throw new ForbiddenException("Guruhga talaba faqat o'qituvchi tomonidan qo'shiladi");
     }
+    const isOwner = await this.groupsService.isGroupOwner(id, req.user.id);
+    if (!isOwner) throw new UnauthorizedException('Siz faqat o\'z guruhlaringizni boshqara olasiz');
     return this.groupsService.addStudent(id, studentId);
   }
 
@@ -44,10 +49,11 @@ export class GroupsController {
   @Delete(':id/remove-student')
   @ApiOperation({ summary: 'Remove a student from a group', description: 'Permissions: GROUP_UPDATE' })
   async removeStudent(@Param('id') id: string, @Body('student_id') studentId: string, @Request() req) {
-    if (req.user.role === 'TEACHER') {
-      const isOwner = await this.groupsService.isGroupOwner(id, req.user.id);
-      if (!isOwner) throw new UnauthorizedException('Siz faqat o\'z guruhlaringizni boshqara olasiz');
+    if (req.user.role !== 'TEACHER') {
+      throw new ForbiddenException("Guruhdan talaba faqat o'qituvchi tomonidan chiqariladi");
     }
+    const isOwner = await this.groupsService.isGroupOwner(id, req.user.id);
+    if (!isOwner) throw new UnauthorizedException('Siz faqat o\'z guruhlaringizni boshqara olasiz');
     return this.groupsService.removeStudent(id, studentId);
   }
 
@@ -75,14 +81,20 @@ export class GroupsController {
   @Permissions('GROUP_UPDATE')
   @Patch(':id')
   @ApiOperation({ summary: 'Update group details', description: 'Permissions: GROUP_UPDATE' })
-  update(@Param('id') id: string, @Body() body: UpdateGroupDto) {
+  update(@Param('id') id: string, @Body() body: UpdateGroupDto, @Request() req: any) {
+    if (req.user?.role !== 'TEACHER') {
+      throw new ForbiddenException('Guruhni faqat o‘qituvchi tahrirlashi mumkin');
+    }
     return this.groupsService.update(id, body);
   }
 
   @Permissions('GROUP_DELETE')
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a group', description: 'Permissions: GROUP_DELETE' })
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: string, @Request() req: any) {
+    if (req.user?.role !== 'TEACHER') {
+      throw new ForbiddenException('Guruhni faqat o‘qituvchi o‘chirishi mumkin');
+    }
     return this.groupsService.softDelete(id);
   }
 }

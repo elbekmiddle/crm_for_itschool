@@ -28,17 +28,17 @@ export async function all_students(dbService: DbService, page: number = 1, limit
   const dataSql = `SELECT * FROM students ${dataWhereStr} ORDER BY created_at DESC LIMIT $1 OFFSET $2`;
 
   const [data, total] = await Promise.all([
-    dbService.query(dataSql, [limit, offset, ...filterParams]),
-    dbService.query(countSql, filterParams)
+    dbService.querySafe(dataSql, [limit, offset, ...filterParams], []),
+    dbService.querySafe(countSql, filterParams, [{ count: '0' }])
   ]);
 
   return {
     data,
     meta: {
-      total: parseInt(total[0].count, 10),
+      total: parseInt(total?.[0]?.count ?? '0', 10),
       page,
       limit,
-      totalPages: Math.ceil(parseInt(total[0].count, 10) / limit)
+      totalPages: Math.ceil(parseInt(total?.[0]?.count ?? '0', 10) / limit)
     }
   };
 }

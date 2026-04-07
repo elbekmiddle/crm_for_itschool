@@ -29,8 +29,8 @@ export async function user_update(dbService: DbService, id: string, data: any) {
 
   values.push(id);
   const result = await dbService.query(
-    `UPDATE users SET ${updates.join(', ')} WHERE id = $${queryIndex} RETURNING id, email, role, first_name, last_name, photo_url, profile_completed_pct`,
-    values
+    `UPDATE users SET ${updates.join(', ')} WHERE id = $${queryIndex} RETURNING *`,
+    values,
   );
   if (!result.length) throw new NotFoundException('Foydalanuvchi topilmadi');
   return result[0];

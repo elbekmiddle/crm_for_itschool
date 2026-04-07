@@ -8,12 +8,10 @@ import {
   Calendar,
   ClipboardList,
   Wallet,
-  BarChart3,
   Settings,
   LogOut,
   X,
   UserPlus,
-  FileText,
 } from 'lucide-react';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
@@ -90,26 +88,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
 
       <aside
         className={cn(
-          "fixed top-0 left-0 h-screen bg-white border-r border-slate-100 flex flex-col z-50 transition-all duration-300",
-          isOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full md:translate-x-0 md:w-20"
+          'fixed top-0 left-0 h-screen bg-[var(--bg-card)] border-r border-[var(--border)] flex flex-col z-50 transition-all duration-300',
+          isOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:translate-x-0 md:w-20',
         )}
       >
         {/* Brand */}
-        <div className="p-5 border-b border-slate-50 flex items-center justify-between min-h-[73px]">
-          <div className={cn("flex items-center gap-3 overflow-hidden", !isOpen && "md:justify-center w-full")}>
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm p-1.5 shrink-0">
-               <img 
-                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Logo_IT_Park_Uzbekistan.svg/3840px-Logo_IT_Park_Uzbekistan.svg.png" 
-                 alt="IT Park" 
-                 className="w-full h-full object-contain"
-               />
+        <div className="p-5 border-b border-[var(--border)] flex items-center justify-between min-h-[73px]">
+          <div className={cn('flex items-center gap-3 overflow-hidden', !isOpen && 'md:justify-center w-full')}>
+            <div className="w-10 h-10 bg-[var(--bg-muted)] rounded-xl flex items-center justify-center shadow-sm p-1.5 shrink-0 border border-[var(--border)]">
+              <img src="/images/logo.png" alt="IT School" className="w-full h-full object-contain" />
             </div>
-            <div className={cn("transition-all duration-300", !isOpen && "md:hidden opacity-0")}>
-              <h1 className="text-sm font-black text-slate-800 tracking-tighter uppercase leading-none">IT Academy</h1>
-              <p className="text-[9px] font-black text-primary-500 uppercase tracking-widest mt-0.5 opacity-70">CRM System</p>
+            <div className={cn('transition-all duration-300', !isOpen && 'md:hidden opacity-0')}>
+              <h1 className="text-sm font-black text-[var(--text-h)] tracking-tighter uppercase leading-none">IT School</h1>
+              <p className="text-[9px] font-black text-[var(--accent)] uppercase tracking-widest mt-0.5 opacity-80">Platform</p>
             </div>
           </div>
-          <button className="md:hidden p-2 rounded-lg hover:bg-slate-50" onClick={onToggle}>
+          <button type="button" className="md:hidden p-2 rounded-lg hover:bg-[var(--hover-bg)] cursor-pointer" onClick={onToggle}>
             <X className="w-5 h-5 text-slate-400" />
           </button>
         </div>
@@ -138,11 +132,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
               onClick={() => { if (window.innerWidth < 768) onToggle(); }}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200",
+                  'flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 cursor-pointer',
                   isActive
-                    ? "bg-primary-50 text-primary-700 shadow-sm shadow-primary-100"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-700",
-                  !isOpen && "md:justify-center md:px-0"
+                    ? 'bg-[var(--accent-bg)] text-[var(--accent)] border border-[var(--accent-border)]'
+                    : 'text-[var(--text)]/80 hover:bg-[var(--hover-bg)] hover:text-[var(--text-h)]',
+                  !isOpen && 'md:justify-center md:px-0',
                 )
               }
             >
@@ -153,14 +147,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
         </nav>
 
         {/* Bottom */}
-        <div className="p-3 border-t border-slate-50 space-y-0.5">
+        <div className="p-3 border-t border-[var(--border)] space-y-0.5">
           <NavLink
             to="/settings"
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200",
-                isActive ? "bg-primary-50 text-primary-700" : "text-slate-500 hover:bg-slate-50",
-                !isOpen && "md:justify-center md:px-0"
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 cursor-pointer',
+                isActive ? 'bg-[var(--accent-bg)] text-[var(--accent)]' : 'text-[var(--text)]/80 hover:bg-[var(--hover-bg)]',
+                !isOpen && 'md:justify-center md:px-0',
               )
             }
           >
@@ -168,10 +162,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
             <span className={cn(!isOpen && "md:hidden")}>Sozlamalar</span>
           </NavLink>
           <button
+            type="button"
             onClick={handleLogout}
             className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-red-500 hover:bg-red-50 transition-all duration-200 w-full",
-              !isOpen && "md:justify-center md:px-0"
+              'flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-red-400 hover:bg-red-500/10 transition-all duration-200 w-full cursor-pointer',
+              !isOpen && 'md:justify-center md:px-0',
             )}
           >
             <LogOut className="w-[18px] h-[18px]" />

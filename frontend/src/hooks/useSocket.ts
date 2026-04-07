@@ -1,87 +1,56 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
-
-interface SocketEvents {
-  [key: string]: (...args: any[]) => void;
-}
-
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+import { useEffect, useCallback, useState } from 'react';
+import { getRealtimeSocket } from '../lib/realtimeSocket';
 
 export const useSocket = () => {
-  const socketRef = useRef<Socket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(() => getRealtimeSocket().connected);
 
   useEffect(() => {
-    // Create socket connection
-    socketRef.current = io(SOCKET_URL, {
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5,
-      transports: ['websocket', 'polling'],
-    });
-
-    socketRef.current.on('connect', () => {
-      console.log('Socket connected:', socketRef.current?.id);
-      setIsConnected(true);
-    });
-
-    socketRef.current.on('disconnect', () => {
-      console.log('Socket disconnected');
-      setIsConnected(false);
-    });
-
-    socketRef.current.on('connect_error', (error: any) => {
-      console.error('Socket connection error:', error);
-    });
-
+    const s = getRealtimeSocket();
+    const onConnect = () => setIsConnected(true);
+    const onDisconnect = () => setIsConnected(false);
+    s.on('connect', onConnect);
+    s.on('disconnect', onDisconnect);
+    setIsConnected(s.connected);
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
+      s.off('connect', onConnect);
+      s.off('disconnect', onDisconnect);
     };
   }, []);
 
-  // Join exam room
   const joinExamRoom = useCallback(
     (examId: string, userId: string, role: 'teacher' | 'student') => {
-      if (socketRef.current?.connected) {
-        socketRef.current.emit('join_exam_room', { examId, userId, role });
+      const s = getRealtimeSocket();
+      if (s.connected) {
+        s.emit('join_exam_room', { examId, userId, role });
       }
     },
     [],
   );
 
-  // Leave exam room
   const leaveExamRoom = useCallback((examId: string, userId: string) => {
-    if (socketRef.current?.connected) {
-      socketRef.current.emit('leave_exam_room', { examId, userId });
+    const s = getRealtimeSocket();
+    if (s.connected) {
+      s.emit('leave_exam_room', { examId, userId });
     }
   }, []);
 
-  // Subscribe to events
   const on = useCallback((event: string, callback: (...args: any[]) => void) => {
-    if (socketRef.current) {
-      socketRef.current.on(event, callback);
-    }
+    getRealtimeSocket().on(event, callback);
   }, []);
 
-  // Unsubscribe from events
-  const off = useCallback((event: string) => {
-    if (socketRef.current) {
-      socketRef.current.off(event);
-    }
+  const off = useCallback((event: string, callback?: (...args: any[]) => void) => {
+    const s = getRealtimeSocket();
+    if (callback) s.off(event, callback);
+    else s.off(event);
   }, []);
 
-  // Emit event
   const emit = useCallback((event: string, data?: any) => {
-    if (socketRef.current?.connected) {
-      socketRef.current.emit(event, data);
-    }
+    const s = getRealtimeSocket();
+    if (s.connected) s.emit(event, data);
   }, []);
 
   return {
-    socket: socketRef.current,
+    socket: getRealtimeSocket(),
     isConnected,
     joinExamRoom,
     leaveExamRoom,

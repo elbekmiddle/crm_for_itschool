@@ -1,16 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
 import {
-  Wallet, Plus, Loader2, Trash2, X,
-  TrendingUp, Snowflake, ChevronLeft, ChevronRight, AlertTriangle
+  Plus, Loader2, Trash2, X,
+  TrendingUp, Snowflake, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 import { useConfirm } from '../context/ConfirmContext';
+import { useToast } from '../context/ToastContext';
+import MiniGrowthChart from '../components/charts/MiniGrowthChart';
+import { paymentMethodLabel } from '../lib/paymentLabels';
 
 const PaymentsPage: React.FC = () => {
-  const { payments, students, courses, stats, fetchPayments, fetchStudents, fetchCourses, fetchStats, createPayment, deletePayment, isLoading } = useAdminStore();
+  const { payments, students, stats, fetchPayments, fetchStudents, fetchCourses, fetchStats, createPayment, deletePayment, isLoading } = useAdminStore();
   const confirm = useConfirm();
+  const { showToast } = useToast();
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ student_id: '', amount: '', payment_method: 'cash', description: '' });
   const [tab, setTab] = useState<'all' | 'debt'>('all');
@@ -20,14 +24,30 @@ const PaymentsPage: React.FC = () => {
   useEffect(() => { fetchPayments(); fetchStudents(); fetchCourses(); fetchStats(); }, []);
 
   const totalRevenue = stats?.totalRevenue || payments.reduce((a: number, p: any) => a + (Number(p.amount) || 0), 0);
-  const list = tab === 'all' ? payments : payments.filter((p: any) => p.status === 'pending' || p.status === 'overdue');
+  const list =
+    tab === 'all'
+      ? payments
+      : payments.filter((p: any) => {
+          const st = (p.status || '').toLowerCase();
+          return st === 'pending' || st === 'overdue';
+        });
   const totalPages = Math.ceil(list.length / perPage);
   const paginated = list.slice((page - 1) * perPage, page * perPage);
+  const maxPayInPage = useMemo(
+    () => Math.max(...paginated.map((p: any) => Number(p.amount) || 0), 1),
+    [paginated],
+  );
 
   const handleCreate = async () => {
-    await createPayment({ ...form, amount: Number(form.amount) });
-    setModal(false);
-    fetchStats();
+    try {
+      await createPayment({ ...form, amount: Number(form.amount) });
+      showToast("To'lov muvaffaqiyatli qo'shildi", 'success');
+      setModal(false);
+      fetchStats();
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || "To'lov saqlanmadi";
+      showToast(msg, 'error');
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -68,19 +88,14 @@ const PaymentsPage: React.FC = () => {
               <button className="px-4 py-2 rounded-lg text-xs font-bold text-slate-400">Yillik</button>
             </div>
           </div>
-          <div className="flex items-end gap-2 h-32">
-            {(stats?.growthTrend || []).map((g: any, i: number) => {
-                const maxCount = Math.max(...(stats?.growthTrend?.map((t: any) => t.count) || [1]), 1);
-                const h = (g.count / maxCount) * 100;
-                return (
-                  <div key={g.month + i} className="flex-1 flex flex-col items-center gap-1">
-                    <div className="w-full bg-primary-100 rounded-lg relative overflow-hidden" style={{ height: `${Math.max(h, 10)}%` }}>
-                      <div className="absolute inset-0 bg-gradient-to-t from-primary-600/50 to-primary-400/20 rounded-lg" />
-                    </div>
-                    <span className="text-[9px] font-bold text-slate-400">{g.month}</span>
-                  </div>
-                );
-            })}
+          <div className="h-48 w-full min-h-[12rem]">
+            <MiniGrowthChart
+              trend={stats?.growthTrend}
+              title=""
+              subtitle=""
+              height={192}
+              className="border-0 p-0 bg-transparent"
+            />
           </div>
         </div>
 
@@ -132,6 +147,7 @@ const PaymentsPage: React.FC = () => {
                   <th>Talaba</th>
                   <th>Sana</th>
                   <th>Summa</th>
+                  <th>Ulush</th>
                   <th>Usul</th>
                   <th>Status</th>
                   <th className="text-right">Amal</th>
@@ -150,9 +166,23 @@ const PaymentsPage: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="text-xs text-slate-500">{p.paid_at ? new Date(p.paid_at).toLocaleDateString('uz-UZ') : '—'}</td>
+                    <td className="text-xs text-slate-500">
+                      {p.display_date || p.paid_at || p.created_at
+                        ? new Date(p.display_date || p.paid_at || p.created_at).toLocaleDateString('uz-UZ')
+                        : '—'}
+                    </td>
                     <td className="font-bold text-green-600">{Number(p.amount).toLocaleString()} so'm</td>
-                    <td><span className="course-badge bg-slate-100 text-slate-600 uppercase">{p.payment_method || 'Cash'}</span></td>
+                    <td className="min-w-[100px] w-fit max-w-[140px]">
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-[var(--border)]">
+                        <div
+                          className="h-full rounded-full bg-[#38bdf8] shadow-[0_0_8px_rgba(56,189,248,0.45)] transition-[width] duration-300"
+                          style={{ width: `${Math.min(100, ((Number(p.amount) || 0) / maxPayInPage) * 100)}%` }}
+                        />
+                      </div>
+                    </td>
+                    <td>
+                      <span className="course-badge bg-slate-100 text-slate-700">{paymentMethodLabel(p.payment_method)}</span>
+                    </td>
                     <td>
                       <span className={cn("status-pill", p.status === 'paid' ? 'pill-paid' : p.status === 'pending' ? 'pill-pending' : 'pill-active')}>
                         ● {p.status || 'paid'}
@@ -165,7 +195,7 @@ const PaymentsPage: React.FC = () => {
                     </td>
                   </tr>
                 ))}
-                {paginated.length === 0 && <tr><td colSpan={6} className="text-center py-12 text-slate-400">To'lovlar topilmadi</td></tr>}
+                {paginated.length === 0 && <tr><td colSpan={7} className="text-center py-12 text-slate-400">To'lovlar topilmadi</td></tr>}
               </tbody>
             </table>
           </div>
@@ -196,7 +226,11 @@ const PaymentsPage: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <label className="input-label">Talaba</label>
-                <select value={form.student_id} onChange={(e) => setForm({ ...form, student_id: e.target.value })} className="select">
+                <select
+                  value={form.student_id}
+                  onChange={(e) => setForm({ ...form, student_id: e.target.value })}
+                  className="select w-full bg-[var(--bg-card)] text-[var(--text-h)] border-[var(--border)]"
+                >
                   <option value="">Talabani tanlang</option>
                   {students.map((s: any) => <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>)}
                 </select>
@@ -207,10 +241,14 @@ const PaymentsPage: React.FC = () => {
               </div>
               <div>
                 <label className="input-label">To'lov usuli</label>
-                <select value={form.payment_method} onChange={(e) => setForm({ ...form, payment_method: e.target.value })} className="select">
+                <select
+                  value={form.payment_method}
+                  onChange={(e) => setForm({ ...form, payment_method: e.target.value })}
+                  className="select w-full bg-[var(--bg-card)] text-[var(--text-h)] border-[var(--border)]"
+                >
                   <option value="cash">Naqd</option>
                   <option value="card">Karta</option>
-                  <option value="transfer">O'tkazma</option>
+                  <option value="transfer">Bank o'tkazmasi</option>
                 </select>
               </div>
               <div>

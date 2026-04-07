@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../lib/api';
+import { disconnectRealtimeSocket } from '../lib/realtimeSocket';
 
 interface AdminState {
   user: any | null;
@@ -67,6 +68,7 @@ interface AdminState {
   fetchUsers: () => Promise<void>;
   createUser: (data: any) => Promise<void>;
   updateUser: (id: string, data: any) => Promise<void>;
+  uploadUserPhoto: (id: string, file: File) => Promise<string>;
   deleteUser: (id: string) => Promise<void>;
   
   // Payments
@@ -148,13 +150,32 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   createStudent: async (data: any) => {
-    await api.post('/students', data); 
-    await get().fetchStudents(); 
+    const payload = {
+      first_name: data.first_name,
+      last_name: data.last_name,
+      phone: data.phone,
+      ...(data.parent_name ? { parent_name: data.parent_name } : {}),
+      ...(data.parent_phone ? { parent_phone: data.parent_phone } : {}),
+    };
+    const res = await api.post('/students', payload);
+    const student = (res as { data?: { id?: string } }).data;
+    if (data.course_id && student?.id) {
+      await api.post(`/students/${student.id}/enroll`, { course_id: data.course_id });
+    }
+    await get().fetchStudents();
   },
 
   updateStudent: async (id, data) => {
-    await api.patch(`/students/${id}`, data); 
-    await get().fetchStudents(); 
+    const payload = {
+      first_name: data.first_name,
+      last_name: data.last_name,
+      phone: data.phone,
+      parent_name: data.parent_name,
+      parent_phone: data.parent_phone,
+      status: data.status,
+    };
+    await api.patch(`/students/${id}`, payload);
+    await get().fetchStudents();
   },
 
   deleteStudent: async (id) => {
@@ -330,7 +351,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   deleteUser: async (id) => {
-    await api.delete(`/users/${id}`); set({ users: get().users.filter(u => u.id !== id) });
+    await api.delete(`/users/${id}`);
+    await get().fetchUsers();
   },
 
   // ──── Payments ────
@@ -343,8 +365,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   createPayment: async (data) => {
-    try { await api.post('/payments', data); await get().fetchPayments(); }
-    catch (e: any) { alert(e.response?.data?.message || "To'lov yaratishda xatolik yuz berdi"); }
+    await api.post('/payments', data);
+    await get().fetchPayments();
   },
 
   deletePayment: async (id) => {
@@ -426,6 +448,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   // ──── Auth ────
   logout: async () => {
     try {
+      disconnectRealtimeSocket();
       await api.post('/auth/logout');
     } catch (e) {
       console.error('Logout xatosi:', e);

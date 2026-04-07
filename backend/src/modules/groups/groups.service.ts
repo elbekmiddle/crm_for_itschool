@@ -8,21 +8,31 @@ import { remove_student_from_group } from './commands/remove_student_from_group'
 import { update_group } from './commands/update_group';
 import { soft_delete_group } from './commands/soft_delete_group';
 import { get_teacher_debtors } from './queries/get_teacher_debtors';
+import { SocketsGateway } from '../sockets/sockets.gateway';
 
 @Injectable()
 export class GroupsService {
-  constructor(private readonly dbService: DbService) {}
+  constructor(
+    private readonly dbService: DbService,
+    private readonly socketsGateway: SocketsGateway,
+  ) {}
 
   async create(data: any) {
-    return create_group(this.dbService, data);
+    const row = await create_group(this.dbService, data);
+    this.socketsGateway.emitDashboardRefresh({ source: 'group', action: 'created' });
+    return row;
   }
 
   async addStudent(groupId: string, studentId: string) {
-    return add_student_to_group(this.dbService, groupId, studentId);
+    const row = await add_student_to_group(this.dbService, groupId, studentId);
+    this.socketsGateway.emitDashboardRefresh({ source: 'group', action: 'student_added' });
+    return row;
   }
 
   async removeStudent(groupId: string, studentId: string) {
-    return remove_student_from_group(this.dbService, groupId, studentId);
+    const row = await remove_student_from_group(this.dbService, groupId, studentId);
+    this.socketsGateway.emitDashboardRefresh({ source: 'group', action: 'student_removed' });
+    return row;
   }
 
   async getStudents(groupId: string) {
@@ -30,11 +40,15 @@ export class GroupsService {
   }
 
   async update(id: string, data: any) {
-    return update_group(this.dbService, id, data);
+    const row = await update_group(this.dbService, id, data);
+    this.socketsGateway.emitDashboardRefresh({ source: 'group', action: 'updated' });
+    return row;
   }
 
   async softDelete(id: string) {
-    return soft_delete_group(this.dbService, id);
+    const row = await soft_delete_group(this.dbService, id);
+    this.socketsGateway.emitDashboardRefresh({ source: 'group', action: 'deleted' });
+    return row;
   }
 
   async findAll() {

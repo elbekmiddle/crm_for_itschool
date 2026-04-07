@@ -5,6 +5,7 @@ import { get_student_payments_raw } from './queries/get_student_payments_raw';
 import { create_payment } from './commands/create_payment';
 import { delete_payment } from './commands/delete_payment';
 import { TelegramService } from '../../infrastructure/notifications/telegram.service';
+import { SocketsGateway } from '../sockets/sockets.gateway';
 
 @Injectable()
 export class PaymentsService implements OnModuleInit {
@@ -12,7 +13,8 @@ export class PaymentsService implements OnModuleInit {
 
   constructor(
     private readonly dbService: DbService,
-    private readonly telegramService: TelegramService
+    private readonly telegramService: TelegramService,
+    private readonly socketsGateway: SocketsGateway,
   ) {}
 
   onModuleInit() {
@@ -38,7 +40,9 @@ export class PaymentsService implements OnModuleInit {
   }
 
   async create(data: any) {
-    return create_payment(this.dbService, data);
+    const row = await create_payment(this.dbService, data);
+    this.socketsGateway.emitDashboardRefresh({ source: 'payment', action: 'created' });
+    return row;
   }
 
   async getStudentPayments(studentId: string) {
@@ -63,7 +67,9 @@ export class PaymentsService implements OnModuleInit {
   }
 
   async remove(id: string) {
-    return delete_payment(this.dbService, id);
+    const row = await delete_payment(this.dbService, id);
+    this.socketsGateway.emitDashboardRefresh({ source: 'payment', action: 'deleted' });
+    return row;
   }
 }
 

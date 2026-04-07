@@ -414,8 +414,9 @@ const BlogAdminPage: React.FC = () => {
       {/* Create/Edit Modal (Full Screen) */}
       {modal && (
         <div className="fixed inset-0 z-[100] bg-white dark:bg-[#16171d] overflow-y-auto">
-          <div className="sticky top-0 z-50 bg-white/80 dark:bg-[#16171d]/80 backdrop-blur-2xl border-b border-[#e5e4e7] dark:border-[#2e303a] px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="sticky top-0 z-50 border-b border-[#e5e4e7] bg-white/80 backdrop-blur-2xl dark:border-[#2e303a] dark:bg-[#16171d]/80">
+            <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-4">
+            <div className="flex min-w-0 flex-1 items-center gap-4">
               <button onClick={() => setModal(null)} className="p-2 rounded-xl bg-slate-100 dark:bg-[#1f2028] text-slate-500 hover:text-slate-700 dark:hover:text-white transition-colors">
                 <X className="w-5 h-5" />
               </button>
@@ -423,7 +424,7 @@ const BlogAdminPage: React.FC = () => {
                 {modal === 'create' ? 'Yangi Blog Yaratish' : 'Blogni Tahrirlash'}
               </h2>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex w-fit shrink-0 flex-wrap items-center gap-3">
               <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}
                 className="px-4 py-2.5 bg-slate-100 dark:bg-[#1f2028] border border-slate-200 dark:border-[#2e303a] rounded-xl text-sm font-bold outline-none text-[#08060d] dark:text-white">
                 <option value="draft">Qoralama</option>
@@ -433,6 +434,7 @@ const BlogAdminPage: React.FC = () => {
                 className="flex items-center gap-2 px-6 py-2.5 bg-[#aa3bff] text-white rounded-xl font-bold text-sm hover:bg-[#9329e6] transition-all shadow-lg shadow-[#aa3bff]/20 active:scale-95">
                 <Save className="w-4 h-4" /> Saqlash
               </button>
+            </div>
             </div>
           </div>
 

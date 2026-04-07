@@ -160,8 +160,8 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Joriy foydalanuvchi ma\'lumotlarini olish' })
-  getMe(@Request() req) {
-    return req.user;
+  async getMe(@Request() req) {
+    return this.authService.getProfileForRequest(req.user);
   }
 
   /* ── HELPER: Set HTTPOnly Secure Cookies ── */

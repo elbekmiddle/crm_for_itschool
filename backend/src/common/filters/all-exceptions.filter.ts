@@ -26,6 +26,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = HttpStatus.CONFLICT;
       message = 'Bu maʼlumot allaqachon bazada mavjud (Unique constraint)';
     }
+    if (exception.code === '42P01') {
+      status = HttpStatus.SERVICE_UNAVAILABLE;
+      message = 'Jadval hali tayyor emas. Iltimos, migratsiyani ishga tushiring.';
+    }
+    if (exception.code === '42703') {
+      status = HttpStatus.SERVICE_UNAVAILABLE;
+      message = 'Bazadagi ustunlar to‘liq emas. Iltimos, migratsiyani yangilang.';
+    }
+    if (exception.code === 'ECONNRESET' || exception?.message?.includes('connection timeout')) {
+      status = HttpStatus.SERVICE_UNAVAILABLE;
+      message = 'Maʼlumotlar bazasi bilan aloqa uzildi. Qayta urinib ko‘ring.';
+    }
 
     if (exception instanceof HttpException) {
       const res = exception.getResponse() as any;

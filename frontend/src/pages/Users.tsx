@@ -1,12 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
-import {
-  Users, Plus, Loader2, Pencil, Trash2, X,
-  Shield, CheckCircle2
-} from 'lucide-react';
+import { formatPersonName, formatInitials } from '../lib/displayName';
+import MiniGrowthChart from '../components/charts/MiniGrowthChart';
+import { resolveMediaUrl } from '../lib/mediaUrl';
+import { Plus, Loader2, Pencil, Trash2, X, Shield, CheckCircle2 } from 'lucide-react';
 
 import { useConfirm } from '../context/ConfirmContext';
+import { useToast } from '../context/ToastContext';
+
+const MAX_TEACHER_COURSES = 5;
+
+function normalizeTeacherCourseIds(u: any): string[] {
+  const raw = u?.teacher_course_ids;
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map(String);
+  return [];
+}
 
 const roleColors: Record<string, string> = {
   ADMIN: 'bg-red-50 text-red-600 border-red-200',
@@ -15,27 +26,84 @@ const roleColors: Record<string, string> = {
 };
 
 const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
-  const { users, fetchUsers, createUser, updateUser, deleteUser, isLoading } = useAdminStore();
+  const {
+    users,
+    courses,
+    stats,
+    fetchUsers,
+    fetchCourses,
+    fetchStats,
+    createUser,
+    updateUser,
+    deleteUser,
+    isLoading,
+  } = useAdminStore();
   const confirm = useConfirm();
+  const { showToast } = useToast();
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
-  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', password: '', role: roleFilter || 'TEACHER' });
+  const [form, setForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: roleFilter || 'TEACHER',
+    course_ids: [] as string[],
+  });
 
-  useEffect(() => { fetchUsers(); }, []);
+  const filteredUsers = roleFilter ? users.filter((u: any) => u.role === roleFilter) : users;
 
-  const filteredUsers = roleFilter 
-    ? users.filter((u: any) => u.role === roleFilter)
-    : users;
+  const [rows, setRows] = useState<any[]>([]);
+  const suspendRowsSyncRef = useRef(false);
+  const pendingDeleteIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    fetchUsers();
+    fetchStats();
+    fetchCourses();
+  }, []);
+
+  useEffect(() => {
+    if (suspendRowsSyncRef.current) return;
+    setRows(filteredUsers);
+  }, [filteredUsers]);
 
   const openCreate = () => {
-    setForm({ first_name: '', last_name: '', email: '', phone: '', password: '', role: 'TEACHER' });
+    setForm({
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      password: '',
+      role: 'TEACHER',
+      course_ids: [],
+    });
     setModal('create');
   };
 
   const openEdit = (u: any) => {
     setEditTarget(u);
-    setForm({ first_name: u.first_name, last_name: u.last_name, email: u.email || '', phone: u.phone || '', password: '', role: u.role });
+    setForm({
+      first_name: u.first_name,
+      last_name: u.last_name,
+      email: u.email || '',
+      phone: u.phone || '',
+      password: '',
+      role: u.role,
+      course_ids: normalizeTeacherCourseIds(u),
+    });
     setModal('edit');
+  };
+
+  const toggleCourse = (courseId: string) => {
+    setForm((f) => {
+      if (f.role !== 'TEACHER') return f;
+      const next = new Set(f.course_ids);
+      if (next.has(courseId)) next.delete(courseId);
+      else if (next.size < MAX_TEACHER_COURSES) next.add(courseId);
+      return { ...f, course_ids: [...next] };
+    });
   };
 
   const normalizePhone = (p: string) => {
@@ -46,14 +114,21 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
   };
 
   const handleSave = async () => {
-    const data = { ...form, phone: normalizePhone(form.phone) };
-    if (modal === 'create') await createUser(data);
-    else if (editTarget) {
-      const payload: any = { ...data };
-      if (!payload.password) delete payload.password;
-      await updateUser(editTarget.id, payload);
+    const data: any = { ...form, phone: normalizePhone(form.phone) };
+    if (form.role !== 'TEACHER') delete data.course_ids;
+    try {
+      if (modal === 'create') await createUser(data);
+      else if (editTarget) {
+        const payload: any = { ...data };
+        if (!payload.password) delete payload.password;
+        await updateUser(editTarget.id, payload);
+      }
+      setModal(null);
+      showToast(modal === 'create' ? 'Foydalanuvchi yaratildi' : 'Saqlandi', 'success');
+    } catch (e: any) {
+      const msg = e?.response?.data?.message;
+      showToast(typeof msg === 'string' ? msg : 'Saqlashda xatolik', 'error');
     }
-    setModal(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -61,85 +136,84 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
       title: "Foydalanuvchini o'chirish?",
       message: "Ushbu foydalanuvchi tizimdan butunlay o'chiriladi.",
       confirmText: "O'CHIRISH",
-      type: 'danger'
+      type: 'danger',
     });
-    if (ok) await deleteUser(id);
+    if (!ok) return;
+    pendingDeleteIdRef.current = id;
+    suspendRowsSyncRef.current = true;
+    setRows((prev) => prev.filter((r) => r.id !== id));
   };
 
-  // Permission matrix
-  const modules = ['Foydalanuvchilar', 'Kurslar', 'Moliya', 'Analitika', 'Imtihonlar'];
-  const roles = ['Admin', 'Manager', 'Teacher'];
-  const matrix: Record<string, boolean[]> = {
-    Admin: [true, true, true, true, true],
-    Manager: [false, true, true, false, true],
-    Teacher: [false, true, false, false, true],
+  const onDeleteExitComplete = () => {
+    const id = pendingDeleteIdRef.current;
+    pendingDeleteIdRef.current = null;
+    if (!id) {
+      suspendRowsSyncRef.current = false;
+      return;
+    }
+    deleteUser(id)
+      .then(() => showToast("Foydalanuvchi o'chirildi", 'success'))
+      .catch(() => {
+        showToast("O'chirishda xatolik", 'error');
+        const u = useAdminStore.getState().users;
+        setRows(roleFilter ? u.filter((x: any) => x.role === roleFilter) : u);
+      })
+      .finally(() => {
+        suspendRowsSyncRef.current = false;
+      });
   };
 
   return (
     <div className="page-container animate-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight">Huquqlar Matritsasi</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Foydalanuvchilar va rollarni boshqaring.</p>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight dark:text-white">Foydalanuvchilar</h1>
+          <p className="text-sm text-slate-400 mt-0.5">IT School jamoasi va rollar.</p>
         </div>
         <div className="flex gap-3">
-          <button className="btn-secondary flex items-center gap-2"><Shield className="w-4 h-4" /> Audit Log</button>
-          <button onClick={openCreate} className="btn-primary flex items-center gap-2"><Plus className="w-4 h-4" /> Foydalanuvchi</button>
+          <button type="button" onClick={openCreate} className="btn-primary flex items-center gap-2 cursor-pointer transition-transform duration-200 hover:scale-[1.02]">
+            <Plus className="w-4 h-4" /> Foydalanuvchi
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Permission Matrix */}
-        <div className="lg:col-span-2 card p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="section-title">Rol & Huquq Matritsasi</h2>
-            <span className="status-pill pill-active">LIVE SYNC ENABLED</span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>MODUL / RESURS</th>
-                  {roles.map(r => <th key={r} className="text-center">{r.toUpperCase()}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {modules.map((mod, i) => (
-                  <tr key={mod}>
-                    <td><p className="font-bold text-slate-700">{mod}</p></td>
-                    {roles.map(r => (
-                      <td key={r} className="text-center">
-                        {matrix[r][i] ? (
-                          <CheckCircle2 className="w-5 h-5 text-primary-500 mx-auto" />
-                        ) : (
-                          <div className="w-5 h-5 rounded-full border-2 border-slate-200 mx-auto" />
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+        <div className="lg:col-span-2 min-h-0 flex">
+          <MiniGrowthChart
+            trend={stats?.growthTrend}
+            title="O'sish tendentsiyasi"
+            subtitle="Yangi ro'yxatga olishlar (so'nggi 6 oy)"
+            height={240}
+            className="flex-1 w-full"
+          />
         </div>
 
         {/* Right Column */}
         <div className="space-y-4">
-          <div className="card p-6">
-            <h2 className="section-title mb-4">Tezkor Belgilash</h2>
+          <div className="card p-6 border border-[var(--border)] bg-[var(--bg-card)]">
+            <h2 className="section-title mb-4">Tezkor ko'rinish</h2>
             <div className="space-y-3">
               {filteredUsers.slice(0, 4).map((u: any) => (
-                <div key={u.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-all">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-primary-100 rounded-lg flex items-center justify-center text-xs font-black text-primary-600 overflow-hidden">
-                      {u.photo_url ? <img src={u.photo_url} className="w-full h-full object-cover" /> : <span>{u.first_name?.[0]}{u.last_name?.[0]}</span>}
+                <div
+                  key={u.id}
+                  className="flex items-center justify-between p-3 rounded-xl transition-colors hover:bg-[var(--hover-bg)] border border-transparent hover:border-[var(--border)]"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 bg-primary-100 dark:bg-primary-900/40 rounded-lg flex items-center justify-center text-xs font-black text-primary-600 overflow-hidden shrink-0">
+                      {resolveMediaUrl(u.photo_url) ? (
+                        <img src={resolveMediaUrl(u.photo_url)} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{formatInitials(u.first_name, u.last_name, u.email)}</span>
+                      )}
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-700">{u.first_name} {u.last_name}</p>
-                      <p className="text-[10px] text-slate-400">{u.email}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-700 dark:text-[var(--text-h)] truncate">
+                        {formatPersonName(u.first_name, u.last_name, u.email)}
+                      </p>
+                      <p className="text-[10px] text-slate-400 truncate">{u.email}</p>
                     </div>
                   </div>
-                  <span className={cn("status-pill", roleColors[u.role] || 'pill-active')}>{u.role}</span>
+                  <span className={cn('status-pill shrink-0', roleColors[u.role] || 'pill-active')}>{u.role}</span>
                 </div>
               ))}
             </div>
@@ -174,27 +248,56 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
                 <tr><th>Ism</th><th>Email</th><th>Telefon</th><th>Rol</th><th className="text-right">Amallar</th></tr>
               </thead>
               <tbody>
-                {filteredUsers.map((u: any) => (
-                  <tr key={u.id}>
-                    <td>
-                      <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center text-xs font-black text-primary-600 overflow-hidden">
-                            {u.photo_url ? <img src={u.photo_url} className="w-full h-full object-cover" /> : <span>{u.first_name?.[0]}{u.last_name?.[0]}</span>}
-                         </div>
-                         <p className="font-bold text-slate-700">{u.first_name} {u.last_name}</p>
-                      </div>
-                    </td>
-                    <td className="text-xs text-slate-500">{u.email}</td>
-                    <td className="font-mono text-xs">{u.phone}</td>
-                    <td><span className={cn("status-pill", roleColors[u.role] || 'pill-active')}>{u.role}</span></td>
-                    <td>
-                      <div className="flex justify-end gap-1">
-                        <button onClick={() => openEdit(u)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={() => handleDelete(u.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-500"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                <AnimatePresence mode="popLayout" onExitComplete={onDeleteExitComplete}>
+                  {rows.map((u: any) => (
+                    <motion.tr
+                      key={u.id}
+                      layout
+                      initial={false}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                    >
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center text-xs font-black text-primary-600 overflow-hidden">
+                            {resolveMediaUrl(u.photo_url) ? (
+                              <img src={resolveMediaUrl(u.photo_url)} className="w-full h-full object-cover" alt="" />
+                            ) : (
+                              <span>{formatInitials(u.first_name, u.last_name, u.email)}</span>
+                            )}
+                          </div>
+                          <p className="font-bold text-slate-700 dark:text-[var(--text-h)]">
+                            {formatPersonName(u.first_name, u.last_name, u.email)}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="text-xs text-slate-500">{u.email}</td>
+                      <td className="font-mono text-xs">{u.phone}</td>
+                      <td>
+                        <span className={cn('status-pill', roleColors[u.role] || 'pill-active')}>{u.role}</span>
+                      </td>
+                      <td>
+                        <div className="flex justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(u)}
+                            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[var(--hover-bg)] text-slate-500 transition-colors duration-200"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(u.id)}
+                            className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 transition-colors duration-200"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
               </tbody>
             </table>
           </div>
@@ -219,12 +322,50 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
               <div><label className="input-label">Parol {modal === 'edit' && '(bo\'sh qoldiring — o\'zgarmaydi)'}</label><input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input" /></div>
               <div>
                 <label className="input-label">Rol</label>
-                <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="select">
+                <select
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  className="select transition-[border-color] duration-200"
+                >
                   <option value="TEACHER">Teacher</option>
                   <option value="MANAGER">Manager</option>
                   <option value="ADMIN">Admin</option>
                 </select>
               </div>
+              {form.role === 'TEACHER' && (
+                <div>
+                  <label className="input-label">Kurslar (maks. {MAX_TEACHER_COURSES})</label>
+                  <p className="text-[11px] text-slate-400 mb-2">O'qituvchiga biriktiriladigan kurslar</p>
+                  <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 dark:border-[var(--border)] bg-[var(--bg-card)] p-3 space-y-2">
+                    {courses.length === 0 ? (
+                      <p className="text-xs text-slate-400">Kurslar yuklanmoqda...</p>
+                    ) : (
+                      courses.map((c: any) => {
+                        const checked = form.course_ids.includes(c.id);
+                        const atLimit = form.course_ids.length >= MAX_TEACHER_COURSES && !checked;
+                        return (
+                          <label
+                            key={c.id}
+                            className={cn(
+                              'flex items-center gap-3 text-sm cursor-pointer rounded-lg px-2 py-1.5 transition-colors duration-200',
+                              atLimit ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50 dark:hover:bg-[var(--hover-bg)]',
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              className="rounded border-slate-300"
+                              checked={checked}
+                              disabled={atLimit}
+                              onChange={() => toggleCourse(c.id)}
+                            />
+                            <span className="truncate text-slate-700 dark:text-[var(--text)]">{c.name}</span>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <button onClick={() => setModal(null)} className="btn-secondary">Bekor qilish</button>

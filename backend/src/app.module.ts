@@ -27,7 +27,6 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { RootController } from './root.controller';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { LeadsModule } from './modules/leads/leads.module';
-import { VacanciesModule } from './modules/vacancies/vacancies.module';
 import { BlogsModule } from './modules/blogs/blogs.module';
 import { RolesGuard } from './common/guards/roles.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
@@ -61,7 +60,6 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
       limit: 100,
     }]),
     LeadsModule,
-    VacanciesModule,
     BlogsModule,
   ],
   providers: [

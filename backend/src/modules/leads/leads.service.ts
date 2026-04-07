@@ -27,6 +27,7 @@ export class LeadsService {
 
     // Real-time notification for CRM
     this.socketsGateway.emitToAll('new_lead', lead);
+    this.socketsGateway.emitDashboardRefresh({ source: 'lead', action: 'created' });
 
     // Interactive Telegram notification (as per telegram_reception_bot repo logic)
     await this.telegramService.notifyNewLead(lead);
@@ -35,12 +36,12 @@ export class LeadsService {
   }
 
   async findAll() {
-    return this.dbService.query(`
+    return this.dbService.querySafe(`
       SELECT l.*, c.name as course_name 
       FROM leads l 
       LEFT JOIN courses c ON l.course_id = c.id
       ORDER BY l.created_at DESC
-    `);
+    `, [], []);
   }
 
   async convertLead(id: string, branchId: string = null, groupId: string = null) {
@@ -87,6 +88,7 @@ export class LeadsService {
        
        // Notify via socket
        this.socketsGateway.emitToAll('lead_converted', { leadId: id, studentId: userId });
+       this.socketsGateway.emitDashboardRefresh({ source: 'lead', action: 'converted' });
 
        return { success: true, message: "Talaba ro'yxatga olindi", userId };
     } catch (e) {

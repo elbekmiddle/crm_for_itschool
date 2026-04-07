@@ -30,7 +30,6 @@ const LandingPage: React.FC = () => {
                   <nav className="hidden md:flex items-center gap-6 font-bold text-sm text-slate-500">
                      <a href="#" className="hover:text-primary-600 transition-colors">Kurslar</a>
                      <a href="/blog" className="hover:text-primary-600 transition-colors">Blog</a>
-                     <a href="/vacancies" className="hover:text-primary-600 transition-colors">Vakansiyalar</a>
                   </nav>
                   <div className="flex gap-3">
                      <button onClick={() => navigate('/crm')} className="px-5 py-2 font-bold text-slate-600 hover:text-primary-600">Tizimga kirish</button>

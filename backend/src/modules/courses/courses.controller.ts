@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Patch, Delete, Request } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -18,8 +18,8 @@ export class CoursesController {
   @Permissions('COURSE_CREATE')
   @Post()
   @ApiOperation({ summary: 'Create a new course', description: 'Permissions: COURSE_CREATE' })
-  create(@Body() body: CreateCourseDto) {
-    return this.coursesService.create(body);
+  create(@Body() body: CreateCourseDto, @Request() req: { user: { id: string; role: string } }) {
+    return this.coursesService.create(body, req.user);
   }
 
   @Permissions('COURSE_READ')

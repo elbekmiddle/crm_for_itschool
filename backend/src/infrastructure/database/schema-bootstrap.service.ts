@@ -1,0 +1,149 @@
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Pool } from 'pg';
+
+/**
+ * Ensures critical columns/tables exist so API queries stop failing on older DBs.
+ * Safe to run on every startup (IF NOT EXISTS / ADD COLUMN IF NOT EXISTS).
+ */
+@Injectable()
+export class SchemaBootstrapService implements OnModuleInit {
+  private readonly logger = new Logger(SchemaBootstrapService.name);
+
+  constructor(@Inject('DATABASE_POOL') private readonly pool: Pool) {}
+
+  async onModuleInit() {
+    await this.run();
+  }
+
+  private async execIgnore(sql: string, label: string) {
+    try {
+      await this.pool.query(sql);
+    } catch (e: any) {
+      this.logger.warn(`${label}: ${e?.message || e}`);
+    }
+  }
+
+  async run() {
+    const statements: { sql: string; label: string }[] = [
+      { label: 'pgcrypto', sql: `CREATE EXTENSION IF NOT EXISTS pgcrypto` },
+      {
+        label: 'users columns',
+        sql: `
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id TEXT;
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS photo_url TEXT;
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_completed_pct INTEGER DEFAULT 0;
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID;
+        `,
+      },
+      {
+        label: 'courses.deleted_at',
+        sql: `ALTER TABLE courses ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`,
+      },
+      {
+        label: 'courses meta + teacher',
+        sql: `
+          ALTER TABLE courses ADD COLUMN IF NOT EXISTS description TEXT;
+          ALTER TABLE courses ADD COLUMN IF NOT EXISTS duration_months INTEGER;
+          ALTER TABLE courses ADD COLUMN IF NOT EXISTS teacher_id UUID REFERENCES users(id) ON DELETE SET NULL;
+        `,
+      },
+      {
+        label: 'groups.deleted_at',
+        sql: `ALTER TABLE groups ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`,
+      },
+      {
+        label: 'group_students.left_at',
+        sql: `ALTER TABLE group_students ADD COLUMN IF NOT EXISTS left_at TIMESTAMP`,
+      },
+      {
+        label: 'students columns',
+        sql: `
+          ALTER TABLE students ADD COLUMN IF NOT EXISTS email TEXT;
+          ALTER TABLE students ADD COLUMN IF NOT EXISTS status TEXT;
+          ALTER TABLE students ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;
+        `,
+      },
+      {
+        label: 'payments.status',
+        sql: `ALTER TABLE payments ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'completed'`,
+      },
+      {
+        label: 'payments extra',
+        sql: `
+          ALTER TABLE payments ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+          ALTER TABLE payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+          ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'cash';
+          ALTER TABLE payments ADD COLUMN IF NOT EXISTS description TEXT;
+        `,
+      },
+      {
+        label: 'audit_logs',
+        sql: `
+          CREATE TABLE IF NOT EXISTS audit_logs (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID,
+            action TEXT,
+            entity TEXT,
+            ip_address TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+        `,
+      },
+      {
+        label: 'student_courses',
+        sql: `
+          CREATE TABLE IF NOT EXISTS student_courses (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+            course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+            status TEXT NOT NULL DEFAULT 'active',
+            price_agreed NUMERIC DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(student_id, course_id)
+          );
+        `,
+      },
+      {
+        label: 'leads',
+        sql: `
+          CREATE TABLE IF NOT EXISTS leads (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            first_name TEXT,
+            last_name TEXT,
+            phone TEXT NOT NULL,
+            parent_name TEXT,
+            course_id UUID REFERENCES courses(id) ON DELETE SET NULL,
+            source TEXT DEFAULT 'site',
+            status TEXT DEFAULT 'new',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+        `,
+      },
+      {
+        label: 'blogs',
+        sql: `
+          CREATE TABLE IF NOT EXISTS blogs (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            title TEXT NOT NULL,
+            slug TEXT UNIQUE NOT NULL,
+            content TEXT,
+            image_url TEXT,
+            category TEXT,
+            status TEXT DEFAULT 'draft',
+            created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+            views_count INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+        `,
+      },
+    ];
+
+    for (const { sql, label } of statements) {
+      await this.execIgnore(sql, label);
+    }
+
+    this.logger.log('Schema bootstrap finished.');
+  }
+}

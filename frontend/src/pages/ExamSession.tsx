@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Clock, Send } from 'lucide-react';
+import api from '../lib/api';
 import { useExamAntiCheat } from '../hooks/useExamAntiCheat';
 import { useConfirm } from '../context/ConfirmContext';
+import { useToast } from '../context/ToastContext';
 
 const ExamSession: React.FC = () => {
   const { id: attemptId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const confirm = useConfirm();
+  const { showToast } = useToast();
 
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -23,18 +27,18 @@ const ExamSession: React.FC = () => {
      setIsSubmitting(true);
      try {
         await api.post(`/exams/attempt/${attemptId}/submit`);
-        toast.success(isAuto ? "Qoidabuzarlik tufayli yakunlandi" : "Imtihon muvaffaqiyatli topshirildi");
-        navigate(`/exam-result/${attemptId}`);
+        showToast(isAuto ? "Qoidabuzarlik tufayli yakunlandi" : "Imtihon muvaffaqiyatli topshirildi", 'success');
+        navigate(`/student/exams/${attemptId}/result`);
      } catch (e) {
-        toast.error("Topshirishda xatolik");
+        showToast("Topshirishda xatolik", 'error');
         setIsSubmitting(false);
      }
-  }, [attemptId, navigate, isSubmitting]);
+  }, [attemptId, navigate, isSubmitting, showToast]);
 
   const { warnings } = useExamAntiCheat({
     examId: attemptId || 'active',
     onWarning: (cnt) => {
-      toast.error(`DIQQAT! Oynani tark etmang (${cnt}/3)`, { icon: '🚨', duration: 4000 });
+      showToast(`DIQQAT! Oynani tark etmang (${cnt}/3)`, 'error');
     },
     onAutoSubmit: () => submitExam(true)
   });
@@ -46,7 +50,7 @@ const ExamSession: React.FC = () => {
           setQuestions(data.data || []);
           setTimeLeft(1800); // 30m default for now
        } catch (e) {
-          toast.error("Sessiyani yuklab bo'lmadi");
+          showToast("Sessiyani yuklab bo'lmadi", 'error');
        } finally {
           setLoading(false);
        }

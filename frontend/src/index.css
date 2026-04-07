@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fefeff;
-  --bg-card: #ffffff;
-  --bg-muted: #f4f3ec;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
+  --text: #7d8392;
+  --text-h: #e7e9ef;
+  --bg: #12131a;
+  --bg-card: #191b24;
+  --bg-muted: #1f2230;
+  --border: #2d3140;
+  --code-bg: #1f2230;
   --accent: #aa3bff;
   --accent-bg: rgba(170, 59, 255, 0.1);
   --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --hover-bg: #f4f3ec;
-  --divide: #f0eff1;
+  --social-bg: rgba(47, 48, 58, 0.5);
+  --hover-bg: #242838;
+  --divide: #2a2e3c;
   --shadow:
-    rgba(0, 0, 0, 0.06) 0 10px 15px -3px, rgba(0, 0, 0, 0.03) 0 4px 6px -2px;
+    rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
 
   --sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: 'Outfit', system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -30,13 +30,13 @@
 }
 
 .dark {
-  --text: #9ca3af;
+  --text: #b3b8c5;
   --text-h: #f3f4f6;
   --bg: #0c0d12;
-  --bg-card: #16171d;
-  --bg-muted: #1f2028;
-  --border: #2e303a;
-  --code-bg: #1f2028;
+  --bg-card: #14161e;
+  --bg-muted: #1b1e2a;
+  --border: #2a2f3d;
+  --code-bg: #1b1e2a;
   --accent: #c084fc;
   --accent-bg: rgba(192, 132, 252, 0.12);
   --accent-border: rgba(192, 132, 252, 0.4);
@@ -45,6 +45,25 @@
   --divide: #23252e;
   --shadow:
     rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+}
+
+/* Manager / shared layout — yorug‘ rejim */
+html.light {
+  --text: #64748b;
+  --text-h: #0f172a;
+  --bg: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-muted: #f8fafc;
+  --border: #e2e8f0;
+  --code-bg: #f1f5f9;
+  --accent: #9329e6;
+  --accent-bg: rgba(147, 41, 230, 0.1);
+  --accent-border: rgba(147, 41, 230, 0.35);
+  --social-bg: rgba(148, 163, 184, 0.15);
+  --hover-bg: #f1f5f9;
+  --divide: #e2e8f0;
+  --shadow:
+    rgba(15, 23, 42, 0.06) 0 10px 15px -3px, rgba(15, 23, 42, 0.04) 0 4px 6px -2px;
 }
 
 @theme {
@@ -74,6 +93,13 @@ body {
   margin: 0;
 }
 
+button:not(:disabled),
+[role='button'],
+select:not(:disabled),
+summary {
+  cursor: pointer;
+}
+
 h1, h2, h3, h4, h5, h6 {
   color: var(--text-h);
   font-family: var(--heading);
@@ -86,7 +112,11 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 1.25rem;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.25s ease,
+    transform 0.2s ease;
 }
 
 .card-hover {
@@ -243,6 +273,11 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 0 0 4px var(--accent-bg);
 }
 
+/* Qidiruv: ikonka va placeholder bir-biriga qolmasin */
+.input.search-input {
+  padding-left: 2.85rem;
+}
+
 .input-label {
   display: block;
   font-size: 11px;
@@ -306,13 +341,20 @@ h1, h2, h3, h4, h5, h6 {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background-color: rgba(15,23,42,0.5);
-  backdrop-filter: blur(8px);
+  padding-top: max(1rem, env(safe-area-inset-top));
+  background-color: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(20px) saturate(1.15);
+  -webkit-backdrop-filter: blur(20px) saturate(1.15);
+  animation: modalBackdropIn 0.22s ease-out;
+}
+@keyframes modalBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .modal-content {
   background-color: var(--bg-card);
@@ -418,6 +460,11 @@ h1, h2, h3, h4, h5, h6 {
   border-color: var(--accent);
   background-color: var(--bg-card);
   box-shadow: 0 0 0 4px var(--accent-bg);
+}
+
+/* Filtr <select> — qidiruv ikonkasi bilan aralashmasin (faqat matn maydoni uchun search-input) */
+.select.filter-select {
+  padding-left: 0.85rem;
 }
 
 /* ── Button sizes ── */

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5001/api/v1',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api/v1',
   withCredentials: true, // Cookie'larni yuborish va qabul qilish
   headers: {
     'Content-Type': 'application/json',
@@ -65,8 +65,35 @@ api.interceptors.response.use(
       }
     }
 
+    const status = error.response?.status;
+    const raw = error.response?.data;
+    const prevMsg =
+      (typeof raw === 'object' && raw && 'message' in raw && (raw as any).message) ||
+      (typeof raw === 'string' ? raw : null);
+    let message = prevMsg;
+    if (!message && status) {
+      const map: Record<number, string> = {
+        400: "So'rov noto'g'ri",
+        401: 'Kirish rad etildi — qayta tizimga kiring',
+        403: 'Ruxsat yo‘q',
+        404: 'Ma’lumot topilmadi',
+        409: 'Ma’lumot allaqachon mavjud',
+        413: 'Fayl juda katta',
+        429: 'Juda ko‘p so‘rov — birozdan keyin urinib ko‘ring',
+        500: 'Server xatosi — keyinroq urinib ko‘ring',
+        503: 'Xizmat vaqtincha ishlamayapti',
+      };
+      message = map[status] || `Xatolik (${status})`;
+    }
+    if (message && error.response) {
+      error.response.data = {
+        ...(typeof raw === 'object' && raw ? raw : {}),
+        message,
+      };
+    }
+
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

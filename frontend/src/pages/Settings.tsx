@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
 import {
   User, Lock, Bell, Palette, Save, Eye, EyeOff,
-  Shield, Loader2
+  Loader2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useToast } from '../context/ToastContext';
@@ -142,53 +142,14 @@ const SettingsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Preferences */}
-              <div className="card p-6">
-                <h2 className="section-title mb-5">Afzalliklar</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-sm text-slate-700">Dark Mode</p>
-                      <p className="text-xs text-slate-400">Tungi rejimdan foydalanish</p>
-                    </div>
-                    <div className="w-12 h-7 bg-slate-200 rounded-full flex items-center p-1 cursor-pointer">
-                      <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-sm text-slate-700">Til</p>
-                      <p className="text-xs text-slate-400">Interfeys tili</p>
-                    </div>
-                    <select className="select w-40">
-                      <option>O'zbekcha</option>
-                      <option>Русский</option>
-                      <option>English</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
             </>
           )}
 
           {tab === 'security' && (
             <div className="card p-6">
-              <h2 className="section-title mb-5">Xavfsizlik Sozlamalari</h2>
+              <h2 className="section-title mb-5">Xavfsizlik</h2>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100">
-                  <div className="flex items-center gap-3">
-                    <Shield className="w-5 h-5 text-primary-600" />
-                    <div>
-                      <p className="font-bold text-sm text-slate-700">Ikki bosqichli tasdiqlash (2FA)</p>
-                      <p className="text-xs text-slate-400">Qo'shimcha xavfsizlik</p>
-                    </div>
-                  </div>
-                  <div className="w-12 h-7 bg-slate-200 rounded-full flex items-center p-1 cursor-pointer">
-                    <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
-                  </div>
-                </div>
-
-                <div className="border-t border-slate-100 pt-4">
+                <div className="border-t border-slate-100 pt-0">
                   <h3 className="text-sm font-bold text-slate-700 mb-4">Parolni o'zgartirish</h3>
                   <div className="space-y-3 max-w-md">
                     <div>
@@ -242,26 +203,10 @@ const SettingsPage: React.FC = () => {
 
           {/* Save Button */}
           <div className="flex justify-end">
-            <button onClick={handleSave} className="btn-primary flex items-center gap-2">
+            <button type="button" onClick={handleSave} className="btn-primary flex items-center gap-2 cursor-pointer">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {saving ? 'Saqlanmoqda...' : 'O\'zgarishlarni saqlash'}
             </button>
-          </div>
-
-          {/* Footer Stats */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="card p-4 text-center">
-              <p className="label-subtle mb-1">Oxirgi kirish</p>
-              <p className="text-sm font-bold text-slate-700">Bugun, 14:23</p>
-            </div>
-            <div className="card p-4 text-center">
-              <p className="label-subtle mb-1">Profil kuchi</p>
-              <p className="text-sm font-bold text-green-600">85%</p>
-            </div>
-            <div className="card p-4 text-center">
-              <p className="label-subtle mb-1">Ulangan qurilmalar</p>
-              <p className="text-sm font-bold text-slate-700">3</p>
-            </div>
           </div>
         </div>
       </div>

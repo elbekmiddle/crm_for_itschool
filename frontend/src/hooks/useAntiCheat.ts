@@ -17,7 +17,7 @@ interface AntiCheatConfig {
   onMaxViolationsReached?: () => void;
 }
 
-export const useAntiCheat = (config: AntiCheatConfig = {}) => {
+export const useAntiCheat = (config: Partial<AntiCheatConfig> = {}) => {
   const defaultConfig: AntiCheatConfig = {
     enableTabMonitoring: true,
     enableScreenShare: true,

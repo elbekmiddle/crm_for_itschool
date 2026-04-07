@@ -5,7 +5,7 @@ export async function add_student_to_group(dbService: DbService, groupId: string
   // 1. Get group info (course and capacity)
   const groupData = await dbService.query(
     `SELECT g.course_id, g.capacity, 
-     (SELECT COUNT(*) FROM group_students gs WHERE gs.group_id = g.id AND gs.left_at IS NULL) as current_count
+     (SELECT COUNT(*) FROM group_students gs WHERE gs.group_id = g.id) as current_count
      FROM groups g WHERE g.id = $1`, [groupId]
   );
   if (!groupData.length) throw new NotFoundException('Group not found');
@@ -16,13 +16,14 @@ export async function add_student_to_group(dbService: DbService, groupId: string
     throw new BadRequestException(`Group capacity reached (${capacity}). Cannot add more students.`);
   }
 
-  // 3. Ensure student is enrolled in the group's course
-  const enrollment = await dbService.query(
+  // 3. Ensure student is enrolled in the group's course (if student_courses exists)
+  const enrollment = await dbService.querySafe(
     `SELECT * FROM student_courses WHERE student_id = $1 AND course_id = $2 AND status = 'active'`,
-    [studentId, course_id]
+    [studentId, course_id],
+    [],
   );
   if (enrollment.length === 0) {
-    throw new BadRequestException('Student must be enrolled in the active course belonging to this group.');
+    throw new BadRequestException('Talaba ushbu guruh kursiga biriktirilmagan.');
   }
 
   // 4. Rule: A student can be in ONLY ONE active group at a time
@@ -30,7 +31,7 @@ export async function add_student_to_group(dbService: DbService, groupId: string
     `SELECT gs.group_id, g.name 
      FROM group_students gs 
      JOIN groups g ON gs.group_id = g.id 
-     WHERE gs.student_id = $1 AND gs.left_at IS NULL`,
+     WHERE gs.student_id = $1`,
     [studentId]
   );
 

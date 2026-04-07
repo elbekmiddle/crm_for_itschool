@@ -41,7 +41,7 @@ const LoadingScreen = () => (
       <Loader2 className="w-7 h-7 text-white animate-spin" />
     </div>
     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest animate-pulse leading-none">
-      Scholar Flow yuklanmoqda...
+      IT School yuklanmoqda...
     </span>
   </div>
 );

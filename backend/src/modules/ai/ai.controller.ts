@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -11,6 +11,13 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody } from '@nes
 @Controller('ai')
 export class AiController {
   constructor(private readonly aiService: AiService) {}
+
+  @Roles('ADMIN', 'MANAGER', 'TEACHER')
+  @Get('status')
+  @ApiOperation({ summary: 'OpenAI kaliti sozlanganligi (kalit ko‘rsatilmaydi)' })
+  aiStatus() {
+    return { openai_configured: this.aiService.isConfigured() };
+  }
 
   @Roles('ADMIN', 'MANAGER', 'TEACHER')
   @Post('analyze-student')

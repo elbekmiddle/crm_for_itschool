@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z, type ZodIssue } from 'zod';
 
 // Exam Schemas
 export const createExamSchema = z.object({
@@ -14,9 +14,7 @@ export const updateExamSchema = createExamSchema.partial();
 
 // Question Schemas
 export const questionSchema = z.object({
-  type: z.enum(['select', 'text', 'code'], {
-    errorMap: () => ({ message: 'Noto\'g\'ri savol turi' }),
-  }),
+  type: z.enum(['select', 'text', 'code'], { message: 'Noto\'g\'ri savol turi' }),
   text: z.string().min(10, 'Savol 10 ta belgidan kam bo\'lmasa kerak').max(500),
   points: z.number().min(1).max(100),
   options: z.array(z.string()).optional(),
@@ -156,7 +154,7 @@ export const apiResponseSchema = z.object({
   success: z.boolean(),
   data: z.any().optional(),
   message: z.string().optional(),
-  errors: z.record(z.string().array(z.string())).optional(),
+  errors: z.record(z.string(), z.array(z.string())).optional(),
 });
 
 // Pagination Schema
@@ -194,7 +192,7 @@ export const validateRegister = (data: unknown) => {
 
 export const formatValidationError = (error: z.ZodError) => {
   const formatted: Record<string, string[]> = {};
-  error.errors.forEach((err) => {
+  error.issues.forEach((err: z.ZodIssue) => {
     const path = err.path.join('.');
     if (!formatted[path]) {
       formatted[path] = [];

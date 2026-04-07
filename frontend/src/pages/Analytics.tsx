@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
 import {
   TrendingUp, Users, GraduationCap, DollarSign,
   AlertTriangle, Download, Sparkles, BarChart3
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import MiniGrowthChart from '../components/charts/MiniGrowthChart';
 
 const AnalyticsPage: React.FC = () => {
   const { stats, students, courses, fetchStats, fetchStudents, fetchCourses } = useAdminStore();
@@ -13,6 +14,14 @@ const AnalyticsPage: React.FC = () => {
 
   const growthTrend = stats?.growthTrend || [];
   const topStudents = stats?.topStudents || [];
+  const aiInsight = useMemo(() => {
+    const fromApi = stats?.ai_insight && String(stats.ai_insight).trim();
+    if (fromApi) return fromApi;
+    const top = stats?.topCourses?.[0];
+    if (!top?.name) return "Hozircha kurs bo'yicha yetarli statistik ma'lumot yo'q.";
+    const n = Number(top.student_count) || 0;
+    return `${top.name} — ${n} ta faol talaba bilan eng ko'p tanlangan yo'nalish.`;
+  }, [stats?.ai_insight, stats?.topCourses]);
 
   return (
     <div className="page-container animate-in">
@@ -70,25 +79,17 @@ const AnalyticsPage: React.FC = () => {
               <h2 className="section-title">O'sish Tendentsiyasi</h2>
               <p className="text-xs text-slate-400 mt-0.5">Yangi ro'yxatga olishlar (so'nggi 6 oy)</p>
             </div>
-            <div className="bg-slate-100 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Internal Data</div>
+            <div className="bg-slate-100 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">So'nggi 6 oy</div>
           </div>
 
-          <div className="flex items-end gap-3 h-40">
-            {growthTrend.map((g: any, i: number) => {
-              const maxCount = Math.max(...growthTrend.map((t: any) => t.count), 1);
-              const h = (g.count / maxCount) * 100;
-              return (
-                <div key={g.month + i} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full relative overflow-hidden bg-primary-100 rounded-t-lg" style={{ height: `${Math.max(h, 5)}%` }}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-primary-500/40 to-primary-300/20" />
-                  </div>
-                  <span className="text-[9px] font-bold text-slate-400">{g.month}</span>
-                </div>
-              );
-            })}
-            {growthTrend.length === 0 && (
-              <div className="w-full h-full flex items-center justify-center text-slate-300 text-xs font-bold">Ma'lumot yetarli emas</div>
-            )}
+          <div className="h-52 w-full min-h-[13rem]">
+            <MiniGrowthChart
+              trend={growthTrend}
+              title=""
+              subtitle=""
+              height={208}
+              className="border-0 p-0 bg-transparent shadow-none"
+            />
           </div>
         </div>
 
@@ -114,9 +115,9 @@ const AnalyticsPage: React.FC = () => {
             {(stats?.topCourses || []).length === 0 && <p className="text-center py-4 text-xs text-slate-400">Kurslar bo'yicha ma'lumot yo'q</p>}
           </div>
 
-          <div className="mt-6 p-4 bg-primary-50 rounded-xl flex items-center gap-3">
-            <Sparkles className="w-5 h-5 text-primary-600" />
-            <p className="text-xs text-primary-700 font-semibold">AI: {stats?.topCourses?.[0]?.name || 'Kurslar'} eng faol rivojlanmoqda.</p>
+          <div className="mt-6 p-4 bg-primary-50 dark:bg-primary-950/30 rounded-xl flex items-start gap-3 border border-primary-100/50 dark:border-primary-900/40">
+            <Sparkles className="w-5 h-5 text-primary-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-primary-800 dark:text-primary-200 font-semibold leading-relaxed">{aiInsight}</p>
           </div>
         </div>
       </div>

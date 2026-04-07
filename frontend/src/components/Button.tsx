@@ -19,9 +19,9 @@ const Button: React.FC<ButtonProps> = ({
   
   const variants = {
     primary: "bg-primary-600 hover:bg-primary-700 text-white shadow-primary-200",
-    secondary: "bg-white border-2 border-slate-100 text-slate-500 hover:bg-slate-50 shadow-slate-100",
+    secondary: "bg-[var(--bg-muted)] border-2 border-[var(--border)] text-[var(--text-h)] hover:bg-[var(--hover-bg)] shadow-none",
     danger: "bg-red-500 hover:bg-red-600 text-white shadow-red-100",
-    ghost: "bg-transparent hover:bg-slate-100 text-slate-400 shadow-none border border-transparent"
+    ghost: "bg-transparent hover:bg-[var(--hover-bg)] text-[var(--text)] shadow-none border border-[var(--border)]"
   };
 
   return (

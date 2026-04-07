@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Muhit — lokal / serverda .env.production ni qo‘lda yarating (.env.production.example dan)
+.env
+.env.production
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

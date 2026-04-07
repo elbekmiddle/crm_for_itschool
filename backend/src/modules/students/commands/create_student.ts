@@ -16,6 +16,20 @@ export async function create_student(dbService: DbService, createStudentDto: Cre
 
   const { first_name, last_name, parent_name } = createStudentDto;
 
+  const dupExact = await dbService.querySafe(
+    `SELECT id FROM students 
+     WHERE phone = $1 
+       AND LOWER(TRIM(first_name)) = LOWER(TRIM($2::text))
+       AND LOWER(TRIM(COALESCE(last_name, ''))) = LOWER(TRIM(COALESCE($3::text, '')))`,
+    [phone_norm, first_name, last_name || ''],
+    [],
+  );
+  if (dupExact.length) {
+    throw new ConflictException(
+      'Bunday ism, familiya va telefon bilan talaba allaqachon mavjud',
+    );
+  }
+
   try {
     const result = await dbService.query(
       `INSERT INTO students (first_name, last_name, phone, parent_name, parent_phone, created_by) 
@@ -24,12 +38,12 @@ export async function create_student(dbService: DbService, createStudentDto: Cre
     );
     return result[0];
   } catch (error) {
-    if (error.code === '23505') { // Unique violation
-      if (error.detail.includes('phone')) {
-        throw new ConflictException('Phone number already exists');
+    if (error.code === '23505') {
+      if (error.detail?.includes('phone')) {
+        throw new ConflictException('Bu telefon raqam bilan talaba allaqachon mavjud');
       }
-      if (error.detail.includes('parent_phone')) {
-        throw new ConflictException('Parent phone number already exists');
+      if (error.detail?.includes('parent_phone')) {
+        throw new ConflictException('Ota-ona telefoni allaqachon ro‘yxatdan o‘tgan');
       }
     }
     throw error;

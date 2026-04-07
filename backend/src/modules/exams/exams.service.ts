@@ -10,13 +10,15 @@ import * as dayjs from 'dayjs';
 
 import { TelegramService } from '../../infrastructure/notifications/telegram.service';
 import { SocketsGateway } from '../sockets/sockets.gateway';
+import { AiService } from '../ai/ai.service';
 @Injectable()
 export class ExamsService {
   constructor(
     private readonly dbService: DbService, 
     private readonly queueService: QueueService,
     private readonly telegramService: TelegramService,
-    private readonly socketsGateway: SocketsGateway
+    private readonly socketsGateway: SocketsGateway,
+    private readonly aiService: AiService,
   ) {}
 
   async findAll() {
@@ -55,6 +57,7 @@ export class ExamsService {
   async create(createExamDto: CreateExamDto, teacherId: string) {
     const newExam = await create_exam(this.dbService, createExamDto, teacherId);
     this.socketsGateway.emitToAll('exam_created', newExam);
+    this.socketsGateway.emitDashboardRefresh({ source: 'exam', action: 'created' });
     return newExam;
   }
 
@@ -69,11 +72,14 @@ export class ExamsService {
     if (data.status === 'published' || data.status === 'approved') {
        this.socketsGateway.emitToAll('exam_approved', result[0]);
     }
+    this.socketsGateway.emitDashboardRefresh({ source: 'exam', action: 'updated' });
     return result[0];
   }
 
   async remove(id: string) {
-    return this.dbService.query(`UPDATE exams SET deleted_at = NOW() WHERE id = $1`, [id]);
+    const r = await this.dbService.query(`UPDATE exams SET deleted_at = NOW() WHERE id = $1`, [id]);
+    this.socketsGateway.emitDashboardRefresh({ source: 'exam', action: 'deleted' });
+    return r;
   }
 
   async addQuestionsToExam(examId: string, questionIds: string[]) {
@@ -150,6 +156,12 @@ export class ExamsService {
       count,
       teacherId
     });
+
+    if (!job?.id) {
+      throw new BadRequestException(
+        "AI imtihon yaratilmadi: OPENAI_API_KEY yoki Redis (REDIS_URL) tekshiring.",
+      );
+    }
 
     // Notify teacher via Telegram that AI is working (or check socket room)
     const teacher = await this.dbService.query(`SELECT telegram_chat_id FROM users WHERE id = $1`, [teacherId]);
@@ -316,14 +328,25 @@ export class ExamsService {
     let correctCount = 0;
     
     for (const ans of answers) {
-       const question = await this.dbService.query(`SELECT type, correct_answer FROM questions WHERE id = $1`, [ans.question_id]);
+       const question = await this.dbService.query(
+         `SELECT type, correct_answer, text FROM questions WHERE id = $1`,
+         [ans.question_id],
+       );
        if (!question.length) continue;
        
        let isCorrect = false;
        let points = 0;
-       const qType = question[0].type;
+       let qType = String(question[0].type || '')
+         .toLowerCase()
+         .replace(/-/g, '_');
+       if (qType === 'select' || qType === 'mcq') qType = 'multiple_choice';
        const qCorrect = question[0].correct_answer;
+       const qText = String(question[0].text || '');
        const uPayload = ans.answer_payload;
+       const refStr =
+         typeof qCorrect === 'string' || typeof qCorrect === 'number'
+           ? String(qCorrect)
+           : JSON.stringify(qCorrect ?? '');
 
        // Enhanced AI evaluation
        if (qType === 'multiple_choice') {
@@ -333,20 +356,41 @@ export class ExamsService {
          const cArr = Array.isArray(qCorrect) ? qCorrect : [];
          isCorrect = pArr.length === cArr.length && pArr.every(v => cArr.includes(v));
        } else if (qType === 'text') {
-         const userText = String(uPayload).toLowerCase();
-         const targetKey = String(qCorrect).toLowerCase().split(/[\s,.;]+/);
-         const matches = targetKey.filter(w => w.length > 3 && userText.includes(w)).length;
-         const relevance = matches / Math.max(targetKey.filter(w => w.length > 3).length, 1);
-         isCorrect = relevance >= 0.5;
-         points = Math.round(relevance * 10);
+         const aiGr = await this.aiService.gradeExamAnswer({
+           questionText: qText,
+           expectedAnswer: refStr,
+           studentAnswer: String(uPayload ?? ''),
+           questionType: 'text',
+         });
+         if (aiGr) {
+           isCorrect = aiGr.isCorrect;
+           points = aiGr.points;
+         } else {
+           const userText = String(uPayload).toLowerCase();
+           const targetKey = refStr.toLowerCase().split(/[\s,.;]+/);
+           const matches = targetKey.filter(w => w.length > 3 && userText.includes(w)).length;
+           const relevance = matches / Math.max(targetKey.filter(w => w.length > 3).length, 1);
+           isCorrect = relevance >= 0.5;
+           points = Math.round(relevance * 10);
+         }
        } else if (qType === 'code') {
-         const code = String(uPayload);
-         // Check for key algorithmic keywords in LeetCode answers
-         const keywords = ['function', 'return', 'const', 'let', 'for', 'while', 'if', 'Map', 'Set', 'stack'];
-         const matchCount = keywords.filter(k => code.includes(k)).length;
-         const structuralScore = (matchCount / keywords.length) * 100;
-         isCorrect = structuralScore > 40;
-         points = isCorrect ? 10 : 0;
+         const aiGr = await this.aiService.gradeExamAnswer({
+           questionText: qText,
+           expectedAnswer: refStr,
+           studentAnswer: String(uPayload ?? ''),
+           questionType: 'code',
+         });
+         if (aiGr) {
+           isCorrect = aiGr.isCorrect;
+           points = aiGr.points;
+         } else {
+           const code = String(uPayload);
+           const keywords = ['function', 'return', 'const', 'let', 'for', 'while', 'if', 'Map', 'Set', 'stack'];
+           const matchCount = keywords.filter(k => code.includes(k)).length;
+           const structuralScore = (matchCount / keywords.length) * 100;
+           isCorrect = structuralScore > 40;
+           points = isCorrect ? 10 : 0;
+         }
        }
 
        if (isCorrect) correctCount++;

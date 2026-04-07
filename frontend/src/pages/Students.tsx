@@ -26,7 +26,16 @@ const StudentsPage: React.FC = () => {
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
   const [enrollModal, setEnrollModal] = useState<any>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
-  const [form, setForm] = useState({ first_name: '', last_name: '', phone: '', email: '', parent_name: '', parent_phone: '', status: 'active', study_type: 'group' });
+  const [form, setForm] = useState({
+    first_name: '',
+    last_name: '',
+    phone: '',
+    parent_name: '',
+    parent_phone: '',
+    status: 'active',
+    study_type: 'group',
+    course_id: '',
+  });
   const [enrollCourseId, setEnrollCourseId] = useState('');
   const [page, setPage] = useState(1);
   const [courseFilter, setCourseFilter] = useState('');
@@ -43,13 +52,31 @@ const StudentsPage: React.FC = () => {
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
   const openCreate = () => {
-    setForm({ first_name: '', last_name: '', phone: '', email: '', parent_name: '', parent_phone: '', status: 'active', study_type: 'group' });
+    setForm({
+      first_name: '',
+      last_name: '',
+      phone: '',
+      parent_name: '',
+      parent_phone: '',
+      status: 'active',
+      study_type: 'group',
+      course_id: '',
+    });
     setModal('create');
   };
 
   const openEdit = (s: any) => {
     setEditTarget(s);
-    setForm({ first_name: s.first_name, last_name: s.last_name, phone: s.phone, email: s.email || '', parent_name: s.parent_name || '', parent_phone: s.parent_phone || '', status: s.status || 'active', study_type: s.study_type || 'group' });
+    setForm({
+      first_name: s.first_name,
+      last_name: s.last_name,
+      phone: s.phone,
+      parent_name: s.parent_name || '',
+      parent_phone: s.parent_phone || '',
+      status: s.status || 'active',
+      study_type: s.study_type || 'group',
+      course_id: '',
+    });
     setModal('edit');
   };
 
@@ -62,10 +89,14 @@ const StudentsPage: React.FC = () => {
   };
 
   const handleSave = async () => {
-    const data = { 
-      ...form, 
+    if (modal === 'create' && (user?.role === 'MANAGER' || user?.role === 'ADMIN') && !form.course_id) {
+      showToast('Talabani kursga biriktirish uchun kursni tanlang', 'error');
+      return;
+    }
+    const data = {
+      ...form,
       phone: normalizePhone(form.phone),
-      parent_phone: normalizePhone(form.parent_phone)
+      parent_phone: normalizePhone(form.parent_phone),
     };
     try {
       if (modal === 'create') {
@@ -148,25 +179,29 @@ const StudentsPage: React.FC = () => {
       </div>
 
       {/* Search & Filter */}
-      <div className="card p-4 mb-4 flex flex-col md:flex-row items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+      <div className="card mb-4 flex flex-col gap-4 p-4 md:flex-row md:items-center">
+        <div className="relative min-w-0 flex-1 isolate">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 z-[2] h-4 w-4 -translate-y-1/2 text-slate-400 opacity-80" />
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Talaba qidirish..."
-            className="input pl-10"
+            className="input search-input w-full transition-[border-color,box-shadow] duration-200"
           />
         </div>
-        <select 
-          value={courseFilter} 
-          onChange={(e) => { setCourseFilter(e.target.value); setPage(1); }}
-          className="select md:w-64"
-        >
-          <option value="">Barcha kurslar</option>
-          {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <span className="text-xs font-bold text-slate-400 whitespace-nowrap">{filtered.length} ta natija</span>
+        <div className="w-full shrink-0 md:w-72">
+          <select
+            value={courseFilter}
+            onChange={(e) => { setCourseFilter(e.target.value); setPage(1); }}
+            className="select filter-select w-full transition-[border-color] duration-200"
+          >
+            <option value="">Barcha kurslar</option>
+            {courses.map((c: any) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <span className="whitespace-nowrap text-xs font-bold text-slate-400">{filtered.length} ta natija</span>
       </div>
 
       {/* Table */}
@@ -201,7 +236,9 @@ const StudentsPage: React.FC = () => {
                         </div>
                         <div>
                           <p className="font-bold text-slate-700">{s.first_name} {s.last_name}</p>
-                          <p className="text-[11px] text-slate-400">{s.email || ''}</p>
+                          {s.parent_name ? (
+                            <p className="text-[11px] text-slate-400">{s.parent_name}</p>
+                          ) : null}
                         </div>
                       </div>
                     </td>
@@ -283,10 +320,6 @@ const StudentsPage: React.FC = () => {
                 <label className="input-label">Telefon</label>
                 <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input" placeholder="+998901234567" />
               </div>
-              <div>
-                <label className="input-label">Email</label>
-                <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="input" placeholder="talaba@email.com" />
-              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="input-label">Ota-ona ismi</label>
@@ -315,6 +348,22 @@ const StudentsPage: React.FC = () => {
                   </select>
                 </div>
               </div>
+              {modal === 'create' && (user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
+                <div>
+                  <label className="input-label">Kursga yozilish *</label>
+                  <select
+                    value={form.course_id}
+                    onChange={(e) => setForm({ ...form, course_id: e.target.value })}
+                    className="select"
+                  >
+                    <option value="">Kursni tanlang</option>
+                    {courses.map((c: any) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-400 mt-1">O‘qituvchi o‘z kursidagi talabalarni shu bo‘yicha ko‘radi.</p>
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <button onClick={() => setModal(null)} className="btn-secondary">Bekor qilish</button>

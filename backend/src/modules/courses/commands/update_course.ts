@@ -8,6 +8,11 @@ export async function update_course(dbService: DbService, id: string, data: any)
 
   if (data.name) { updates.push(`name = $${queryIndex++}`); values.push(data.name); }
   if (data.price !== undefined) { updates.push(`price = $${queryIndex++}`); values.push(data.price); }
+  if (data.description !== undefined) { updates.push(`description = $${queryIndex++}`); values.push(data.description); }
+  if (data.duration_months !== undefined) {
+    updates.push(`duration_months = $${queryIndex++}`);
+    values.push(data.duration_months === null || data.duration_months === '' ? null : Number(data.duration_months));
+  }
 
   if (updates.length === 0) return { success: false, message: 'Nothing to update' };
   values.push(id);

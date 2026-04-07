@@ -22,6 +22,30 @@ export class DbService implements OnModuleInit {
     }
   }
 
+  /**
+   * Safe query for backward-compatible flows.
+   * Returns fallback rows when table/column/schema is missing.
+   */
+  async querySafe<T = any>(queryText: string, values: any[] = [], fallback: T[] = []): Promise<T[]> {
+    try {
+      this.logger.debug(`Executing query (safe): ${queryText}`);
+      const result: QueryResult = await this.pool.query(queryText, values);
+      return result.rows as T[];
+    } catch (error) {
+      const code = (error as any)?.code;
+      const isSchemaError = ['42P01', '42703', '3F000'].includes(code);
+
+      if (isSchemaError) {
+        this.logger.warn(
+          `Schema mismatch for query (code=${code}). Returning fallback rows.`,
+        );
+        return fallback;
+      }
+
+      throw error;
+    }
+  }
+
   async getClient() {
     return await this.pool.connect();
   }

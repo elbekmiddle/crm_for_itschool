@@ -31,9 +31,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const token = req.cookies?.access_token || req.headers.authorization?.split(' ')[1];
     
     if (token) {
-      const blacklisted = await this.redisService.get(`blacklist:${token}`);
-      if (blacklisted) {
-        throw new UnauthorizedException('Token qora ro\'yxatda');
+      try {
+        const blacklisted = await this.redisService.get(`blacklist:${token}`);
+        if (blacklisted) {
+          throw new UnauthorizedException('Token qora ro\'yxatda');
+        }
+      } catch (e: any) {
+        if (e instanceof UnauthorizedException) throw e;
+        // Redis tarmoq xatosi — kirishni bloklamaslik
       }
     }
     
