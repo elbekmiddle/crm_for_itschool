@@ -14,7 +14,7 @@ export async function all_users(dbService: DbService) {
   );
   if (rows.length > 0) return rows;
   return dbService.querySafe(
-    `SELECT id, email, role, first_name, last_name, created_at FROM users ORDER BY created_at DESC`,
+    `SELECT id, email, role, first_name, last_name, phone, photo_url, created_at FROM users ORDER BY created_at DESC`,
     [],
     [],
   );

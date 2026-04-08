@@ -21,10 +21,14 @@ import { get_user_by_email } from './queries/get_user_by_email';
 import { get_user_by_id_for_auth } from './queries/get_user_by_id_for_auth';
 import { get_student_by_phone } from './queries/get_student_by_phone';
 import { get_student_by_id_with_auth_data } from './queries/get_student_by_id_with_auth_data';
+import { permissionsForRole } from '../../common/constants/role-permissions';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+
+  /** Redis bo‘lmasa: tasdiqlash kodi vaqtinchalik server xotirasida (restart = kod yo‘qoladi) */
+  private readonly verifyCodeMemory = new Map<string, { code: string; exp: number }>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -178,8 +182,12 @@ export class AuthService {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const redisKey = `verify:${phone}`;
 
-    // Store in Redis for 5 minutes
-    await this.redisService.set(redisKey, code, { ex: 300 });
+    if (this.redisService.isEnabled()) {
+      await this.redisService.set(redisKey, code, { ex: 300 });
+    } else {
+      this.verifyCodeMemory.set(phone, { code, exp: Date.now() + 300_000 });
+      this.logger.warn(`[sendVerifyCode] Redis yo'q — kod vaqtinchalik server xotirasida: ${redisKey}`);
+    }
     this.logger.debug(`[sendVerifyCode] phone=${phone} code=${code} redis_key=${redisKey}`);
 
     if (student.telegram_chat_id) {
@@ -200,15 +208,39 @@ export class AuthService {
    * Step 2: Pre-validate the code without setting password
    * Returns 200 if code matches, 400 if wrong/expired
    */
+  private async readVerifyCode(phone: string): Promise<string | null> {
+    const redisKey = `verify:${phone}`;
+    if (this.redisService.isEnabled()) {
+      const raw = await this.redisService.get(redisKey);
+      if (raw == null || raw === '') return null;
+      return String(raw).replace(/\D/g, '');
+    }
+    const row = this.verifyCodeMemory.get(phone);
+    if (!row) return null;
+    if (Date.now() > row.exp) {
+      this.verifyCodeMemory.delete(phone);
+      return null;
+    }
+    return String(row.code).replace(/\D/g, '');
+  }
+
+  private async clearVerifyCode(phone: string) {
+    const redisKey = `verify:${phone}`;
+    this.verifyCodeMemory.delete(phone);
+    if (this.redisService.isEnabled()) {
+      await this.redisService.del(redisKey);
+    }
+  }
+
   async checkCode(dto: CheckCodeDto) {
     const phone = this.normalizePhone(dto.phone);
-    const redisKey = `verify:${phone}`;
-    const storedCode = await this.redisService.get(redisKey);
-    this.logger.debug(`[checkCode] phone=${phone} entered=${dto.code} stored=${storedCode}`);
-    if (!storedCode) {
+    const entered = String(dto.code || '').replace(/\D/g, '');
+    const storedNorm = await this.readVerifyCode(phone);
+    this.logger.debug(`[checkCode] phone=${phone} entered=${entered} stored_len=${storedNorm?.length ?? 0}`);
+    if (!storedNorm) {
       throw new BadRequestException('Kod muddati tugagan. Qaytadan so\'rang.');
     }
-    if (storedCode !== dto.code) {
+    if (storedNorm !== entered) {
       throw new BadRequestException('Noto\'g\'ri kod. Telegram dan kodni yana bir bor tekshiring.');
     }
     return { valid: true, message: 'Kod to\'g\'ri!' };
@@ -219,13 +251,13 @@ export class AuthService {
    */
   async verifyCodeAndSetPassword(dto: VerifyCodeDto) {
     const phone = this.normalizePhone(dto.phone);
-    const redisKey = `verify:${phone}`;
-    const storedCode = await this.redisService.get(redisKey);
-    this.logger.debug(`[verifyCode] phone=${phone} entered=${dto.code} stored=${storedCode}`);
-    if (!storedCode) {
+    const entered = String(dto.code || '').replace(/\D/g, '');
+    const storedNorm = await this.readVerifyCode(phone);
+    this.logger.debug(`[verifyCode] phone=${phone} entered=${entered} stored_len=${storedNorm?.length ?? 0}`);
+    if (!storedNorm) {
       throw new BadRequestException('Kod muddati tugagan. Qaytadan so\'rang.');
     }
-    if (storedCode !== dto.code) {
+    if (storedNorm !== entered) {
       throw new BadRequestException('Noto\'g\'ri kod.');
     }
 
@@ -238,7 +270,7 @@ export class AuthService {
        WHERE REGEXP_REPLACE(phone, '[^0-9]', '', 'g') = REGEXP_REPLACE($2::text, '[^0-9]', '', 'g') AND deleted_at IS NULL`,
       [hashedPassword, phone],
     );
-    await this.redisService.del(redisKey);
+    await this.clearVerifyCode(phone);
     const students = await get_student_by_phone(this.dbService, phone);
     if (!students.length) throw new NotFoundException('Student not found');
 
@@ -308,17 +340,10 @@ export class AuthService {
   }
 
   private async generateTokens(user: any) {
-    const rolePermissions = {
-      'ADMIN': ['*'],
-      'MANAGER': ['STUDENT_READ', 'STUDENT_CREATE', 'STUDENT_UPDATE', 'STUDENT_ENROLL', 'COURSE_READ', 'GROUP_READ', 'GROUP_UPDATE', 'PAYMENT_READ', 'PAYMENT_CREATE', 'ANALYTICS_VIEW'],
-      'TEACHER': ['STUDENT_READ', 'STUDENT_CREATE', 'STUDENT_UPDATE', 'GROUP_READ', 'GROUP_CREATE', 'GROUP_UPDATE', 'ATTENDANCE_MARK', 'ATTENDANCE_READ', 'EXAM_MANAGE', 'PAYMENT_READ', 'ANALYTICS_VIEW'],
-      'STUDENT': ['STUDENT_READ', 'EXAM_PASS', 'EXAM_READ', 'ATTENDANCE_READ', 'PAYMENT_READ', 'COURSE_READ']
-    };
-
     const payload = {
       sub: user.id,
       role: user.role,
-      permissions: rolePermissions[user.role] || [],
+      permissions: permissionsForRole(user.role),
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       phone: user.phone || '',

@@ -22,6 +22,17 @@ export class CreateGroupDto {
   @Min(1)
   @IsOptional()
   capacity?: number;
+
+  @ApiProperty({ example: 20, required: false, description: 'Frontend: max_students' })
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  max_students?: number;
+
+  @ApiProperty({ example: 'Du, Se (14:00)', required: false })
+  @IsString()
+  @IsOptional()
+  schedule?: string;
 }
 
 export class GroupStudentDto {

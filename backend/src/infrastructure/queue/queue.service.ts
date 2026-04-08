@@ -82,15 +82,10 @@ export class QueueService implements OnModuleInit {
   async addExamJob(data: any) {
     if (!this.aiQueue) {
       this.logger.warn('Redis offline: Processing AI exam job synchronously...');
-      try {
-        const { examId, lessonId, topic, level, count, teacherId } = data;
-        const questions = await this.aiService.generateExamQuestions(topic, level, count);
-        await process_exam_questions(this.dbService, examId, lessonId, teacherId, level, questions);
-        return { id: 'sync-' + Date.now(), getState: () => 'completed' };
-      } catch (e: any) {
-        this.logger.error(`Sync job failed: ${e.message}`);
-        return null;
-      }
+      const { examId, lessonId, topic, level, count, teacherId } = data;
+      const questions = await this.aiService.generateExamQuestions(topic, level, count);
+      await process_exam_questions(this.dbService, examId, lessonId, teacherId, level, questions);
+      return { id: 'sync-' + Date.now(), getState: () => 'completed' };
     }
     return this.aiQueue.add('generate-exam', data, {
       removeOnComplete: true,

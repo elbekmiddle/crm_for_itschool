@@ -10,7 +10,8 @@ import { useToast } from '../context/ToastContext';
 import MiniGrowthChart from '../components/charts/MiniGrowthChart';
 
 const CoursesPage: React.FC = () => {
-  const { courses, fetchCourses, fetchStats, stats, createCourse, updateCourse, deleteCourse, isLoading } = useAdminStore();
+  const { user, courses, fetchCourses, fetchStats, stats, createCourse, updateCourse, deleteCourse, isLoading } = useAdminStore();
+  const isManager = user?.role === 'MANAGER';
   const confirm = useConfirm();
   const { showToast } = useToast();
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
@@ -94,12 +95,14 @@ const CoursesPage: React.FC = () => {
           <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-[var(--text-h)]">Kurs Boshqaruvi</h1>
           <p className="mt-0.5 text-sm text-slate-400">O'quv yo'nalishlarini boshqaring.</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="btn-primary flex items-center gap-2 transition-transform duration-200 hover:scale-[1.02]"
-        >
-          <Plus className="h-4 w-4" /> Yangi Kurs
-        </button>
+        {!isManager && (
+          <button
+            onClick={openCreate}
+            className="btn-primary flex items-center gap-2 transition-transform duration-200 hover:scale-[1.02]"
+          >
+            <Plus className="h-4 w-4" /> Yangi Kurs
+          </button>
+        )}
       </div>
 
       {/* Stats */}

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import api from '../lib/api';
+import SparklineChart from '../components/charts/SparklineChart';
 
 const ExamResult: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -188,16 +189,16 @@ const ExamResult: React.FC = () => {
                     <span className="text-slate-500 font-semibold">O'tish bali</span>
                     <span className="font-bold text-slate-700">{result.exam?.passing_score || 60}%</span>
                  </div>
-                 <div className="w-full bg-slate-100 rounded-full h-3 relative overflow-hidden">
-                    <div 
-                      className="absolute left-0 top-0 h-full bg-slate-300 border-r-2 border-white z-10" 
-                      style={{ width: `${result.exam?.passing_score || 60}%` }} 
-                    />
-                    <div 
-                      className={cn("absolute left-0 top-0 h-full z-20 transition-all duration-1000", isPassed ? "bg-green-500" : "bg-red-500")}
-                      style={{ width: `${result.score}%` }}
-                    />
-                 </div>
+                 <SparklineChart
+                   className="mt-1"
+                   height={52}
+                   color={isPassed ? '#22c55e' : '#ef4444'}
+                   values={[
+                     0,
+                     Math.min(100, Number(result.exam?.passing_score) || 60),
+                     Math.min(100, Number(result.score) || 0),
+                   ]}
+                 />
                  <p className="text-xs text-slate-400 font-medium italic">
                     * Sizning balingiz kamida {result.exam?.passing_score || 60}% bo'lishi kerak edi.
                  </p>

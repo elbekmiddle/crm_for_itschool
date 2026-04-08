@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import * as compression from 'compression';
@@ -9,6 +9,7 @@ import * as cookieParser from 'cookie-parser';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
   app.useWebSocketAdapter(new IoAdapter(app));
 
@@ -48,22 +49,30 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // Swagger API Documentation
-  const config = new DocumentBuilder()
-    .setTitle('IT School CRM + LMS API')
-    .setDescription('Production-grade Backend for Educational Management')
-    .setVersion('2.0')
-    .addTag('students')
-    .addTag('groups')
-    .addTag('exams')
-    .addBearerAuth()
-    .build();
+  const enableSwagger =
+    process.env.NODE_ENV !== 'production' ||
+    process.env.ENABLE_SWAGGER === 'true';
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/v1/docs', app, document);
+  if (enableSwagger) {
+    const config = new DocumentBuilder()
+      .setTitle('IT School CRM + LMS API')
+      .setDescription('Production-grade Backend for Educational Management')
+      .setVersion('2.0')
+      .addTag('students')
+      .addTag('groups')
+      .addTag('exams')
+      .addBearerAuth()
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/v1/docs', app, document);
+    logger.log(`Swagger: http://localhost:${process.env.PORT || 3000}/api/v1/docs`);
+  } else {
+    logger.log('Swagger o‘chirilgan (NODE_ENV=production). Staging uchun: ENABLE_SWAGGER=true');
+  }
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}/api/v1/docs`);
+  logger.log(`API: http://localhost:${port}/api/v1`);
 }
 bootstrap();

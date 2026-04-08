@@ -7,10 +7,13 @@ import {
 } from 'lucide-react';
 
 import { useConfirm } from '../context/ConfirmContext';
+import { useToast } from '../context/ToastContext';
+import api from '../lib/api';
 
 const GroupsPage: React.FC = () => {
   const { user, groups, courses, students, fetchGroups, fetchCourses, fetchStudents, createGroup, updateGroup, deleteGroup, addStudentToGroup, removeStudentFromGroup, fetchGroupStudents, isLoading } = useAdminStore();
   const confirm = useConfirm();
+  const { showToast } = useToast();
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
   const [form, setForm] = useState({ name: '', course_id: '', schedule: '', max_students: '' });
@@ -18,6 +21,7 @@ const GroupsPage: React.FC = () => {
   const [groupStudents, setGroupStudents] = useState<any[]>([]);
   const [addStudentModal, setAddStudentModal] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [groupAttendancePct, setGroupAttendancePct] = useState<number | null>(null);
 
   useEffect(() => { fetchGroups(); fetchCourses(); fetchStudents(); }, []);
 
@@ -25,7 +29,36 @@ const GroupsPage: React.FC = () => {
     setSelectedGroup(group);
     const data = await fetchGroupStudents(group.id);
     setGroupStudents(data || []);
+    setGroupAttendancePct(null);
   };
+
+  useEffect(() => {
+    const id = selectedGroup?.id;
+    if (!id) {
+      setGroupAttendancePct(null);
+      return;
+    }
+    let cancelled = false;
+    const t = window.setTimeout(async () => {
+      try {
+        const { data: att } = await api.get(`/attendance/group/${id}`);
+        if (cancelled) return;
+        const rows = Array.isArray(att) ? att : [];
+        if (rows.length === 0) {
+          setGroupAttendancePct(null);
+          return;
+        }
+        const present = rows.filter((r: any) => String(r.status || '').toUpperCase() === 'PRESENT').length;
+        setGroupAttendancePct(Math.round((present / rows.length) * 100));
+      } catch {
+        if (!cancelled) setGroupAttendancePct(null);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [selectedGroup?.id]);
 
   const openCreate = () => {
     setForm({ name: '', course_id: '', schedule: '', max_students: '' });
@@ -34,7 +67,12 @@ const GroupsPage: React.FC = () => {
 
   const openEdit = (g: any) => {
     setEditTarget(g);
-    setForm({ name: g.name, course_id: g.course_id || '', schedule: g.schedule || '', max_students: g.max_students?.toString() || '' });
+    setForm({
+      name: g.name,
+      course_id: g.course_id || '',
+      schedule: g.schedule || '',
+      max_students: String(g.max_students ?? g.capacity ?? ''),
+    });
     setModal('edit');
   };
 
@@ -64,10 +102,17 @@ const GroupsPage: React.FC = () => {
   };
 
   const handleAddStudent = async () => {
-    if (selectedGroup && selectedStudentId) {
+    if (!selectedGroup || !selectedStudentId) return;
+    try {
       await addStudentToGroup(selectedGroup.id, selectedStudentId);
       await loadGroupStudents(selectedGroup);
       setAddStudentModal(false);
+      setSelectedStudentId('');
+      showToast('Talaba guruhga qo‘shildi', 'success');
+    } catch (error: any) {
+      const message = error?.response?.data?.message;
+      const text = Array.isArray(message) ? message.join(', ') : message || 'Talabani qo‘shib bo‘lmadi';
+      showToast(String(text), 'error');
     }
   };
 
@@ -181,14 +226,26 @@ const GroupsPage: React.FC = () => {
                     <p className="text-2xl font-black text-primary-600">{groupStudents.length}</p>
                     <p className="text-[10px] font-bold text-primary-400 uppercase mt-1">Talabalar</p>
                   </div>
-                  <div className="bg-green-50 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-black text-green-600">92%</p>
+                  <div className="bg-green-50 dark:bg-emerald-950/30 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-black text-green-600 dark:text-emerald-400">
+                      {groupAttendancePct === null ? '—' : `${groupAttendancePct}%`}
+                    </p>
                     <p className="text-[10px] font-bold text-green-400 uppercase mt-1">Davomat</p>
+                    {groupAttendancePct === null && (
+                      <p className="text-[9px] text-slate-400 mt-1 font-medium">Yozuvlar yo‘q</p>
+                    )}
                   </div>
                 </div>
 
                 {user?.role === 'TEACHER' && (
-                  <button onClick={() => { setAddStudentModal(true); setSelectedStudentId(''); }} className="btn-primary w-full flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => {
+                      void fetchStudents();
+                      setAddStudentModal(true);
+                      setSelectedStudentId('');
+                    }}
+                    className="btn-primary w-full flex items-center justify-center gap-2"
+                  >
                     <UserPlus className="w-4 h-4" /> Talaba qo'shish
                   </button>
                 )}

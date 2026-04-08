@@ -3,7 +3,7 @@ import {
   Users, UserCheck, GraduationCap, TrendingUp, 
   ArrowUpRight, ArrowDownRight, Activity, Calendar,
   PieChart, DollarSign, Target, MessageSquare, Loader2,
-  Sparkles, Zap, Award, BarChart3
+  Sparkles, Zap, Award
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAdminStore } from '../../store/useAdminStore';
@@ -17,21 +17,11 @@ import {
   Tooltip,
   Legend,
   Filler,
-  ArcElement
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import { LINE_ACCENT, primaryGrowthDataset, standardLineChartOptions } from '../../lib/chartLineTheme';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 const AdminDashboard: React.FC = () => {
   const { user, stats, fetchStats, isLoading } = useAdminStore();
@@ -60,56 +50,47 @@ const AdminDashboard: React.FC = () => {
     { label: 'Oylik Mavjudlik', value: `${Number(stats?.attendanceAvg || 0)}%`, icon: UserCheck, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '-1.2%', isUp: false },
   ];
 
+  const growthLabels = stats?.growthTrend?.map((g: any) => g.month) || ['Yan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  const growthCounts = stats?.growthTrend?.map((g: any) => g.count) || [30, 45, 57, 48, 63, 72];
   const chartData = {
-    labels: stats?.growthTrend?.map((g: any) => g.month) || ['Yan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    labels: growthLabels,
     datasets: [
-      {
-        fill: true,
-        label: 'Yangi o\'quvchilar',
-        data: stats?.growthTrend?.map((g: any) => g.count) || [30, 45, 57, 48, 63, 72],
-        borderColor: '#aa3bff',
-        backgroundColor: 'rgba(170, 59, 255, 0.08)',
+      primaryGrowthDataset("Yangi o'quvchilar", growthCounts, {
+        borderColor: LINE_ACCENT,
+        borderWidth: 3,
         tension: 0.45,
-        pointRadius: 6,
-        pointHoverRadius: 8,
-        pointBackgroundColor: '#fff',
-        pointBorderColor: '#aa3bff',
-        pointBorderWidth: 3,
-        borderWidth: 4,
-      }
+      }),
     ],
   };
 
+  const baseChartOpts = standardLineChartOptions();
   const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: {
-      intersect: false,
-      mode: 'index' as const,
-    },
+    ...baseChartOpts,
     plugins: {
-      legend: { display: false },
+      ...baseChartOpts.plugins,
       tooltip: {
+        ...baseChartOpts.plugins.tooltip,
         backgroundColor: '#08060d',
         padding: 16,
         titleFont: { size: 14, weight: 'bold' as const, family: 'Outfit' },
         bodyFont: { size: 13, family: 'Inter' },
         cornerRadius: 16,
-        displayColors: false,
         usePointStyle: true,
-      }
+      },
     },
     scales: {
+      ...baseChartOpts.scales,
       y: {
-        beginAtZero: true,
+        ...(baseChartOpts.scales as { y: Record<string, unknown> }).y,
+        suggestedMax: Math.max(4, ...growthCounts.map((n: number) => Number(n) || 0), 1),
         grid: { color: 'rgba(0, 0, 0, 0.02)', drawBorder: false },
-        ticks: { color: '#6b6375', font: { size: 11, weight: 'bold' as any } }
+        ticks: { color: '#6b6375', font: { size: 11, weight: 'bold' as const } },
       },
       x: {
-        grid: { display: false },
-        ticks: { color: '#6b6375', font: { size: 11, weight: 'bold' as any } }
-      }
-    }
+        ...(baseChartOpts.scales as { x: Record<string, unknown> }).x,
+        ticks: { color: '#6b6375', font: { size: 11, weight: 'bold' as const } },
+      },
+    },
   };
 
   return (
@@ -173,7 +154,7 @@ const AdminDashboard: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
              <div className="flex items-center gap-5">
                 <div className="w-14 h-14 bg-[#aa3bff]/10 text-[#aa3bff] rounded-2xl flex items-center justify-center shadow-inner">
-                   <BarChart3 className="w-7 h-7" />
+                   <TrendingUp className="w-7 h-7" />
                 </div>
                 <div>
                    <h3 className="text-2xl font-black text-[#08060d] dark:text-white tracking-tight mb-1">O'sish Tendentsiyasi</h3>
@@ -212,14 +193,6 @@ const AdminDashboard: React.FC = () => {
                        <div>
                           <p className="text-base font-black text-[#08060d] dark:text-[#f3f4f6] tracking-tight">{course.name}</p>
                           <p className="text-[10px] text-[#6b6375] dark:text-[#9ca3af] font-black uppercase tracking-widest mt-1">{course.student_count} ta faol talaba</p>
-                       </div>
-                    </div>
-                    <div className="text-right">
-                       <div className="w-24 h-2 bg-[#f4f3ec] dark:bg-[#16171d] rounded-full overflow-hidden shadow-inner">
-                          <div 
-                            className="h-full bg-gradient-to-r from-[#aa3bff] to-[#c084fc] rounded-full transition-all duration-1000" 
-                            style={{ width: `${(course.student_count / (stats?.totalStudents || 1)) * 100}%` }} 
-                          />
                        </div>
                     </div>
                  </div>

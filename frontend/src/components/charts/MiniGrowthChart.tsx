@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,6 +9,7 @@ import {
   Tooltip,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import { primaryGrowthDataset, standardLineChartOptions } from '../../lib/chartLineTheme';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 
@@ -32,52 +33,31 @@ const MiniGrowthChart: React.FC<Props> = ({
   const labels = (trend && trend.length > 0 ? trend : [{ month: '—', count: 0 }]).map((t) => t.month);
   const dataPoints = (trend && trend.length > 0 ? trend : [{ month: '—', count: 0 }]).map((t) => Number(t.count) || 0);
 
-  const data = {
-    labels,
-    datasets: [
-      {
-        label: "Ro'yxatga olishlar",
-        data: dataPoints,
-        borderColor: '#aa3bff',
-        backgroundColor: 'rgba(170, 59, 255, 0.08)',
-        fill: true,
-        tension: 0.4,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        borderWidth: 2,
-      },
-    ],
-  };
+  const data = useMemo(
+    () => ({
+      labels,
+      datasets: [primaryGrowthDataset("Ro'yxatga olishlar", dataPoints)],
+    }),
+    [labels, dataPoints],
+  );
 
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { mode: 'index' as const, intersect: false },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: 'rgba(8, 6, 13, 0.92)',
-        padding: 12,
-        cornerRadius: 12,
+  const options = useMemo(() => {
+    const base = standardLineChartOptions() as Record<string, unknown>;
+    return {
+      ...base,
+      elements: {
+        line: { spanGaps: true },
+        point: { radius: dataPoints.length <= 1 ? 5 : 3, hoverRadius: 6 },
       },
-    },
-    elements: {
-      line: { spanGaps: true },
-      point: { radius: dataPoints.length <= 1 ? 5 : 3, hoverRadius: 6 },
-    },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: { color: '#6b6375', font: { size: 10 }, maxRotation: 0 },
+      scales: {
+        ...(base.scales as object),
+        y: {
+          ...(base.scales as { y: Record<string, unknown> }).y,
+          suggestedMax: Math.max(4, ...dataPoints, 1),
+        },
       },
-      y: {
-        beginAtZero: true,
-        suggestedMax: Math.max(4, ...dataPoints, 1),
-        grid: { color: 'rgba(0,0,0,0.06)' },
-        ticks: { color: '#6b6375', font: { size: 10 } },
-      },
-    },
-  };
+    };
+  }, [dataPoints]);
 
   return (
     <div className={`rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 h-full flex flex-col ${className}`}>

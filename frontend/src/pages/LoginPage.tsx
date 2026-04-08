@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GraduationCap, Mail, Lock, Eye, EyeOff, Loader2, TrendingUp, Phone, ChevronRight, MessageSquare, ShieldCheck, ArrowLeft, Sparkles, Zap, Globe } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, Phone, ChevronRight, MessageSquare, ShieldCheck, ArrowLeft, Zap } from 'lucide-react';
 import api from '../lib/api';
+import { reconnectRealtimeSocket } from '../lib/realtimeSocket';
 import { useAdminStore } from '../store/useAdminStore';
 import { useToast } from '../context/ToastContext';
 
@@ -66,7 +67,9 @@ const LoginPage: React.FC = () => {
       } else {
         await fetchMe();
       }
-      
+
+      reconnectRealtimeSocket();
+
       const updatedUser = useAdminStore.getState().user;
       if (!updatedUser) {
         throw new Error("Foydalanuvchi ma'lumotlarini yuklab bo'lmadi");
@@ -104,7 +107,10 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-       await api.post('/auth/check-code', { phone: loginValue, code: verificationCode });
+       await api.post('/auth/check-code', {
+         phone: loginValue,
+         code: verificationCode.replace(/\D/g, ''),
+       });
        setStep('SET_PASSWORD');
     } catch (err: any) {
        showToast(err.response?.data?.message || "Kod noto'g'ri", "error");
@@ -119,6 +125,7 @@ const LoginPage: React.FC = () => {
     try {
        await api.post('/auth/verify-code', { phone: loginValue, code: verificationCode, password: newPassword });
        await fetchMe();
+       reconnectRealtimeSocket();
        navigate('/student/dashboard');
        showToast("Parol o'rnatildi va tizimga kirildi!", "success");
     } catch (err: any) {
@@ -130,88 +137,46 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen flex bg-white font-sans text-[#08060d]">
-      {/* Visual side */}
-      <div className="hidden lg:flex lg:w-3/5 relative bg-[#08060d] p-24 flex-col justify-between overflow-hidden">
-         {/* Premium background effects */}
-         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#aa3bff]/20 rounded-full blur-[150px] -mr-96 -mt-96 animate-pulse" />
-         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-[#c084fc]/10 rounded-full blur-[120px] -ml-48 -mb-48" />
-         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 contrast-150 brightness-150" />
-         
-         <div className="relative z-10 flex items-center gap-4">
-            <div className="w-16 h-16 bg-white rounded-[2rem] flex items-center justify-center shadow-2xl p-3 transform transition-transform hover:rotate-12">
-               <img 
-                 src="/images/logo.png" 
-                 alt="Scholar Flow" 
-                 className="w-full h-full object-contain"
-               />
+      {/* Visual side — faqat fon rasmi, gradient va logo */}
+      <div className="hidden lg:flex lg:w-3/5 relative min-h-screen overflow-hidden bg-[#08060d]">
+        <div
+          className="absolute inset-0 bg-cover bg-center scale-105"
+          style={{ backgroundImage: "url('/images/uzbek-hero.png')" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#08060d]/88 via-[#1e1b4b]/80 to-[#4c1d95]/75" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#08060d] via-transparent to-[#08060d]/40" />
+        <div className="relative z-10 flex flex-col justify-between p-12 xl:p-16 w-full">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="flex items-center gap-5"
+          >
+            <div className="w-16 h-16 bg-white/95 rounded-[1.35rem] flex items-center justify-center p-3 ring-1 ring-white/25 shrink-0">
+              <img src="/images/logo.png" alt="IT School" className="w-full h-full object-contain" />
             </div>
-            <div>
-               <p className="text-2xl font-black text-white tracking-widest uppercase leading-none">Scholar <span className="text-[#aa3bff]">Flow</span></p>
-               <p className="text-[10px] text-[#aa3bff] font-black uppercase tracking-[0.4em] mt-2 opacity-80">Next-Gen Academy CRM</p>
-            </div>
-         </div>
-
-         <div className="relative z-10 max-w-2xl">
-            <motion.div
-               initial={{ opacity: 0, y: 30 }}
-               animate={{ opacity: 1, y: 0 }}
-               transition={{ duration: 0.8, ease: "easeOut" }}
-            >
-               <div className="inline-flex items-center gap-2 px-5 py-2 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 mb-8">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/90">Ecosystem Update · April 2026</span>
-               </div>
-               <h1 className="text-7xl font-black text-white leading-[1.05] mb-8 tracking-tighter">
-                  Ta'lim <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#aa3bff] via-[#c084fc] to-[#f4f3ec]">boshqaruvi</span> <br/> yangi darajada.
-               </h1>
-               <div className="flex items-center gap-6">
-                  <div className="h-1 w-24 bg-gradient-to-r from-[#aa3bff] to-transparent rounded-full" />
-                  <p className="text-[#9ca3af] text-xl font-medium leading-relaxed max-w-lg">
-                     Barcha o'quv jarayonlari, moliya va natijalar bitta aqlli tizimda jamlandi.
-                  </p>
-               </div>
-            </motion.div>
-         </div>
-
-         <div className="relative z-10 flex items-center gap-12">
-            <div className="flex items-center gap-3 group cursor-help">
-               <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 group-hover:bg-[#aa3bff]/20 transition-colors">
-                  <ShieldCheck className="w-5 h-5 text-[#aa3bff]" />
-               </div>
-               <div>
-                  <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Security</p>
-                  <p className="text-xs font-black text-white tracking-widest uppercase">Encrypted</p>
-               </div>
-            </div>
-            <div className="flex items-center gap-3 group cursor-help">
-               <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 group-hover:bg-emerald-500/20 transition-colors">
-                  <Globe className="w-5 h-5 text-emerald-500" />
-               </div>
-               <div>
-                  <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Network</p>
-                  <p className="text-xs font-black text-white tracking-widest uppercase">Decentralized</p>
-               </div>
-            </div>
-         </div>
+            <span className="text-white font-black text-2xl xl:text-3xl tracking-tight uppercase leading-none drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
+              IT SCHOOL
+            </span>
+          </motion.div>
+          <div className="pointer-events-none opacity-0" aria-hidden />
+        </div>
       </div>
 
-      {/* Form side */}
-      <div className="flex-1 flex items-center justify-center p-12 bg-[#f4f3ec]/30 lg:bg-white relative overflow-hidden">
-         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#aa3bff]/5 rounded-full blur-[100px] pointer-events-none" />
+      {/* Form side — yorug‘ fon, dark tema global h2 rangini bekor qilish */}
+      <div className="login-form-panel flex-1 flex items-center justify-center p-12 bg-[#f8fafc] lg:bg-white text-slate-900 relative overflow-hidden [color-scheme:light]">
+         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#aa3bff]/6 rounded-full blur-[100px] pointer-events-none" />
          
          <div className="w-full max-w-md relative z-10">
-            <div className="mb-12 text-center lg:text-left">
-               <div className="lg:hidden flex justify-center mb-8">
-                  <div className="w-16 h-16 bg-white border border-[#e5e4e7] rounded-[1.5rem] flex items-center justify-center shadow-xl p-3">
-                     <img 
-                       src="/images/logo.png" 
-                       alt="Scholar Flow" 
-                       className="w-full h-full object-contain"
-                     />
+            <div className="mb-10 text-center lg:text-left">
+               <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
+                  <div className="w-14 h-14 bg-white border border-slate-200 rounded-[1.25rem] flex items-center justify-center p-2.5 shadow-sm">
+                     <img src="/images/logo.png" alt="IT School" className="w-full h-full object-contain" />
                   </div>
+                  <span className="font-black text-xl uppercase tracking-tight text-slate-900">IT SCHOOL</span>
                </div>
-               <h2 className="text-5xl font-black text-[#08060d] tracking-tighter mb-4">Tizimga kirish</h2>
-               <p className="text-[#6b6375] text-lg font-medium leading-relaxed">Analitika va boshqaruv paneliga xush kelibsiz. Davom etish uchun identifikatoringizni kiriting.</p>
+               <h2 className="text-4xl sm:text-5xl font-black tracking-tighter mb-3">Tizimga kirish</h2>
+               <p className="login-subtitle text-base font-medium leading-snug max-w-md">Login yoki telefon bilan kiring.</p>
             </div>
 
             <AnimatePresence mode="wait">
@@ -233,7 +198,7 @@ const LoginPage: React.FC = () => {
                           />
                        </div>
                     </div>
-                    <button disabled={loading || !loginValue} className="w-full bg-[#08060d] hover:bg-[#aa3bff] text-white font-black py-5 rounded-[2rem] transition-all duration-500 flex items-center justify-center gap-4 active:scale-95 disabled:opacity-50 shadow-2xl shadow-[#08060d]/20 relative group overflow-hidden">
+                    <button disabled={loading || !loginValue} className="w-full bg-[#08060d] hover:bg-[#aa3bff] text-white font-black py-5 rounded-[2rem] transition-[background-color,transform] duration-200 flex items-center justify-center gap-4 active:scale-[0.98] disabled:opacity-50 relative group overflow-hidden">
                        <span className="relative z-10 uppercase tracking-widest">{loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Identifikatsiya'}</span>
                        {!loading && <ChevronRight className="w-6 h-6 relative z-10 transition-transform group-hover:translate-x-2" />}
                        <div className="absolute inset-0 bg-gradient-to-r from-[#aa3bff] to-[#c084fc] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -263,7 +228,7 @@ const LoginPage: React.FC = () => {
                           </button>
                        </div>
                     </div>
-                    <button disabled={loading} className="w-full bg-[#aa3bff] hover:bg-[#9329e6] text-white font-black py-5 rounded-[2rem] transition-all duration-500 shadow-2xl shadow-[#aa3bff]/30 active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest relative overflow-hidden group">
+                    <button disabled={loading} className="w-full bg-[#aa3bff] hover:bg-[#9329e6] text-white font-black py-5 rounded-[2rem] transition-[background-color,transform] duration-200 active:scale-[0.98] flex items-center justify-center gap-3 uppercase tracking-widest relative overflow-hidden group">
                        <span className="relative z-10">{loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Tizimga kirish'}</span>
                        {!loading && <Zap className="w-5 h-5 relative z-10 animate-pulse" />}
                        <div className="absolute inset-0 bg-[#08060d] opacity-0 group-hover:opacity-10 transition-opacity" />

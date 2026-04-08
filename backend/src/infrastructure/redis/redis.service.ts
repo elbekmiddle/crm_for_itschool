@@ -19,17 +19,30 @@ export class RedisService {
     }
   }
 
+  /** Redis REST sozlanganmi (Upstash) */
+  isEnabled(): boolean {
+    return this.redis != null;
+  }
+
   async get(key: string): Promise<any> {
     if (!this.redis) return null;
     return this.redis.get(key);
   }
 
-  async set(key: string, value: any, options?: any): Promise<void> {
+  /**
+   * Oddiy matn/raqam — JSON.stringify qilmasdan (verify kodlari uchun muhim).
+   * Ob’ektlar — JSON.stringify.
+   */
+  async set(key: string, value: any, options?: { ex?: number }): Promise<void> {
     if (!this.redis) return;
-    if (options) {
-      await this.redis.set(key, JSON.stringify(value), options);
+    const payload =
+      typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+        ? String(value)
+        : JSON.stringify(value);
+    if (options?.ex != null) {
+      await this.redis.set(key, payload, { ex: options.ex });
     } else {
-      await this.redis.set(key, JSON.stringify(value));
+      await this.redis.set(key, payload);
     }
   }
 

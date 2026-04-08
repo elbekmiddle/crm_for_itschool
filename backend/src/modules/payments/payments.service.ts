@@ -1,9 +1,8 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger, ForbiddenException } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { all_payments } from './queries/all_payments';
 import { get_student_payments_raw } from './queries/get_student_payments_raw';
 import { create_payment } from './commands/create_payment';
-import { delete_payment } from './commands/delete_payment';
 import { TelegramService } from '../../infrastructure/notifications/telegram.service';
 import { SocketsGateway } from '../sockets/sockets.gateway';
 
@@ -40,7 +39,21 @@ export class PaymentsService implements OnModuleInit {
   }
 
   async create(data: any) {
-    const row = await create_payment(this.dbService, data);
+    let group_id = data.group_id;
+    if (group_id === '' || group_id === undefined) {
+      group_id = null;
+    }
+    if (!group_id && data.student_id) {
+      const rows = await this.dbService.query(
+        `SELECT gs.group_id FROM group_students gs
+         WHERE gs.student_id = $1 AND gs.left_at IS NULL
+         ORDER BY gs.joined_at DESC NULLS LAST
+         LIMIT 1`,
+        [data.student_id],
+      );
+      group_id = rows[0]?.group_id ?? null;
+    }
+    const row = await create_payment(this.dbService, { ...data, group_id });
     this.socketsGateway.emitDashboardRefresh({ source: 'payment', action: 'created' });
     return row;
   }
@@ -66,10 +79,8 @@ export class PaymentsService implements OnModuleInit {
     return all_payments(this.dbService);
   }
 
-  async remove(id: string) {
-    const row = await delete_payment(this.dbService, id);
-    this.socketsGateway.emitDashboardRefresh({ source: 'payment', action: 'deleted' });
-    return row;
+  async remove(_id: string) {
+    throw new ForbiddenException("To'lov yozuvlarini o'chirish taqiqlangan.");
   }
 }
 

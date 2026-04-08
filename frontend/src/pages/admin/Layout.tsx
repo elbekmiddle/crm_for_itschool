@@ -275,11 +275,11 @@ const AdminLayout: React.FC = () => {
             <div className="hidden h-8 w-px bg-[#e5e4e7] dark:bg-[#2e303a] sm:block" />
 
             <div className="flex items-center gap-3">
-              <div className="hidden max-w-[140px] text-right sm:block">
+              <div className="hidden min-w-0 max-w-[200px] text-left sm:block">
                 <p className="truncate text-sm font-black leading-none tracking-tight text-[#08060d] dark:text-[#f3f4f6]">
                   {user?.first_name} {user?.last_name || ''}
                 </p>
-                <div className="mt-1 flex items-center justify-end gap-1.5">
+                <div className="mt-1 flex items-center gap-1.5">
                   <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
                   <p className="text-[10px] font-black uppercase tracking-widest text-[#aa3bff] opacity-90 dark:text-[#c084fc]">
                     {roleLabels[user?.role || ''] || user?.role || '—'}

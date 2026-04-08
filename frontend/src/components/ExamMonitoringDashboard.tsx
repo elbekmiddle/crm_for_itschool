@@ -5,6 +5,7 @@ import {
   Zap, Eye, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import SparklineChart from './charts/SparklineChart';
 
 interface ExamMonitorProps {
   examId: string;
@@ -240,12 +241,12 @@ const ExamMonitoringDashboard: React.FC<ExamMonitorProps> = ({
                   {Math.round(generationProgress)}%
                 </span>
               </div>
-              <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-indigo-600 transition-all duration-300"
-                  style={{ width: `${generationProgress}%` }}
-                />
-              </div>
+              <SparklineChart
+              className="w-full"
+              height={36}
+              color="#4f46e5"
+              values={[0, Math.round(generationProgress * 0.5), Math.round(generationProgress)]}
+            />
             </div>
 
             {/* Generated Questions Preview */}
@@ -352,14 +353,14 @@ const ExamMonitoringDashboard: React.FC<ExamMonitorProps> = ({
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary-600 transition-all duration-300"
-                            style={{ width: `${session.progress}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-bold text-slate-600">
+                      <div className="flex items-center gap-2 min-w-[140px]">
+                        <SparklineChart
+                          className="flex-1 min-w-0"
+                          height={28}
+                          color="#4f46e5"
+                          values={[0, Math.round(session.progress * 0.55), session.progress]}
+                        />
+                        <span className="text-xs font-bold text-slate-600 shrink-0 tabular-nums">
                           {session.progress}%
                         </span>
                       </div>

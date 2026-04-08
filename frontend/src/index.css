@@ -17,6 +17,9 @@
   --shadow:
     rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
 
+  --ui-duration: 200ms;
+  --ui-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
   --sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: 'Outfit', system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
@@ -106,6 +109,14 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 500;
 }
 
+/* Login forma paneli — global dark tema h2 yorug‘ fonda ko‘rinmasligi uchun */
+.login-form-panel h2 {
+  color: #0f172a !important;
+}
+.login-form-panel .login-subtitle {
+  color: #64748b !important;
+}
+
 /* ─── Card ─── */
 .card {
   background-color: var(--bg-card);
@@ -115,8 +126,12 @@ h1, h2, h3, h4, h5, h6 {
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease,
-    box-shadow 0.25s ease,
+    box-shadow 0.2s ease,
     transform 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--accent-border);
 }
 
 .card-hover {
@@ -124,14 +139,18 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 1.25rem;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
 
 .card-hover:hover {
-  transform: translateY(-4px);
+  transform: translateY(-3px);
   border-color: var(--accent-border);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow);
 }
 
 /* ─── Glass Card ─── */
@@ -157,12 +176,10 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 0.75rem;
   border: none;
   cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 4px 12px var(--accent-bg);
+  transition: background-color 0.2s ease, filter 0.2s ease, transform 0.2s ease;
 }
 .btn-primary:hover {
-  filter: brightness(1.1);
-  box-shadow: 0 8px 20px var(--accent-bg);
+  filter: brightness(1.08);
 }
 .btn-primary:active { transform: scale(0.98); }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
@@ -310,6 +327,9 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 500;
   border-bottom: 1px solid var(--border);
 }
+.data-table tbody tr {
+  transition: background-color 0.2s ease;
+}
 .data-table tbody tr:hover {
   background-color: var(--hover-bg);
 }
@@ -352,6 +372,9 @@ h1, h2, h3, h4, h5, h6 {
   -webkit-backdrop-filter: blur(20px) saturate(1.15);
   animation: modalBackdropIn 0.22s ease-out;
 }
+.dark .modal-overlay {
+  background-color: rgba(0, 0, 0, 0.62);
+}
 @keyframes modalBackdropIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -361,10 +384,11 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 1.25rem;
   box-shadow: 0 25px 50px rgba(0,0,0,0.2);
   width: 100%;
-  max-width: 28rem;
-  max-height: 90vh;
+  max-width: min(36rem, 100vw - 2rem);
+  max-height: min(90vh, 100dvh - 2rem);
   overflow-y: auto;
   border: 1px solid var(--border);
+  margin: auto;
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }

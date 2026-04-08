@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { jwtDecode } from 'jwt-decode';
 import api from '../lib/api';
+import { disconnectRealtimeSocket, reconnectRealtimeSocket } from '../lib/realtimeSocket';
 import type { Student } from '../types';
 
 type VerifyStep = 'phone' | 'code' | 'password' | 'login';
@@ -128,6 +129,7 @@ export const useAuthStore = create<AuthState>()(
           if (!token) throw new Error('Server JWT tokenni qaytarmadi');
           const user = parseJwt(token, phone);
           localStorage.setItem('token', token);
+          reconnectRealtimeSocket();
           set({ user, token, isAuthenticated: true, lastActivity: Date.now(), isLoading: false });
         } catch (e: any) {
           console.error('[Auth] loginWithPassword error:', e.response?.data || e.message);
@@ -143,6 +145,7 @@ export const useAuthStore = create<AuthState>()(
           const user = parseJwt(token, phone);
           if (firstName) user.first_name = firstName;
           localStorage.setItem('token', token);
+          reconnectRealtimeSocket();
           set({ user, token, isAuthenticated: true, lastActivity: Date.now(), isLoading: false });
         } catch (e) {
           set({ isLoading: false }); throw e;
@@ -150,6 +153,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        disconnectRealtimeSocket();
         localStorage.removeItem('token');
         localStorage.removeItem('exam-lock');
         set({ user: null, token: null, isAuthenticated: false, verifyStep: 'phone', verifyPhone: '' });

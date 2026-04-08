@@ -14,14 +14,19 @@ export class AiController {
 
   @Roles('ADMIN', 'MANAGER', 'TEACHER')
   @Get('status')
-  @ApiOperation({ summary: 'OpenAI kaliti sozlanganligi (kalit ko‘rsatilmaydi)' })
+  @ApiOperation({ summary: 'AI kalitlari (qiymatlar qaytarilmaydi)' })
   aiStatus() {
-    return { openai_configured: this.aiService.isConfigured() };
+    return {
+      ai_configured: this.aiService.isConfigured(),
+      openai_configured: this.aiService.hasOpenAi(),
+      gemini_configured: this.aiService.hasGemini(),
+      active_provider: this.aiService.getActiveProvider(),
+    };
   }
 
   @Roles('ADMIN', 'MANAGER', 'TEACHER')
   @Post('analyze-student')
-  @ApiOperation({ summary: 'OpenAI: Provide performance sentiment analysis for a student' })
+  @ApiOperation({ summary: 'AI: talaba holati bo‘yicha qisqa tahlil (OpenAI yoki Gemini)' })
   @ApiBody({ schema: { type: 'object', properties: { summaryData: { type: 'object' } } } })
   @ApiResponse({ status: 201, description: 'Humorous AI string response.' })
   analyzeStudent(@Body() body: any) {
@@ -30,7 +35,7 @@ export class AiController {
 
   @Roles('ADMIN', 'MANAGER')
   @Post('group-summary')
-  @ApiOperation({ summary: 'OpenAI: Evaluate group level dynamic based on aggregate inputs' })
+  @ApiOperation({ summary: 'AI: guruh bo‘yicha qisqa xulosa (OpenAI yoki Gemini)' })
   @ApiBody({ schema: { type: 'object', properties: { groupData: { type: 'object' } } } })
   @ApiResponse({ status: 201, description: 'Actionable humorous summary.' })
   groupSummary(@Body() body: any) {

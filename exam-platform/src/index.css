@@ -17,6 +17,9 @@
   --shadow:
     rgba(0, 0, 0, 0.06) 0 10px 15px -3px, rgba(0, 0, 0, 0.03) 0 4px 6px -2px;
 
+  --ui-duration: 200ms;
+  --ui-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
   --sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: 'Outfit', system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;

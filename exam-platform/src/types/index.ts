@@ -16,6 +16,7 @@ export interface CourseInfo {
   name: string;
   course_name?: string;
   group_name?: string;
+  group_id?: string;
   group_type?: 'GROUP' | 'INDIVIDUAL';
   teacher_name: string;
   level?: string;

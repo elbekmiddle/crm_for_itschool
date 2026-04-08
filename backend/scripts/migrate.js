@@ -1,5 +1,21 @@
 const { Pool } = require('pg');
-require('dotenv').config({ path: 'backend/.env' });
+const path = require('path');
+const fs = require('fs');
+function loadEnv(p) {
+  if (!fs.existsSync(p)) return;
+  for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    const i = t.indexOf('=');
+    if (i === -1) continue;
+    const k = t.slice(0, i).trim();
+    let v = t.slice(i + 1).trim();
+    if ((v[0] === '"' && v[v.length - 1] === '"') || (v[0] === "'" && v[v.length - 1] === "'"))
+      v = v.slice(1, -1);
+    if (process.env[k] === undefined) process.env[k] = v;
+  }
+}
+loadEnv(path.join(__dirname, '../.env'));
 
 const pool = new Pool({
   host: process.env.DB_HOST,

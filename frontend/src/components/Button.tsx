@@ -15,13 +15,14 @@ const Button: React.FC<ButtonProps> = ({
   disabled, 
   ...props 
 }) => {
-  const baseStyles = "flex items-center justify-center gap-2 px-8 py-4 rounded-3xl font-black transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none uppercase tracking-widest text-sm shadow-xl";
+  const baseStyles =
+    "flex items-center justify-center gap-2 px-8 py-4 rounded-3xl font-black transition-[background-color,color,transform,opacity] duration-200 ease-out active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none uppercase tracking-widest text-sm shadow-none";
   
   const variants = {
-    primary: "bg-primary-600 hover:bg-primary-700 text-white shadow-primary-200",
-    secondary: "bg-[var(--bg-muted)] border-2 border-[var(--border)] text-[var(--text-h)] hover:bg-[var(--hover-bg)] shadow-none",
-    danger: "bg-red-500 hover:bg-red-600 text-white shadow-red-100",
-    ghost: "bg-transparent hover:bg-[var(--hover-bg)] text-[var(--text)] shadow-none border border-[var(--border)]"
+    primary: "bg-primary-600 hover:bg-primary-700 text-white",
+    secondary: "bg-[var(--bg-muted)] border-2 border-[var(--border)] text-[var(--text-h)] hover:bg-[var(--hover-bg)]",
+    danger: "bg-red-500 hover:bg-red-600 text-white",
+    ghost: "bg-transparent hover:bg-[var(--hover-bg)] text-[var(--text)] border border-[var(--border)]"
   };
 
   return (

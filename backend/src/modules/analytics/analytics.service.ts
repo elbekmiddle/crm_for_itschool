@@ -68,6 +68,18 @@ export class AnalyticsService {
       ai_humor = `${ai_humor ? ai_humor + '\n\n' : ''}🚀 DEMO: ${demoAi.analysis}`;
     }
 
+    if (!ai_humor && this.aiService.isConfigured()) {
+      try {
+        ai_humor = await this.aiService.getStudentHumorStatus({
+          name: `${student.first_name} ${student.last_name}`,
+          present: presentCount,
+          missed: missedCount,
+        });
+      } catch {
+        ai_humor = null;
+      }
+    }
+
     return {
       personal_info: student,
       attendance_summary: presence,
@@ -117,10 +129,47 @@ export class AnalyticsService {
       }
     }
 
+    let totalSessions = 0;
+    let totalAttended = 0;
+    for (const stat of attendance_stats) {
+      const att = parseInt(stat.attended, 10) || 0;
+      const mis = parseInt(stat.missed, 10) || 0;
+      totalAttended += att;
+      totalSessions += att + mis;
+    }
+    const avgAttendance =
+      totalSessions > 0 ? Math.round((totalAttended / totalSessions) * 100) : 0;
+
+    const recentExams = (exams || []).slice(0, 8).map((e: any) => ({
+      id: e.id,
+      title: e.title,
+      date: e.created_at,
+      group_name: e.group_name?.trim() || null,
+      course_name: e.course_name?.trim() || null,
+      avg_score: Number(e.avg_score) || 0,
+    }));
+
+    const topStudents = [...attendance_stats]
+      .map((s: any) => {
+        const att = parseInt(s.attended, 10) || 0;
+        const mis = parseInt(s.missed, 10) || 0;
+        const tot = att + mis;
+        const attendance_pct = tot > 0 ? Math.round((att / tot) * 100) : null;
+        return { ...s, _ratio: tot > 0 ? att / tot : 0, attendance_pct };
+      })
+      .sort((a: any, b: any) => b._ratio - a._ratio)
+      .slice(0, 5)
+      .map(({ _ratio, ...rest }: any) => rest);
+
     return {
       total_groups: groups.length,
+      totalGroups: groups.length,
       groups,
       total_students: students.length,
+      totalStudents: students.length,
+      avgAttendance,
+      recentExams,
+      topStudents,
       students,
       debtors_count: debtors.length,
       debtors,
@@ -128,7 +177,7 @@ export class AnalyticsService {
       attendance_stats,
       most_active_student: most_active_student ? { ...most_active_student, badge: '😎' } : null,
       ai_humor,
-      exams
+      exams,
     };
   }
 

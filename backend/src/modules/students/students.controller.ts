@@ -71,8 +71,25 @@ export class StudentsController {
   @ApiOperation({ summary: 'Get list of students with pagination', description: 'Permissions: STUDENT_READ' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  findAll(@Query('page') page: string, @Query('limit') limit: string, @Request() req) {
-    return this.studentsService.findAll(+page || 1, +limit || 20, req.user);
+  @ApiQuery({ name: 'compact', required: false, description: 'Yengil ro‘yxat (kam ustunlar)' })
+  findAll(
+    @Query('page') page: string,
+    @Query('limit') limit: string,
+    @Query('compact') compact: string,
+    @Request() req,
+  ) {
+    const c = compact === '1' || compact === 'true';
+    return this.studentsService.findAll(+page || 1, +limit || 20, req.user, c);
+  }
+
+  /** :id dan oldin — bo‘lmasa "find-similar" :id sifatida ushlanyapti */
+  @Permissions('STUDENT_READ')
+  @Get('find-similar')
+  @ApiOperation({ summary: 'Check for potential duplicate students', description: 'Permissions: STUDENT_READ' })
+  @ApiQuery({ name: 'first_name', required: true })
+  @ApiQuery({ name: 'last_name', required: true })
+  findSimilar(@Query('first_name') firstName: string, @Query('last_name') lastName: string) {
+    return this.studentsService.findSimilar(firstName, lastName);
   }
 
   @Permissions('STUDENT_READ')
@@ -99,8 +116,11 @@ export class StudentsController {
   @Permissions('STUDENT_ENROLL')
   @Post(':id/enroll')
   @ApiOperation({ summary: 'Enroll a student in a course', description: 'Permissions: STUDENT_ENROLL' })
-  enroll(@Param('id') id: string, @Body('course_id') courseId: string) {
-    return this.studentsService.enroll(id, courseId);
+  enroll(@Param('id') id: string, @Body('course_id') courseId: string, @Request() req: any) {
+    return this.studentsService.enroll(id, courseId, {
+      id: req.user?.id,
+      role: req.user?.role,
+    });
   }
 
   @Permissions('STUDENT_READ')
@@ -110,15 +130,6 @@ export class StudentsController {
   getDashboard(@Param('id') id: string, @Request() req) {
     const studentId = req.user.role === 'STUDENT' ? req.user.id : id;
     return this.studentsService.getDashboard(studentId);
-  }
-
-  @Permissions('STUDENT_READ')
-  @Get('find-similar')
-  @ApiOperation({ summary: 'Check for potential duplicate students', description: 'Permissions: STUDENT_READ' })
-  @ApiQuery({ name: 'first_name', required: true })
-  @ApiQuery({ name: 'last_name', required: true })
-  findSimilar(@Query('first_name') firstName: string, @Query('last_name') lastName: string) {
-    return this.studentsService.findSimilar(firstName, lastName);
   }
 
   @Permissions('STUDENT_UPDATE')

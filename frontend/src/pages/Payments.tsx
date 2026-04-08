@@ -1,19 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
 import {
-  Plus, Loader2, Trash2, X,
+  Plus, Loader2, X,
   TrendingUp, Snowflake, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
-import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
 import MiniGrowthChart from '../components/charts/MiniGrowthChart';
 import { paymentMethodLabel } from '../lib/paymentLabels';
 
 const PaymentsPage: React.FC = () => {
-  const { payments, students, stats, fetchPayments, fetchStudents, fetchCourses, fetchStats, createPayment, deletePayment, isLoading } = useAdminStore();
-  const confirm = useConfirm();
+  const { payments, students, stats, fetchPayments, fetchStudents, fetchCourses, fetchStats, createPayment, isLoading } = useAdminStore();
   const { showToast } = useToast();
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ student_id: '', amount: '', payment_method: 'cash', description: '' });
@@ -33,10 +31,6 @@ const PaymentsPage: React.FC = () => {
         });
   const totalPages = Math.ceil(list.length / perPage);
   const paginated = list.slice((page - 1) * perPage, page * perPage);
-  const maxPayInPage = useMemo(
-    () => Math.max(...paginated.map((p: any) => Number(p.amount) || 0), 1),
-    [paginated],
-  );
 
   const handleCreate = async () => {
     try {
@@ -47,19 +41,6 @@ const PaymentsPage: React.FC = () => {
     } catch (e: any) {
       const msg = e?.response?.data?.message || "To'lov saqlanmadi";
       showToast(msg, 'error');
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    const ok = await confirm({
-      title: "To'lovni o'chirish?",
-      message: "Ushbu to'lov ma'lumoti qaytarib bo'lmaydigan qilib o'chiriladi.",
-      confirmText: "O'CHIRISH",
-      type: 'danger'
-    });
-    if (ok) {
-       await deletePayment(id);
-       fetchStats();
     }
   };
 
@@ -118,10 +99,7 @@ const PaymentsPage: React.FC = () => {
           </div>
           <div className="card p-5">
             <p className="label-subtle mb-1">Undirish darajasi</p>
-            <p className="text-3xl font-black text-green-600">{stats?.collectionRate || 0}%</p>
-            <div className="w-full bg-slate-100 rounded-full h-2 mt-2">
-              <div className="bg-green-500 h-2 rounded-full" style={{ width: `${stats?.collectionRate || 0}%` }} />
-            </div>
+            <p className="text-3xl font-black text-green-600 dark:text-emerald-400">{stats?.collectionRate || 0}%</p>
           </div>
         </div>
       </div>
@@ -147,10 +125,8 @@ const PaymentsPage: React.FC = () => {
                   <th>Talaba</th>
                   <th>Sana</th>
                   <th>Summa</th>
-                  <th>Ulush</th>
                   <th>Usul</th>
                   <th>Status</th>
-                  <th className="text-right">Amal</th>
                 </tr>
               </thead>
               <tbody>
@@ -162,7 +138,7 @@ const PaymentsPage: React.FC = () => {
                           {p.student_name?.[0] || p.first_name?.[0] || 'S'}
                         </div>
                         <div>
-                          <p className="font-bold text-slate-700">{p.student_name || `${p.first_name || ''} ${p.last_name || ''}`}</p>
+                          <p className="font-bold text-slate-800 dark:text-[var(--text-h)]">{p.student_name || `${p.first_name || ''} ${p.last_name || ''}`}</p>
                         </div>
                       </div>
                     </td>
@@ -172,14 +148,6 @@ const PaymentsPage: React.FC = () => {
                         : '—'}
                     </td>
                     <td className="font-bold text-green-600">{Number(p.amount).toLocaleString()} so'm</td>
-                    <td className="min-w-[100px] w-fit max-w-[140px]">
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-[var(--border)]">
-                        <div
-                          className="h-full rounded-full bg-[#38bdf8] shadow-[0_0_8px_rgba(56,189,248,0.45)] transition-[width] duration-300"
-                          style={{ width: `${Math.min(100, ((Number(p.amount) || 0) / maxPayInPage) * 100)}%` }}
-                        />
-                      </div>
-                    </td>
                     <td>
                       <span className="course-badge bg-slate-100 text-slate-700">{paymentMethodLabel(p.payment_method)}</span>
                     </td>
@@ -188,14 +156,9 @@ const PaymentsPage: React.FC = () => {
                         ● {p.status || 'paid'}
                       </span>
                     </td>
-                    <td className="text-right">
-                      <button onClick={() => handleDelete(p.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-500">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
                   </tr>
                 ))}
-                {paginated.length === 0 && <tr><td colSpan={7} className="text-center py-12 text-slate-400">To'lovlar topilmadi</td></tr>}
+                {paginated.length === 0 && <tr><td colSpan={5} className="text-center py-12 text-slate-400">To'lovlar topilmadi</td></tr>}
               </tbody>
             </table>
           </div>
@@ -248,7 +211,6 @@ const PaymentsPage: React.FC = () => {
                 >
                   <option value="cash">Naqd</option>
                   <option value="card">Karta</option>
-                  <option value="transfer">Bank o'tkazmasi</option>
                 </select>
               </div>
               <div>

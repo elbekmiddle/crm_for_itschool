@@ -34,7 +34,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = HttpStatus.SERVICE_UNAVAILABLE;
       message = 'Bazadagi ustunlar to‘liq emas. Iltimos, migratsiyani yangilang.';
     }
-    if (exception.code === 'ECONNRESET' || exception?.message?.includes('connection timeout')) {
+    if (
+      exception.code === 'ECONNRESET' ||
+      exception.code === 'ETIMEDOUT' ||
+      exception?.message?.includes('connection timeout') ||
+      exception?.message?.includes('Connection terminated')
+    ) {
       status = HttpStatus.SERVICE_UNAVAILABLE;
       message = 'Maʼlumotlar bazasi bilan aloqa uzildi. Qayta urinib ko‘ring.';
     }

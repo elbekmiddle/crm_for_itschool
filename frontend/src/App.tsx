@@ -18,6 +18,7 @@ const CoursesPage = lazy(() => import('./pages/Courses'));
 const GroupsPage = lazy(() => import('./pages/Groups'));
 const AttendancePage = lazy(() => import('./pages/Attendance'));
 const ExamsPage = lazy(() => import('./pages/Exams'));
+const TeacherStudentsPage = lazy(() => import('./pages/TeacherStudents'));
 const UsersPage = lazy(() => import('./pages/Users'));
 const PaymentsPage = lazy(() => import('./pages/Payments'));
 const AnalyticsPage = lazy(() => import('./pages/Analytics'));
@@ -68,13 +69,14 @@ const App: React.FC = () => {
                   <Route path="/manager/students" element={<ProtectedRoute roles={['MANAGER']}><StudentsPage /></ProtectedRoute>} />
                   <Route path="/manager/students/:id" element={<ProtectedRoute roles={['MANAGER']}><StudentProfilePage /></ProtectedRoute>} />
                   <Route path="/manager/payments" element={<ProtectedRoute roles={['MANAGER']}><PaymentsPage /></ProtectedRoute>} />
-                  <Route path="/manager/courses" element={<ProtectedRoute roles={['MANAGER']}><CoursesPage /></ProtectedRoute>} />
-                  <Route path="/manager/groups" element={<ProtectedRoute roles={['MANAGER']}><GroupsPage /></ProtectedRoute>} />
-                  <Route path="/manager/leads" element={<ProtectedRoute roles={['MANAGER']}><LeadsPage /></ProtectedRoute>} />
+                  <Route path="/manager/courses" element={<ProtectedRoute roles={['MANAGER']}><Navigate to="/manager/dashboard" replace /></ProtectedRoute>} />
+                  <Route path="/manager/groups" element={<ProtectedRoute roles={['MANAGER']}><Navigate to="/manager/dashboard" replace /></ProtectedRoute>} />
 
                   {/* TEACHER Panel */}
                   <Route path="/teacher" element={<ProtectedRoute roles={['TEACHER']}><Navigate to="/teacher/dashboard" replace /></ProtectedRoute>} />
                   <Route path="/teacher/dashboard" element={<ProtectedRoute roles={['TEACHER']}><Dashboard /></ProtectedRoute>} />
+                  <Route path="/teacher/students" element={<ProtectedRoute roles={['TEACHER']}><TeacherStudentsPage /></ProtectedRoute>} />
+                  <Route path="/teacher/students/:id" element={<ProtectedRoute roles={['TEACHER']}><StudentProfilePage /></ProtectedRoute>} />
                   <Route path="/teacher/groups" element={<ProtectedRoute roles={['TEACHER']}><GroupsPage /></ProtectedRoute>} />
                   <Route path="/teacher/groups/:id" element={<ProtectedRoute roles={['TEACHER']}><GroupsPage /></ProtectedRoute>} />
                   <Route path="/teacher/attendance" element={<ProtectedRoute roles={['TEACHER']}><AttendancePage /></ProtectedRoute>} />

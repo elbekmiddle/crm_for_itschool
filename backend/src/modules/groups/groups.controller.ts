@@ -1,4 +1,17 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Patch, Request, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  UseGuards,
+  Patch,
+  Request,
+  UnauthorizedException,
+  ForbiddenException,
+  Query,
+} from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -20,6 +33,20 @@ export class GroupsController {
   @ApiOperation({ summary: 'List all groups', description: 'Permissions: GROUP_READ' })
   findAll() {
     return this.groupsService.findAll();
+  }
+
+  @Permissions('GROUP_READ')
+  @Get('my-groups')
+  @ApiOperation({ summary: 'Get groups for current teacher', description: 'Permissions: GROUP_READ' })
+  findMyGroups(@Request() req) {
+    return this.groupsService.findTeacherGroups(req.user.id);
+  }
+
+  @Permissions('STUDENT_READ')
+  @Get('debtors')
+  @ApiOperation({ summary: 'Get debtors in teacher groups', description: 'Permissions: STUDENT_READ' })
+  getDebtors(@Request() req) {
+    return this.groupsService.getTeacherDebtors(req.user.id);
   }
 
   @Permissions('GROUP_CREATE')
@@ -65,17 +92,25 @@ export class GroupsController {
   }
 
   @Permissions('GROUP_READ')
-  @Get('my-groups')
-  @ApiOperation({ summary: 'Get groups for teacher', description: 'Permissions: GROUP_READ' })
-  findMyGroups(@Request() req) {
-    return this.groupsService.findTeacherGroups(req.user.id);
+  @Get(':id/lesson-log')
+  @ApiOperation({ summary: 'Kunlik dars mavzusi', description: 'Permissions: GROUP_READ' })
+  getLessonLog(@Param('id') id: string, @Query('date') date: string) {
+    return this.groupsService.getLessonLog(id, date || new Date().toISOString().slice(0, 10));
   }
 
-  @Permissions('STUDENT_READ')
-  @Get('debtors')
-  @ApiOperation({ summary: 'Get debtors in teacher groups', description: 'Permissions: STUDENT_READ' })
-  getDebtors(@Request() req) {
-    return this.groupsService.getTeacherDebtors(req.user.id);
+  @Permissions('GROUP_UPDATE')
+  @Post(':id/lesson-log')
+  @ApiOperation({ summary: 'Kunlik dars mavzusini saqlash', description: 'Permissions: GROUP_UPDATE' })
+  async saveLessonLog(
+    @Param('id') id: string,
+    @Body() body: { lesson_date?: string; topic?: string | null },
+    @Request() req: any,
+  ) {
+    if (req.user?.role !== 'TEACHER') {
+      throw new ForbiddenException('Mavzuni faqat o‘qituvchi saqlashi mumkin');
+    }
+    const lessonDate = body.lesson_date || new Date().toISOString().slice(0, 10);
+    return this.groupsService.saveLessonLog(id, lessonDate, body.topic ?? null, req.user.id);
   }
 
   @Permissions('GROUP_UPDATE')

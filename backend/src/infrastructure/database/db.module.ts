@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Logger, Module } from '@nestjs/common';
 import { Pool } from 'pg';
 import { ConfigService } from '@nestjs/config';
 import { DbService } from './db.service';
@@ -11,7 +11,7 @@ import { SchemaBootstrapService } from './schema-bootstrap.service';
       provide: 'DATABASE_POOL',
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        return new Pool({
+        const pool = new Pool({
           host: configService.get<string>('DB_HOST', 'localhost'),
           port: configService.get<number>('DB_PORT', 5432),
           user: configService.get<string>('DB_USER', 'root'),
@@ -19,8 +19,14 @@ import { SchemaBootstrapService } from './schema-bootstrap.service';
           database: configService.get<string>('DB_NAME', 'it_school_crm'),
           max: 20,
           idleTimeoutMillis: 30000,
-          connectionTimeoutMillis: 10000,
+          connectionTimeoutMillis: configService.get<number>('DB_CONNECTION_TIMEOUT_MS', 30000),
+          keepAlive: true,
         });
+        const log = new Logger('DatabasePool');
+        pool.on('error', (err) => {
+          log.error(`Pool client error: ${err.message}`);
+        });
+        return pool;
       },
     },
     DbService,

@@ -25,8 +25,8 @@ export class CoursesController {
   @Permissions('COURSE_READ')
   @Get()
   @ApiOperation({ summary: 'Get all courses', description: 'Permissions: COURSE_READ' })
-  findAll() {
-    return this.coursesService.findAll();
+  findAll(@Request() req: { user: { id: string; role: string } }) {
+    return this.coursesService.findAll(req.user);
   }
 
   @Permissions('COURSE_READ')

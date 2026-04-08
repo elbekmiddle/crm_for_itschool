@@ -7,6 +7,7 @@ import {
   Pencil, Trash2, X, UserPlus, ChevronLeft, ChevronRight, Send, Eye
 } from 'lucide-react';
 
+import api from '../lib/api';
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
 
@@ -45,7 +46,8 @@ const StudentsPage: React.FC = () => {
 
   const filtered = students.filter((s: any) => {
     const matchesSearch = `${s.first_name} ${s.last_name} ${s.phone}`.toLowerCase().includes(search.toLowerCase());
-    const matchesCourse = courseFilter ? s.course_id === courseFilter : true;
+    const matchesCourse =
+      !courseFilter || String(s.course_id ?? '') === String(courseFilter);
     return matchesSearch && matchesCourse;
   });
   const totalPages = Math.ceil(filtered.length / perPage);
@@ -75,7 +77,7 @@ const StudentsPage: React.FC = () => {
       parent_phone: s.parent_phone || '',
       status: s.status || 'active',
       study_type: s.study_type || 'group',
-      course_id: '',
+      course_id: s.course_id || '',
     });
     setModal('edit');
   };
@@ -104,6 +106,21 @@ const StudentsPage: React.FC = () => {
         showToast("O'quvchi muvaffaqiyatli yaratildi", "success");
       } else if (editTarget) {
         await updateStudent(editTarget.id, data);
+        if ((user?.role === 'MANAGER' || user?.role === 'ADMIN') && form.course_id) {
+          const prev = String(editTarget.course_id || '').trim();
+          const next = String(form.course_id || '').trim();
+          if (next && prev !== next) {
+            if (prev) {
+              await api.post(`/students/${editTarget.id}/transfer-course`, {
+                old_course_id: prev,
+                new_course_id: next,
+              });
+            } else {
+              await enrollStudent(editTarget.id, next);
+            }
+          }
+        }
+        await fetchStudents();
         showToast("Ma'lumotlar yangilandi", "success");
       }
       setModal(null);
@@ -123,6 +140,12 @@ const StudentsPage: React.FC = () => {
         showToast(msg, "error");
       }
     }
+  };
+
+  const openStudentProfile = (studentId: string) => {
+    if (user?.role === 'MANAGER' || user?.role === 'ADMIN') navigate(`/manager/students/${studentId}`);
+    else if (user?.role === 'TEACHER') navigate(`/teacher/students/${studentId}`);
+    else navigate('/student/profile');
   };
 
   const handleDelete = async (id: string) => {
@@ -159,22 +182,6 @@ const StudentsPage: React.FC = () => {
               <Plus className="w-4 h-4" /> Talaba qo'shish
             </button>
           )}
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="card p-5">
-          <p className="label-subtle mb-1">Jami ro'yxatga olingan</p>
-          <p className="text-3xl font-black text-slate-800">{students.length}</p>
-        </div>
-        <div className="card p-5">
-          <p className="label-subtle mb-1">Faol</p>
-          <p className="text-3xl font-black text-green-600">{students.filter((s: any) => s.status === 'active').length}</p>
-        </div>
-        <div className="card p-5">
-          <p className="label-subtle mb-1">Muzlatilgan</p>
-          <p className="text-3xl font-black text-blue-600">{students.filter((s: any) => s.status === 'frozen').length}</p>
         </div>
       </div>
 
@@ -217,6 +224,7 @@ const StudentsPage: React.FC = () => {
                   <th>Telefon</th>
                   <th>Kurs</th>
                   <th>Guruh</th>
+                  <th>Bu oy to‘lovi</th>
                   <th>Status</th>
                   <th className="text-right">Amallar</th>
                 </tr>
@@ -235,33 +243,46 @@ const StudentsPage: React.FC = () => {
                           )}
                         </div>
                         <div>
-                          <p className="font-bold text-slate-700">{s.first_name} {s.last_name}</p>
+                          <p className="font-bold text-slate-800 dark:text-[var(--text-h)]">{s.first_name} {s.last_name}</p>
                           {s.parent_name ? (
-                            <p className="text-[11px] text-slate-400">{s.parent_name}</p>
+                            <p className="text-[11px] text-slate-500 dark:text-[var(--text)]">{s.parent_name}</p>
                           ) : null}
                         </div>
                       </div>
                     </td>
-                    <td className="font-mono text-xs">{s.phone}</td>
-                    <td>{s.course_name || <span className="text-slate-300">—</span>}</td>
+                    <td className="font-mono text-xs text-slate-600 dark:text-[var(--text)]">{s.phone}</td>
+                    <td className="text-slate-800 dark:text-[var(--text-h)]">{s.course_name?.trim() ? s.course_name : '—'}</td>
                     <td>
-                      {s.group_name ? (
-                        <span className="course-badge bg-primary-50 text-primary-600">{s.group_name}</span>
-                      ) : <span className="text-slate-300">—</span>}
+                      {s.group_name?.trim() ? (
+                        <span className="course-badge bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-300">{s.group_name}</span>
+                      ) : (
+                        <span className="text-slate-400 dark:text-[var(--text)]">—</span>
+                      )}
+                    </td>
+                    <td>
+                      {s.paid_this_month ? (
+                        <span className="inline-flex rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-400">
+                          To‘langan
+                        </span>
+                      ) : (
+                        <span className="inline-flex rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-black uppercase text-amber-800 dark:text-amber-400">
+                          Yo‘q
+                        </span>
+                      )}
                     </td>
                     <td><span className={cn("status-pill", statusPill(s.status))}>{s.status || 'active'}</span></td>
                     <td>
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => navigate(`/student/${s.id}`)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-all" title="Ko'rish">
+                        <button type="button" onClick={() => openStudentProfile(s.id)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[var(--hover-bg)] text-slate-500 dark:text-[var(--text)] transition-colors duration-200" title="Ko'rish">
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button onClick={() => { setEnrollModal(s); setEnrollCourseId(''); }} className="p-2 rounded-lg hover:bg-primary-50 text-primary-600 transition-all" title="Kursga yozish">
+                        <button type="button" onClick={() => { setEnrollModal(s); setEnrollCourseId(''); }} className="p-2 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 text-primary-600 transition-colors duration-200" title="Kursga yozish">
                           <UserPlus className="w-4 h-4" />
                         </button>
-                        <button onClick={() => openEdit(s)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-all" title="Tahrirlash">
+                        <button type="button" onClick={() => openEdit(s)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[var(--hover-bg)] text-slate-500 dark:text-[var(--text)] transition-colors duration-200" title="Tahrirlash">
                           <Pencil className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(s.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-all" title="O'chirish">
+                        <button type="button" onClick={() => handleDelete(s.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 transition-colors duration-200" title="O'chirish">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -269,7 +290,7 @@ const StudentsPage: React.FC = () => {
                   </tr>
                 ))}
                 {paginated.length === 0 && (
-                  <tr><td colSpan={6} className="text-center py-12 text-slate-400">Talabalar topilmadi</td></tr>
+                  <tr><td colSpan={7} className="text-center py-12 text-slate-400">Talabalar topilmadi</td></tr>
                 )}
               </tbody>
             </table>
@@ -348,15 +369,15 @@ const StudentsPage: React.FC = () => {
                   </select>
                 </div>
               </div>
-              {modal === 'create' && (user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
+              {(modal === 'create' || modal === 'edit') && (user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
                 <div>
-                  <label className="input-label">Kursga yozilish *</label>
+                  <label className="input-label">{modal === 'create' ? 'Kursga yozilish *' : 'Faol kurs'}</label>
                   <select
                     value={form.course_id}
                     onChange={(e) => setForm({ ...form, course_id: e.target.value })}
                     className="select"
                   >
-                    <option value="">Kursni tanlang</option>
+                    <option value="">{modal === 'create' ? 'Kursni tanlang' : 'Kurs tanlanmagan'}</option>
                     {courses.map((c: any) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}

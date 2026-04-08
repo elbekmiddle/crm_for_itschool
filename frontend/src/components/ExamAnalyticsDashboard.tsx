@@ -1,9 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  BarChart3, TrendingUp, Users, Clock, Target, Award,
-  AlertCircle, CheckCircle2, XCircle, DollarSign
+  TrendingUp, Users, Clock, Target, Award,
+  AlertCircle, CheckCircle2, XCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+import SparklineChart from './charts/SparklineChart';
+import { LINE_PRIMARY, primaryGrowthDataset, standardLineChartOptions } from '../lib/chartLineTheme';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 
 interface StudentResult {
   studentId: string;
@@ -47,19 +61,46 @@ const ExamAnalyticsDashboard: React.FC<ExamAnalyticsDashboardProps> = ({
   data,
 }) => {
   const [selectedStudent, setSelectedStudent] = useState<StudentResult | null>(null);
-  const [timelineData, setTimelineData] = useState<any[]>([]);
 
-  useEffect(() => {
-    // Generate timeline data
-    const timeline = data.results
-      .map((r) => ({
-        name: r.studentName,
-        score: r.score,
-        timestamp: new Date(r.lastAttempt).getTime(),
-      }))
-      .sort((a, b) => a.timestamp - b.timestamp);
-    setTimelineData(timeline);
-  }, [data.results]);
+  const scoreBuckets = useMemo(
+    () => [
+      { range: '90-100', count: data.results.filter((r) => r.score >= 90).length },
+      { range: '80-89', count: data.results.filter((r) => r.score >= 80 && r.score < 90).length },
+      { range: '70-79', count: data.results.filter((r) => r.score >= 70 && r.score < 80).length },
+      { range: '60-69', count: data.results.filter((r) => r.score >= 60 && r.score < 70).length },
+      { range: '0-59', count: data.results.filter((r) => r.score < 60).length },
+    ],
+    [data.results],
+  );
+
+  const distChartData = useMemo(
+    () => ({
+      labels: scoreBuckets.map((b) => b.range),
+      datasets: [
+        primaryGrowthDataset('Talabalar soni', scoreBuckets.map((b) => b.count), {
+          borderColor: LINE_PRIMARY,
+          tension: 0.35,
+        }),
+      ],
+    }),
+    [scoreBuckets],
+  );
+
+  const distChartOptions = useMemo(() => {
+    const base = standardLineChartOptions();
+    const counts = scoreBuckets.map((b) => b.count);
+    return {
+      ...base,
+      scales: {
+        ...(base.scales as object),
+        y: {
+          ...(base.scales as { y: Record<string, unknown> }).y,
+          suggestedMax: Math.max(2, ...counts, 1),
+          ticks: { ...((base.scales as { y: { ticks?: object } }).y.ticks || {}), stepSize: 1 },
+        },
+      },
+    };
+  }, [scoreBuckets]);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600 bg-green-50';
@@ -144,33 +185,21 @@ const ExamAnalyticsDashboard: React.FC<ExamAnalyticsDashboardProps> = ({
         </motion.div>
       </div>
 
-      {/* Score Distribution */}
+      {/* Score Distribution — line chart */}
       <div className="bg-white rounded-2xl shadow-sm p-6">
         <div className="flex items-center gap-2 mb-6">
-          <BarChart3 className="w-5 h-5 text-primary-600" />
+          <TrendingUp className="w-5 h-5 text-primary-600" />
           <h3 className="text-lg font-black text-slate-800">Ball Taqsimoti</h3>
         </div>
 
-        <div className="space-y-4">
-          {[
-            { range: '90-100', count: data.results.filter((r) => r.score >= 90).length },
-            { range: '80-89', count: data.results.filter((r) => r.score >= 80 && r.score < 90).length },
-            { range: '70-79', count: data.results.filter((r) => r.score >= 70 && r.score < 80).length },
-            { range: '60-69', count: data.results.filter((r) => r.score >= 60 && r.score < 70).length },
-            { range: '0-59', count: data.results.filter((r) => r.score < 60).length },
-          ].map((item) => (
-            <div key={item.range} className="flex items-center gap-4">
-              <span className="w-16 font-bold text-slate-600 text-sm">{item.range}</span>
-              <div className="flex-1 h-8 bg-slate-100 rounded-lg overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-primary-500 to-primary-600 transition-all duration-300"
-                  style={{
-                    width: `${(item.count / data.totalStudents) * 100}%`,
-                  }}
-                />
-              </div>
-              <span className="w-12 font-black text-slate-800 text-right">{item.count}</span>
-            </div>
+        <div className="h-56 w-full min-h-[14rem]">
+          <Line data={distChartData} options={distChartOptions as any} />
+        </div>
+        <div className="mt-4 flex flex-wrap gap-3 text-[11px] font-bold text-slate-500">
+          {scoreBuckets.map((item) => (
+            <span key={item.range} className="rounded-lg bg-slate-50 px-2 py-1">
+              {item.range}: <span className="text-slate-800">{item.count}</span>
+            </span>
           ))}
         </div>
       </div>
@@ -199,13 +228,12 @@ const ExamAnalyticsDashboard: React.FC<ExamAnalyticsDashboardProps> = ({
                   </span>
                 </div>
               </div>
-              <div className="flex-shrink-0 w-20">
-                <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-green-500 transition-all duration-300"
-                    style={{ width: `${q.correctRate * 100}%` }}
-                  />
-                </div>
+              <div className="flex-shrink-0 w-24">
+                <SparklineChart
+                  height={36}
+                  color="#22c55e"
+                  values={[0, Math.round(q.correctRate * 50), Math.round(q.correctRate * 100)]}
+                />
                 <p className="text-xs font-bold text-slate-600 text-right mt-1">
                   {(q.correctRate * 100).toFixed(0)}%
                 </p>

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import api from '../lib/api';
-import { disconnectRealtimeSocket } from '../lib/realtimeSocket';
+import { disconnectRealtimeSocket, reconnectRealtimeSocket } from '../lib/realtimeSocket';
 
 interface AdminState {
   user: any | null;
@@ -27,7 +27,7 @@ interface AdminState {
   fetchStats: () => Promise<void>;
   
   // Students
-  fetchStudents: (page?: number, limit?: number) => Promise<void>;
+  fetchStudents: (page?: number, limit?: number, compact?: boolean) => Promise<void>;
   createStudent: (data: any) => Promise<void>;
   updateStudent: (id: string, data: any) => Promise<void>;
   deleteStudent: (id: string) => Promise<void>;
@@ -62,6 +62,14 @@ interface AdminState {
   addQuestionsToExam: (examId: string, questionIds: string[]) => Promise<void>;
   removeQuestionFromExam: (examId: string, questionId: string) => Promise<void>;
   generateAiExam: (examId: string, options: any) => Promise<void>;
+  addManualExamQuestion: (
+    examId: string,
+    payload: { text: string; options: string[]; correctIndex: number; level?: string },
+  ) => Promise<void>;
+  fetchExamForManage: (examId: string) => Promise<any>;
+  updateExamQuestion: (examId: string, questionId: string, body: Record<string, unknown>) => Promise<void>;
+  approveExamQuestion: (examId: string, questionId: string) => Promise<void>;
+  approveAllExamQuestions: (examId: string) => Promise<void>;
   fetchExamResults: (examId: string) => Promise<void>;
   
   // Users
@@ -141,10 +149,11 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   // ──── Students ────
-  fetchStudents: async (page = 1, limit = 100) => {
+  fetchStudents: async (page = 1, limit = 500, compact = false) => {
     set({ isLoading: true });
     try {
-      const { data } = await api.get(`/students?page=${page}&limit=${limit}`);
+      const c = compact ? '&compact=1' : '';
+      const { data } = await api.get(`/students?page=${page}&limit=${limit}${c}`);
       set({ students: Array.isArray(data) ? data : (data.data || []), isLoading: false });
     } catch (e: any) { set({ error: e.message, isLoading: false }); }
   },
@@ -234,7 +243,9 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   fetchGroups: async () => {
     set({ isLoading: true });
     try {
-      const { data } = await api.get('/groups');
+      const role = get().user?.role;
+      const path = role === 'TEACHER' ? '/groups/my-groups' : '/groups';
+      const { data } = await api.get(path);
       set({ groups: data, isLoading: false });
     } catch (e: any) { set({ error: e.message, isLoading: false }); }
   },
@@ -277,11 +288,25 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   createExam: async (data) => {
-    await api.post('/exams', data); await get().fetchExams();
+    try {
+      await api.post('/exams', data);
+      await get().fetchExams();
+    } catch (e: any) {
+      const raw = e.response?.data?.message;
+      const msg = Array.isArray(raw) ? raw.join(', ') : raw || e.message;
+      throw new Error(typeof msg === 'string' ? msg : "Imtihon yaratishda xatolik");
+    }
   },
 
   updateExam: async (id, data) => {
-    await api.patch(`/exams/${id}`, data); await get().fetchExams();
+    try {
+      await api.patch(`/exams/${id}`, data);
+      await get().fetchExams();
+    } catch (e: any) {
+      const raw = e.response?.data?.message;
+      const msg = Array.isArray(raw) ? raw.join(', ') : raw || e.message;
+      throw new Error(typeof msg === 'string' ? msg : 'Yangilashda xatolik');
+    }
   },
 
   deleteExam: async (id) => {
@@ -289,7 +314,16 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   publishExam: async (id) => {
-    await api.post(`/exams/${id}/publish`); await get().fetchExams();
+    try {
+      await api.post(`/exams/${id}/publish`);
+      await get().fetchExams();
+    } catch (e: any) {
+      const msg =
+        e.response?.data?.message ||
+        (Array.isArray(e.response?.data?.message) ? e.response.data.message.join(', ') : null) ||
+        e.message;
+      throw new Error(typeof msg === 'string' ? msg : "Nashr qilishda xatolik");
+    }
   },
 
   addQuestionsToExam: async (examId, questionIds) => {
@@ -298,13 +332,94 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   removeQuestionFromExam: async (examId, questionId) => {
-    try { await api.delete(`/exams/${examId}/questions/${questionId}`); }
-    catch (e: any) { alert('Savol olib tashlashda xatolik yuz berdi'); }
+    try {
+      await api.delete(`/exams/${examId}/questions/${questionId}`);
+      await get().fetchExams();
+    } catch (e: any) {
+      const raw = e.response?.data?.message;
+      const msg = Array.isArray(raw) ? raw.join(', ') : raw || e.message;
+      throw new Error(typeof msg === 'string' ? msg : 'Savolni olib tashlashda xatolik');
+    }
   },
 
   generateAiExam: async (examId, options) => {
-    try { await api.post(`/exams/${examId}/ai-generate`, options); await get().fetchExams(); }
-    catch (e: any) { alert('AI xatosi: ' + (e.response?.data?.message || "Noma'lum xatolik")); }
+    try {
+      await api.post(`/exams/${examId}/ai-generate`, options);
+      await get().fetchExams();
+    } catch (e: any) {
+      const raw = e.response?.data?.message;
+      const msg = Array.isArray(raw) ? raw.join(', ') : raw || e.message;
+      throw new Error(typeof msg === 'string' ? msg : 'AI yaratishda xatolik');
+    }
+  },
+
+  fetchExamForManage: async (examId) => {
+    try {
+      const { data } = await api.get(`/exams/manage/${examId}`);
+      return data;
+    } catch (e: any) {
+      const raw = e.response?.data?.message;
+      const msg = Array.isArray(raw) ? raw.join(', ') : raw || e.message;
+      throw new Error(typeof msg === 'string' ? msg : 'Imtihon ma’lumotini yuklashda xatolik');
+    }
+  },
+
+  updateExamQuestion: async (examId, questionId, body) => {
+    try {
+      await api.patch(`/exams/${examId}/questions/${questionId}`, body);
+      await get().fetchExams();
+    } catch (e: any) {
+      const raw = e.response?.data?.message;
+      const msg = Array.isArray(raw) ? raw.join(', ') : raw || e.message;
+      throw new Error(typeof msg === 'string' ? msg : 'Savolni yangilashda xatolik');
+    }
+  },
+
+  approveExamQuestion: async (examId, questionId) => {
+    try {
+      await api.post(`/exams/${examId}/questions/${questionId}/approve`);
+      await get().fetchExams();
+    } catch (e: any) {
+      const raw = e.response?.data?.message;
+      const msg = Array.isArray(raw) ? raw.join(', ') : raw || e.message;
+      throw new Error(typeof msg === 'string' ? msg : 'Tasdiqlashda xatolik');
+    }
+  },
+
+  approveAllExamQuestions: async (examId) => {
+    try {
+      await api.post(`/exams/${examId}/approve-all`);
+      await get().fetchExams();
+    } catch (e: any) {
+      const raw = e.response?.data?.message;
+      const msg = Array.isArray(raw) ? raw.join(', ') : raw || e.message;
+      throw new Error(typeof msg === 'string' ? msg : 'Tasdiqlashda xatolik');
+    }
+  },
+
+  addManualExamQuestion: async (examId, { text, options, correctIndex, level }) => {
+    const slots = options.map((o) => String(o || '').trim());
+    const opts = slots.filter(Boolean);
+    if (!text?.trim() || opts.length < 2) {
+      throw new Error('Savol matni va kamida 2 ta javob varianti kerak');
+    }
+    const cSlot = correctIndex;
+    if (cSlot < 0 || cSlot > 3 || !slots[cSlot]) {
+      throw new Error("To'g'ri javob uchun to'ldirilgan variantni tanlang");
+    }
+    const correct_answer = opts.indexOf(slots[cSlot]);
+    if (correct_answer < 0) {
+      throw new Error("To'g'ri javob indeksi noto'g'ri");
+    }
+    await api.post(`/exams/${examId}/questions/new`, {
+      text: text.trim(),
+      level: level || 'medium',
+      type: 'multiple_choice',
+      options: opts,
+      correct_answer,
+      lesson_id: null,
+    });
+    await get().fetchExams();
   },
 
   fetchExamResults: async (examId) => {
@@ -391,8 +506,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   markAttendance: async (data) => {
-    try { await api.post('/attendance', data); }
-    catch (e: any) { alert(e.response?.data?.message || 'Davomat belgilashda xatolik yuz berdi'); }
+    await api.post('/attendance', data);
   },
 
   updateAttendance: async (id, status) => {
@@ -438,6 +552,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       const { data } = await api.get('/auth/me');
       get().setUser(data);
       set({ isInitialized: true });
+      reconnectRealtimeSocket();
     } catch (e) {
       localStorage.removeItem('user');
       localStorage.removeItem('access_token');

@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../../infrastructure/redis/redis.service';
+import { permissionsForRole } from '../constants/role-permissions';
 import { Request } from 'express';
 
 const cookieExtractor = (req: Request): string | null => {
@@ -42,14 +43,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
     }
     
-    return { 
-      id: payload.sub, 
-      email: payload.email, 
+    const permissions = permissionsForRole(payload.role);
+
+    return {
+      id: payload.sub,
+      email: payload.email,
       role: payload.role,
-      permissions: payload.permissions || [],
+      permissions,
       first_name: payload.first_name,
       last_name: payload.last_name,
-      phone: payload.phone
+      phone: payload.phone,
     };
   }
 }

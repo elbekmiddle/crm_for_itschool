@@ -15,8 +15,8 @@ export class CoursesService {
     return create_course(this.dbService, data, user);
   }
 
-  async findAll() {
-    return all_courses(this.dbService);
+  async findAll(user?: { id: string; role: string }) {
+    return all_courses(this.dbService, user);
   }
 
   async findOne(id: string) {

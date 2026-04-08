@@ -13,8 +13,6 @@ import {
   ClipboardList,
   ArrowLeft,
   Clock,
-  BookOpen,
-  Users,
   UserCircle
 } from 'lucide-react';
 
@@ -24,6 +22,7 @@ const StudentProfilePage: React.FC = () => {
   const { user } = useAdminStore();
   const [student, setStudent] = useState<any>(null);
   const [dashboard, setDashboard] = useState<any>(null);
+  const [aiMentor, setAiMentor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,19 +32,33 @@ const StudentProfilePage: React.FC = () => {
       
       setLoading(true);
       try {
-        const [profileRes, dashboardRes] = await Promise.all([
-          api.get(`/students/${targetId}`),
-          api.get(`/students/${targetId}/dashboard`)
-        ]);
+        const profileRes = await api.get(`/students/${targetId}`);
         setStudent(profileRes.data);
-        setDashboard(dashboardRes.data);
+        try {
+          const dashboardRes = await api.get(`/students/${targetId}/dashboard`);
+          setDashboard(dashboardRes.data);
+        } catch {
+          setDashboard(null);
+        }
+        if (user?.role === 'STUDENT' && targetId === user?.id) {
+          try {
+            const ar = await api.get('/analytics/student/me');
+            setAiMentor(ar.data?.ai_humor ? String(ar.data.ai_humor).trim() : null);
+          } catch {
+            setAiMentor(null);
+          }
+        } else {
+          setAiMentor(null);
+        }
       } catch (e) {
         console.error('Error loading student profile:', e);
+        setStudent(null);
+        setDashboard(null);
       }
       setLoading(false);
     };
     loadData();
-  }, [id, user?.id]);
+  }, [id, user?.id, user?.role]);
 
   if (loading) {
     return (
@@ -56,11 +69,20 @@ const StudentProfilePage: React.FC = () => {
     );
   }
 
+  const studentsListPath =
+    user?.role === 'STUDENT'
+      ? '/student/dashboard'
+      : user?.role === 'TEACHER'
+        ? '/teacher/students'
+        : '/manager/students';
+
   if (!student) {
     return (
       <div className="page-container text-center py-20">
         <p className="text-slate-400">Talaba topilmadi</p>
-        <button onClick={() => navigate('/students')} className="btn-primary mt-4">Orqaga</button>
+        <button type="button" onClick={() => navigate(studentsListPath)} className="btn-primary mt-4">
+          Orqaga
+        </button>
       </div>
     );
   }
@@ -78,17 +100,24 @@ const StudentProfilePage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <button onClick={() => navigate('/students')} className="flex items-center gap-2 text-xs font-black text-slate-400 hover:text-primary-600 mb-2 transition-all uppercase tracking-wider">
-            <ArrowLeft className="w-4 h-4" /> Talabalar ro'yxatiga qaytish
+          <button
+            type="button"
+            onClick={() => navigate(studentsListPath)}
+            className="flex items-center gap-2 text-xs font-black text-slate-400 hover:text-primary-600 mb-2 transition-all uppercase tracking-wider"
+          >
+            <ArrowLeft className="w-4 h-4" />{' '}
+            {user?.role === 'STUDENT' ? 'Kabinetga' : "Ro'yxatga qaytish"}
           </button>
-          <h1 className="text-2xl font-black text-slate-800">Talaba Profili</h1>
+          <h1 className="text-2xl font-black text-slate-800 dark:text-[var(--text-h)]">
+            {user?.role === 'STUDENT' ? 'Mening profilim' : 'Talaba Profili'}
+          </h1>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left — Profile Info */}
         <div className="space-y-6">
-          <div className="card p-6 text-center shadow-lg border-primary-50">
+          <div className="card p-6 text-center shadow-lg border-primary-50 dark:border-[var(--border)] dark:bg-[var(--bg-card)]">
             <div className="w-28 h-28 bg-gradient-to-br from-primary-500 to-indigo-700 rounded-[2rem] flex items-center justify-center text-white text-3xl font-black mx-auto mb-4 shadow-2xl shadow-primary-200/40 relative overflow-hidden group">
               <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               {student.image_url ? (
@@ -97,8 +126,12 @@ const StudentProfilePage: React.FC = () => {
                 `${student.first_name?.[0] || ''}${student.last_name?.[0] || ''}`
               )}
             </div>
-            <h2 className="text-xl font-black text-slate-800">{student.first_name} {student.last_name}</h2>
-            <p className="text-[10px] font-black text-slate-300 mt-1 uppercase tracking-[0.2em]">ID: {student.id?.slice(0, 8)}</p>
+            <h2 className="text-xl font-black text-slate-800 dark:text-[var(--text-h)]">
+              {student.first_name} {student.last_name}
+            </h2>
+            <p className="text-[10px] font-black text-slate-300 dark:text-slate-500 mt-1 uppercase tracking-[0.2em]">
+              ID: {student.id?.slice(0, 8)}
+            </p>
             
             <div className="flex justify-center mt-3">
               <span className={cn(
@@ -111,33 +144,33 @@ const StudentProfilePage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-3 mt-8 text-left">
-              <div className="flex items-center gap-4 p-4 rounded-3xl bg-slate-50/50 border border-slate-100/50 hover:bg-white hover:border-primary-100 transition-all duration-300">
-                <div className="w-10 h-10 bg-white rounded-2xl shadow-sm flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-4 p-4 rounded-3xl border border-slate-100/50 bg-slate-50/50 transition-all duration-300 hover:border-primary-100 hover:bg-white dark:border-[var(--border)] dark:bg-[var(--bg-muted)] dark:hover:bg-[var(--hover-bg)] dark:hover:border-[var(--border)]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm dark:bg-[var(--bg-card)]">
                    <Phone className="w-5 h-5 text-primary-500" />
                 </div>
                 <div>
-                  <p className="label-subtle">Telefon raqam</p>
-                  <p className="text-sm font-black text-slate-800 tracking-tight">{student.phone || '—'}</p>
+                  <p className="label-subtle dark:text-slate-400">Telefon raqam</p>
+                  <p className="text-sm font-black tracking-tight text-slate-800 dark:text-[var(--text-h)]">{student.phone || '—'}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 p-4 rounded-3xl bg-slate-50/50 border border-slate-100/50 hover:bg-white hover:border-primary-100 transition-all duration-300">
-                <div className="w-10 h-10 bg-white rounded-2xl shadow-sm flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-4 p-4 rounded-3xl border border-slate-100/50 bg-slate-50/50 transition-all duration-300 hover:border-primary-100 hover:bg-white dark:border-[var(--border)] dark:bg-[var(--bg-muted)] dark:hover:bg-[var(--hover-bg)] dark:hover:border-[var(--border)]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm dark:bg-[var(--bg-card)]">
                    <UserCircle className="w-5 h-5 text-indigo-500" />
                 </div>
                 <div>
-                  <p className="label-subtle">Ota-ona ismi</p>
-                  <p className="text-sm font-black text-slate-800 tracking-tight">{student.parent_name || '—'}</p>
+                  <p className="label-subtle dark:text-slate-400">Ota-ona ismi</p>
+                  <p className="text-sm font-black tracking-tight text-slate-800 dark:text-[var(--text-h)]">{student.parent_name || '—'}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 p-4 rounded-3xl bg-slate-50/50 border border-slate-100/50 hover:bg-white hover:border-primary-100 transition-all duration-300">
-                <div className="w-10 h-10 bg-white rounded-2xl shadow-sm flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-4 p-4 rounded-3xl border border-slate-100/50 bg-slate-50/50 transition-all duration-300 hover:border-primary-100 hover:bg-white dark:border-[var(--border)] dark:bg-[var(--bg-muted)] dark:hover:bg-[var(--hover-bg)] dark:hover:border-[var(--border)]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm dark:bg-[var(--bg-card)]">
                    <Calendar className="w-5 h-5 text-slate-400" />
                 </div>
                 <div>
-                  <p className="label-subtle">Ro'yxatdan o'tgan</p>
-                  <p className="text-sm font-black text-slate-800 tracking-tight">
+                  <p className="label-subtle dark:text-slate-400">Ro'yxatdan o'tgan</p>
+                  <p className="text-sm font-black tracking-tight text-slate-800 dark:text-[var(--text-h)]">
                     {student.created_at ? new Date(student.created_at).toLocaleDateString('uz-UZ') : '—'}
                   </p>
                 </div>
@@ -150,48 +183,55 @@ const StudentProfilePage: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="card p-6 bg-white border-l-4 border-l-primary-500 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <p className="label-subtle text-primary-600/70">Davomat</p>
-                <div className="w-9 h-9 bg-primary-50 rounded-xl flex items-center justify-center text-primary-500">
-                  <Clock className="w-5 h-5" />
+            <div className="card border-l-4 border-l-primary-500 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-l-primary-400 dark:bg-[var(--bg-card)]">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="label-subtle text-primary-600/70 dark:text-primary-300/80">Davomat</p>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-50 text-primary-500 dark:bg-primary-900/40 dark:text-primary-300">
+                  <Clock className="h-5 w-5" />
                 </div>
               </div>
               <div className="flex items-baseline gap-2">
-                <h4 className="text-3xl font-black text-slate-800">{attendancePercent}<span className="text-lg opacity-40">%</span></h4>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ko'rsatkich</p>
+                <h4 className="text-3xl font-black text-slate-800 dark:text-[var(--text-h)]">
+                  {attendancePercent}
+                  <span className="text-lg opacity-40">%</span>
+                </h4>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Ko'rsatkich</p>
               </div>
             </div>
 
-            <div className="card p-6 bg-white border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <p className="label-subtle text-green-600/70">To'lovlar</p>
-                <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center text-green-500">
-                  <DollarSign className="w-5 h-5" />
+            <div className="card border-l-4 border-l-green-500 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-l-emerald-400 dark:bg-[var(--bg-card)]">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="label-subtle text-green-600/70 dark:text-emerald-300/80">To'lovlar</p>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-50 text-green-500 dark:bg-emerald-900/40 dark:text-emerald-300">
+                  <DollarSign className="h-5 w-5" />
                 </div>
               </div>
               <div className="flex items-baseline gap-2">
-                <h4 className="text-2xl font-black text-slate-800 tabular-nums">{totalPaid.toLocaleString()}</h4>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">So'm</p>
+                <h4 className="text-2xl font-black tabular-nums text-slate-800 dark:text-[var(--text-h)]">{totalPaid.toLocaleString()}</h4>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">So'm</p>
               </div>
             </div>
 
-            <div className="card p-6 bg-white border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <p className="label-subtle text-amber-600/70">Imtihonlar</p>
-                <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500">
-                  <ClipboardList className="w-5 h-5" />
+            <div className="card border-l-4 border-l-amber-500 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-l-amber-400 dark:bg-[var(--bg-card)]">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="label-subtle text-amber-600/70 dark:text-amber-200/80">Imtihonlar</p>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-500 dark:bg-amber-900/40 dark:text-amber-300">
+                  <ClipboardList className="h-5 w-5" />
                 </div>
               </div>
               <div className="flex items-baseline gap-2">
-                <h4 className="text-3xl font-black text-slate-800">{avgExamScore}</h4>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ball</p>
+                <h4 className="text-3xl font-black text-slate-800 dark:text-[var(--text-h)]">{avgExamScore}</h4>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Ball</p>
               </div>
             </div>
           </div>
 
-          {/* AI Mentor Feedback */}
-          {dashboard?.ai_status && (
+          {/* AI Mentor — faqat o‘quvchi o‘z profilini ko‘rayotganda */}
+          {user?.role === 'STUDENT' &&
+            student?.id &&
+            user?.id &&
+            String(student.id) === String(user.id) &&
+            (aiMentor || dashboard?.ai_status) && (
             <div className="card p-8 bg-gradient-to-br from-primary-600 to-indigo-800 text-white relative overflow-hidden group">
                <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-white/20 transition-all duration-1000" />
                <div className="relative z-10 flex items-start gap-6">
@@ -199,42 +239,15 @@ const StudentProfilePage: React.FC = () => {
                     <Sparkles className="w-7 h-7 text-white" />
                  </div>
                  <div>
-                   <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary-100 mb-2">AI Mentor Fikri</h3>
+                   <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary-100 mb-2">AI Mentor</h3>
                    <p className="text-lg font-medium italic leading-relaxed text-indigo-50">
-                     "{dashboard.ai_status}"
+                     "{aiMentor || dashboard?.ai_status}"
                    </p>
                  </div>
                </div>
             </div>
           )}
 
-          {/* Course & Group */}
-          <div className="card p-6">
-            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
-               Kurs & Guruh
-               <div className="h-0.5 w-8 bg-primary-100" />
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-slate-50/70 border border-slate-100 rounded-3xl p-5 flex items-center gap-4 hover:bg-white hover:border-primary-100 transition-all duration-300">
-                <div className="w-12 h-12 bg-white rounded-[1.25rem] shadow-sm flex items-center justify-center text-indigo-500">
-                   <BookOpen className="w-6 h-6" />
-                </div>
-                <div>
-                   <p className="label-subtle">Talim Yo'nalishi</p>
-                   <p className="text-sm font-black text-slate-800 uppercase tracking-tight">{student.course_name || 'Belgilanmagan'}</p>
-                </div>
-              </div>
-              <div className="bg-slate-50/70 border border-slate-100 rounded-3xl p-5 flex items-center gap-4 hover:bg-white hover:border-primary-100 transition-all duration-300">
-                <div className="w-12 h-12 bg-white rounded-[1.25rem] shadow-sm flex items-center justify-center text-primary-500">
-                   <Users className="w-6 h-6" />
-                </div>
-                <div>
-                   <p className="label-subtle">Guruh Nomi</p>
-                   <p className="text-sm font-black text-slate-800 uppercase tracking-tight">{student.group_name || 'Belgilanmagan'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

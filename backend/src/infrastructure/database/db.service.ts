@@ -16,8 +16,15 @@ export class DbService implements OnModuleInit {
       this.logger.debug(`Executing query: ${queryText}`);
       const result: QueryResult = await this.pool.query(queryText, values);
       return result.rows;
-    } catch (error) {
-      this.logger.error(`Query failed: ${queryText}`, error.stack);
+    } catch (error: any) {
+      const code = error?.code;
+      if (code === '42703' || code === '42P01' || code === '3F000') {
+        this.logger.debug(
+          `Query failed (schema/column mismatch ${code}): ${queryText} — ${error?.message || ''}`,
+        );
+      } else {
+        this.logger.error(`Query failed: ${queryText}`, error.stack);
+      }
       throw error;
     }
   }

@@ -5,7 +5,7 @@ import { cn } from '../lib/utils';
 import { formatPersonName, formatInitials } from '../lib/displayName';
 import MiniGrowthChart from '../components/charts/MiniGrowthChart';
 import { resolveMediaUrl } from '../lib/mediaUrl';
-import { Plus, Loader2, Pencil, Trash2, X, Shield, CheckCircle2 } from 'lucide-react';
+import { Plus, Loader2, Pencil, Trash2, X } from 'lucide-react';
 
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
@@ -219,18 +219,6 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="card p-5 text-center">
-              <Shield className="w-6 h-6 text-primary-500 mx-auto mb-2" />
-              <p className="label-subtle">Faol rollar</p>
-              <p className="text-2xl font-black text-slate-800 mt-1">{new Set(users.map((u: any) => u.role)).size}</p>
-            </div>
-            <div className="card p-5 text-center">
-              <CheckCircle2 className="w-6 h-6 text-green-500 mx-auto mb-2" />
-              <p className="label-subtle">Tasdiqlangan</p>
-              <p className="text-2xl font-black text-slate-800 mt-1">{users.length}</p>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -273,7 +261,7 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
                         </div>
                       </td>
                       <td className="text-xs text-slate-500">{u.email}</td>
-                      <td className="font-mono text-xs">{u.phone}</td>
+                      <td className="font-mono text-xs">{u.phone?.trim() ? u.phone : '—'}</td>
                       <td>
                         <span className={cn('status-pill', roleColors[u.role] || 'pill-active')}>{u.role}</span>
                       </td>

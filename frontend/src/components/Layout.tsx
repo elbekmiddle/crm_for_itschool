@@ -7,7 +7,8 @@ import { useAdminStore } from '../store/useAdminStore';
 import { useNotifications } from '../hooks/useNotifications';
 import { useSocketEvents } from '../hooks/useSocketEvents';
 import { cn } from '../lib/utils';
-import { formatPersonName } from '../lib/displayName';
+import { formatPersonName, formatInitials } from '../lib/displayName';
+import { resolveMediaUrl } from '../lib/mediaUrl';
 
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -52,14 +53,21 @@ const Layout: React.FC = () => {
   useSocketEvents();
 
   const displayName = formatPersonName(user?.first_name, user?.last_name, user?.email);
+  const avatarSrc = resolveMediaUrl(user?.photo_url);
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
       <div className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'}`}>
-        {/* Header */}
-        <header className="sticky top-0 z-40 flex min-h-[73px] items-center justify-between gap-4 border-b border-[var(--border)] bg-[var(--bg-card)] px-6 py-3 backdrop-blur-xl transition-colors duration-200">
+        {/* Header — fixed (sticky ba’zi scroll kontekstlarda ishlamasligi mumkin) */}
+        <header
+          className={cn(
+            'fixed right-0 top-0 z-40 flex min-h-[73px] items-center justify-between gap-4 border-b border-[var(--border)] bg-[var(--bg-card)]/95 px-6 py-3 backdrop-blur-xl transition-all duration-200',
+            sidebarOpen ? 'md:left-64' : 'md:left-20',
+            'left-0',
+          )}
+        >
           <div className="flex items-center gap-4 flex-1">
             <button
               type="button"
@@ -119,7 +127,7 @@ const Layout: React.FC = () => {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.96 }}
                       transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-                      className="fixed left-1/2 top-[5.5rem] z-[100] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-[var(--bg-card)] shadow-2xl sm:top-[4.75rem]"
+                      className="fixed left-1/2 top-[5.75rem] z-[100] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-[var(--bg-card)] shadow-2xl sm:top-[5.25rem]"
                     >
                       <div className="flex items-center justify-between bg-gradient-to-br from-[#9329e6] to-indigo-800 p-5 text-white">
                         <div className="flex items-center gap-3">
@@ -194,20 +202,30 @@ const Layout: React.FC = () => {
               <Settings className="w-[18px] h-[18px]" />
             </button>
             <div className="flex items-center gap-3 pl-3 ml-1 border-l border-[var(--border)]">
-              <div className="text-right min-w-0">
-                <p className="text-sm font-black text-[var(--text-h)] leading-none truncate max-w-[160px]">
+              <div className="min-w-0 text-left">
+                <p className="max-w-[180px] truncate text-sm font-black leading-none text-[var(--text-h)]">
                   {displayName}
                 </p>
-                <p className="text-[10px] font-black text-[var(--accent)] uppercase tracking-widest mt-0.5">
+                <p className="mt-0.5 text-[10px] font-black uppercase tracking-widest text-[var(--accent)]">
                   {user?.role || '—'}
                 </p>
+              </div>
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg-muted)] text-[11px] font-black text-[var(--accent)]"
+                title={displayName}
+              >
+                {avatarSrc ? (
+                  <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span>{formatInitials(user?.first_name, user?.last_name, user?.email)}</span>
+                )}
               </div>
             </div>
           </div>
         </header>
 
-        {/* Content */}
-        <main>
+        {/* Content — navbar balandligi qo‘shimchasi */}
+        <main className="min-h-[calc(100vh-73px)] pt-[73px]">
           <Outlet />
         </main>
         {/* App Loader */}

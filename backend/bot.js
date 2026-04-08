@@ -70,34 +70,45 @@ async function getStudentByChatId(chatId) {
   return r.rows[0] || null;
 }
 
+/** Normalize to digits only (Telegram contact vs DB formats). */
+function phoneDigits(phone) {
+  return String(phone || '').replace(/\D/g, '');
+}
+
+function normalizeUzPhoneDigits(phone) {
+  let d = phoneDigits(phone);
+  if (d.length === 9) d = '998' + d;
+  return d;
+}
+
+/** Redis kalit — Nest `auth.service` bilan bir xil: verify:+998... */
+function verifyRedisKey(digits) {
+  const d = String(digits || '').replace(/\D/g, '');
+  return d ? `verify:+${d}` : 'verify:';
+}
+
 async function getStudentByPhone(phone) {
+  const digits = normalizeUzPhoneDigits(phone);
+  if (!digits || digits.length < 11) return null;
   const r = await db.query(
     `SELECT id, first_name, last_name, phone, telegram_chat_id, is_verified FROM students
-     WHERE phone = $1 AND deleted_at IS NULL LIMIT 1`,
-    [phone]
+     WHERE deleted_at IS NULL
+       AND regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g') = $1
+     LIMIT 1`,
+    [digits]
   );
   return r.rows[0] || null;
 }
 
 async function linkStudentTelegram(studentId, chatId, telegramUser) {
-  await db.query(
-    `UPDATE students
-     SET telegram_chat_id     = $1,
-         telegram_username    = $2,
-         telegram_first_name  = $3,
-         telegram_last_name   = $4,
-         telegram_linked_at   = NOW(),
-         updated_at           = NOW()
-     WHERE id = $5`,
-    [
-      String(chatId),
-      telegramUser?.username   || null,
-      telegramUser?.first_name || null,
-      telegramUser?.last_name  || null,
-      studentId,
-    ]
+  await db.query(`UPDATE students SET telegram_chat_id = $1 WHERE id = $2`, [
+    String(chatId),
+    studentId,
+  ]);
+  console.log(
+    `[BOT] Linked student ${studentId} to Telegram chat ${chatId}` +
+      (telegramUser?.username ? ` (@${telegramUser.username})` : '')
   );
-  console.log(`[BOT] Linked student ${studentId} to Telegram @${telegramUser?.username || chatId}`);
 }
 
 // ─── State machine (per user, stored in Redis) ───────────────────────────────
@@ -187,7 +198,7 @@ async function handleMessage(msg) {
     }
     // Generate 6-digit reset code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    await redisSet(`verify:${student.phone}`, code, 300);
+    await redisSet(verifyRedisKey(normalizeUzPhoneDigits(student.phone)), code, 300);
     await redisSet(stateKey, STATE_RESET, 300);
     await sendMessage(chatId,
       `🔐 <b>Parol tiklash kodi:</b>\n\n` +
@@ -201,10 +212,10 @@ async function handleMessage(msg) {
 
   // ─── Handle contact (phone number sharing) ────────────────────────────────
   if (msg.contact) {
-    const phone = msg.contact.phone_number.replace(/\D/g, '');
-    const fullPhone = phone.startsWith('998') ? `+${phone}` : (phone.startsWith('+') ? phone : `+${phone}`);
-    
-    const student = await getStudentByPhone(fullPhone);
+    const digits = normalizeUzPhoneDigits(msg.contact.phone_number);
+    const fullPhone = digits.startsWith('998') ? `+${digits}` : `+${digits}`;
+
+    const student = await getStudentByPhone(digits);
     if (!student) {
       await sendMessage(chatId,
         `❌ Bu raqam (<code>${fullPhone}</code>) tizimda topilmadi.\n\n` +
@@ -220,7 +231,7 @@ async function handleMessage(msg) {
 
     // Send verification code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    await redisSet(`verify:${fullPhone}`, code, 300);
+    await redisSet(verifyRedisKey(digits), code, 300);
 
     await sendMessage(chatId,
       `✅ Hisobingiz ulandi!\n\n` +
@@ -237,8 +248,10 @@ async function handleMessage(msg) {
 
   // ─── Phone number typed as text ───────────────────────────────────────────
   if (state === STATE_LINKING && /^[\+]?[0-9\s\-]{9,15}$/.test(text)) {
-    const fullPhone = text.replace(/\s/g, '').startsWith('+') ? text.replace(/\s/g, '') : `+${text.replace(/\s/g, '')}`;
-    const student = await getStudentByPhone(fullPhone);
+    const raw = text.replace(/\s/g, '');
+    const digits = normalizeUzPhoneDigits(raw.startsWith('+') ? raw : `+${raw}`);
+    const fullPhone = digits.startsWith('998') ? `+${digits}` : `+${digits}`;
+    const student = await getStudentByPhone(digits);
     if (!student) {
       await sendMessage(chatId, `❌ Bu raqam tizimda topilmadi.\n\nIltimos to'g'ri raqamni kiriting yoki admin bilan bog'laning.`);
       return;
@@ -247,7 +260,7 @@ async function handleMessage(msg) {
     await linkStudentTelegram(student.id, chatId, msg.from);
     await redisDel(stateKey);
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    await redisSet(`verify:${fullPhone}`, code, 300);
+    await redisSet(verifyRedisKey(digits), code, 300);
     await sendMessage(chatId,
       `✅ Ulandi! <b>${student.first_name}</b>\n` +
       (msg.from?.username ? `🔗 @${msg.from.username}\n` : '') +

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
 import {
   TrendingUp, Users, GraduationCap, DollarSign,
-  AlertTriangle, Download, Sparkles, BarChart3
+  AlertTriangle, Download, Sparkles
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import MiniGrowthChart from '../components/charts/MiniGrowthChart';
@@ -98,26 +98,20 @@ const AnalyticsPage: React.FC = () => {
           <h2 className="section-title mb-4">Eng mashhur kurslar</h2>
           <div className="space-y-4">
             {(stats?.topCourses || []).map((c: any, i: number) => {
-              const maxCount = stats?.topCourses?.[0]?.student_count || 1;
-              const rev = Math.round((Number(c.student_count) / maxCount) * 100) || 5;
+              const sc = Number(c.student_count) || 0;
               return (
-                <div key={c.id || i}>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="font-semibold text-slate-600 truncate flex-1">{c.name}</span>
-                    <span className="font-bold text-slate-700 ml-2">{c.student_count || 0} ta</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2">
-                    <div className={cn("h-2 rounded-full", i === 0 ? "bg-primary-500" : i === 1 ? "bg-green-500" : i === 2 ? "bg-amber-500" : i === 3 ? "bg-pink-500" : "bg-slate-400")} style={{ width: `${rev}%` }} />
-                  </div>
+                <div key={c.id || i} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 dark:border-[var(--border)] bg-slate-50/50 dark:bg-[var(--bg-muted)]/40 px-4 py-3">
+                  <span className="font-semibold text-slate-700 dark:text-[var(--text-h)] truncate min-w-0">{c.name}</span>
+                  <span className="font-black text-slate-800 dark:text-[var(--text-h)] shrink-0 text-sm tabular-nums">{sc} ta</span>
                 </div>
               );
             })}
             {(stats?.topCourses || []).length === 0 && <p className="text-center py-4 text-xs text-slate-400">Kurslar bo'yicha ma'lumot yo'q</p>}
           </div>
 
-          <div className="mt-6 p-4 bg-primary-50 dark:bg-primary-950/30 rounded-xl flex items-start gap-3 border border-primary-100/50 dark:border-primary-900/40">
-            <Sparkles className="w-5 h-5 text-primary-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-primary-800 dark:text-primary-200 font-semibold leading-relaxed">{aiInsight}</p>
+          <div className="mt-6 p-4 rounded-xl flex items-start gap-3 border border-[var(--border)] bg-[var(--bg-muted)]">
+            <Sparkles className="w-5 h-5 text-[var(--accent)] shrink-0 mt-0.5" />
+            <p className="text-xs font-semibold leading-relaxed text-slate-800 dark:text-[var(--text-h)]">{aiInsight}</p>
           </div>
         </div>
       </div>
@@ -146,13 +140,13 @@ const AnalyticsPage: React.FC = () => {
                           {s.first_name?.[0]}{s.last_name?.[0]}
                         </div>
                         <div>
-                          <p className="font-bold text-slate-700">{s.first_name} {s.last_name}</p>
-                          <p className="text-[10px] text-slate-400">{s.email}</p>
+                          <p className="font-bold text-slate-800 dark:text-[var(--text-h)]">{s.first_name} {s.last_name}</p>
+                          <p className="text-[10px] text-slate-500 dark:text-[var(--text)]">{s.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="font-bold text-primary-600">{s.avg_score}%</td>
-                    <td className="font-bold text-slate-800">{s.attendance_pct}%</td>
+                    <td className="font-bold text-primary-600 dark:text-primary-400">{s.avg_score}%</td>
+                    <td className="font-bold text-slate-800 dark:text-[var(--text-h)]">{s.attendance_pct}%</td>
                     <td>
                       <span className={cn("status-pill", i === 0 ? "pill-published" : i < 3 ? "pill-active" : "pill-frozen")}>
                         {i === 0 ? "🏆 OLTIN" : i < 3 ? "⭐ TOP" : "● FAOLLAR"}

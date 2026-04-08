@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
@@ -27,8 +27,8 @@ export class StudentsService {
     return row;
   }
 
-  async findAll(page: number = 1, limit: number = 20, user?: any) {
-    return all_students(this.dbService, page, limit, user);
+  async findAll(page: number = 1, limit: number = 20, user?: any, compact?: boolean) {
+    return all_students(this.dbService, page, limit, user, Boolean(compact));
   }
 
   async findOne(id: string) {
@@ -47,7 +47,32 @@ export class StudentsService {
     return row;
   }
 
-  async enroll(id: string, courseId: string) {
+  async enroll(
+    id: string,
+    courseId: string,
+    actor?: { id: string; role: string },
+  ) {
+    if (actor?.role === 'TEACHER' && courseId) {
+      let ok: any[];
+      try {
+        ok = await this.dbService.query(
+          `SELECT 1 FROM courses WHERE id = $1::uuid AND teacher_id = $2::uuid AND deleted_at IS NULL LIMIT 1`,
+          [courseId, actor.id],
+        );
+      } catch (e: any) {
+        if (e?.code === '42703') {
+          ok = await this.dbService.query(
+            `SELECT 1 FROM courses WHERE id = $1::uuid AND teacher_id = $2::uuid LIMIT 1`,
+            [courseId, actor.id],
+          );
+        } else {
+          throw e;
+        }
+      }
+      if (!ok?.length) {
+        throw new ForbiddenException("Faqat o'z kurslaringizga talaba yozishingiz mumkin");
+      }
+    }
     const row = await enroll_student(this.dbService, id, courseId);
     this.socketsGateway.emitDashboardRefresh({ source: 'student', action: 'enrolled' });
     return row;
@@ -57,43 +82,44 @@ export class StudentsService {
     const data = await get_student_dashboard(this.dbService, id);
     if (!data) return null;
 
-    // Add AI humor status
-    const humor = await this.aiService.getStudentHumorStatus({
-      present_days: data.present_days,
-      absent_days: data.absent_days,
-      last_payment: data.payments[0]?.paid_at,
-      name: data.first_name
-    });
+    let humor: unknown = null;
+    try {
+      humor = await this.aiService.getStudentHumorStatus({
+        present_days: data.present_days,
+        absent_days: data.absent_days,
+        last_payment: data.payments[0]?.paid_at,
+        name: data.first_name,
+      });
+    } catch {
+      humor = null;
+    }
 
     return { ...data, ai_status: humor };
   }
 
   async transferCourse(id: string, oldCourseId: string, newCourseId: string) {
-    await this.dbService.query('BEGIN');
+    const client = await this.dbService.getClient();
     try {
-      // 1. Close old course
-      await this.dbService.query(
+      await client.query('BEGIN');
+      await client.query(
         `UPDATE student_courses SET status = 'transferred', ended_at = NOW() 
          WHERE student_id = $1 AND course_id = $2 AND status = 'active'`,
-        [id, oldCourseId]
+        [id, oldCourseId],
       );
-
-      // 2. Remove from active group in that course
-      await this.dbService.query(
+      await client.query(
         `UPDATE group_students SET left_at = NOW() 
          WHERE student_id = $1 AND group_id IN (SELECT id FROM groups WHERE course_id = $2)`,
-        [id, oldCourseId]
+        [id, oldCourseId],
       );
-
-      // 3. Enroll in new course
-      const enrollment = await this.enroll(id, newCourseId);
-
-      await this.dbService.query('COMMIT');
+      const { enrollment } = await enroll_student(this.dbService, id, newCourseId, client);
+      await client.query('COMMIT');
       this.socketsGateway.emitDashboardRefresh({ source: 'student', action: 'transfer_course' });
       return { success: true, enrollment };
     } catch (error) {
-      await this.dbService.query('ROLLBACK');
+      await client.query('ROLLBACK');
       throw error;
+    } finally {
+      client.release();
     }
   }
 
@@ -108,26 +134,25 @@ export class StudentsService {
        throw new BadRequestException('Group transfer must be within the same course.');
     }
 
-    await this.dbService.query('BEGIN');
+    const client = await this.dbService.getClient();
     try {
-      // 1. Leave old group
-      await this.dbService.query(
+      await client.query('BEGIN');
+      await client.query(
         `UPDATE group_students SET left_at = NOW() WHERE student_id = $1 AND group_id = $2`,
-        [id, oldGroupId]
+        [id, oldGroupId],
       );
-
-      // 2. Join new group
-      const result = await this.dbService.query(
+      const result = await client.query(
         `INSERT INTO group_students (student_id, group_id) VALUES ($1, $2) RETURNING *`,
-        [id, newGroupId]
+        [id, newGroupId],
       );
-
-      await this.dbService.query('COMMIT');
+      await client.query('COMMIT');
       this.socketsGateway.emitDashboardRefresh({ source: 'student', action: 'transfer_group' });
-      return result[0];
+      return result.rows[0];
     } catch (error) {
-      await this.dbService.query('ROLLBACK');
+      await client.query('ROLLBACK');
       throw error;
+    } finally {
+      client.release();
     }
   }
 

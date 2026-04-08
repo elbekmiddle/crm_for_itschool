@@ -21,7 +21,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Fix for payment history trigger function
--- First let's check what payment table has: id, student_id, course_id, amount, paid_at
 CREATE OR REPLACE FUNCTION log_payment_history()
 RETURNS TRIGGER AS $$
 BEGIN

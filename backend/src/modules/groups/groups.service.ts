@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { all_groups } from './queries/all_groups';
 import { get_group_students } from './queries/get_group_students';
@@ -8,6 +8,8 @@ import { remove_student_from_group } from './commands/remove_student_from_group'
 import { update_group } from './commands/update_group';
 import { soft_delete_group } from './commands/soft_delete_group';
 import { get_teacher_debtors } from './queries/get_teacher_debtors';
+import { get_group_lesson_log } from './queries/get_group_lesson_log';
+import { upsert_group_lesson_log } from './commands/upsert_group_lesson_log';
 import { SocketsGateway } from '../sockets/sockets.gateway';
 
 @Injectable()
@@ -56,12 +58,40 @@ export class GroupsService {
   }
 
   async findTeacherGroups(teacherId: string) {
-    return this.dbService.query(
-      `SELECT g.*, (SELECT COUNT(*) FROM group_students gs WHERE gs.group_id = g.id) as student_count
-       FROM groups g 
-       WHERE g.teacher_id = $1 AND g.deleted_at IS NULL`,
-      [teacherId]
-    );
+    try {
+      return await this.dbService.query(
+        `SELECT g.*, c.name AS course_name,
+                COALESCE(gs.cnt, 0)::int AS student_count
+         FROM groups g
+         LEFT JOIN courses c ON c.id = g.course_id
+         LEFT JOIN (
+           SELECT group_id, COUNT(*)::int AS cnt
+           FROM group_students
+           WHERE left_at IS NULL
+           GROUP BY group_id
+         ) gs ON gs.group_id = g.id
+         WHERE g.teacher_id = $1 AND g.deleted_at IS NULL
+         ORDER BY g.created_at DESC`,
+        [teacherId],
+      );
+    } catch (e: any) {
+      if (e?.code === '42703') {
+        return this.dbService.querySafe(
+          `SELECT g.*, c.name AS course_name,
+                  COALESCE(gs.cnt, 0)::int AS student_count
+           FROM groups g
+           LEFT JOIN courses c ON c.id = g.course_id
+           LEFT JOIN (
+             SELECT group_id, COUNT(*)::int AS cnt FROM group_students GROUP BY group_id
+           ) gs ON gs.group_id = g.id
+           WHERE g.teacher_id = $1
+           ORDER BY g.created_at DESC`,
+          [teacherId],
+          [],
+        );
+      }
+      throw e;
+    }
   }
 
   async getTeacherDebtors(teacherId: string) {
@@ -70,7 +100,24 @@ export class GroupsService {
 
   async isGroupOwner(groupId: string, teacherId: string): Promise<boolean> {
     const group = await this.dbService.query(`SELECT teacher_id FROM groups WHERE id = $1`, [groupId]);
-    return group.length > 0 && group[0].teacher_id === teacherId;
+    if (!group.length || group[0].teacher_id == null) return false;
+    return String(group[0].teacher_id) === String(teacherId);
+  }
+
+  async getLessonLog(groupId: string, lessonDate: string) {
+    try {
+      return await get_group_lesson_log(this.dbService, groupId, lessonDate);
+    } catch {
+      return null;
+    }
+  }
+
+  async saveLessonLog(groupId: string, lessonDate: string, topic: string | null, teacherId: string) {
+    const ok = await this.isGroupOwner(groupId, teacherId);
+    if (!ok) throw new UnauthorizedException('Faqat o‘z guruhlaringiz uchun mavzu saqlash mumkin');
+    const row = await upsert_group_lesson_log(this.dbService, groupId, lessonDate, topic);
+    this.socketsGateway.emitDashboardRefresh({ source: 'group', action: 'lesson_log' });
+    return row;
   }
 }
 

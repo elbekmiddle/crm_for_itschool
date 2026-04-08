@@ -3,15 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   Phone, Lock, Eye, EyeOff,
   Loader2, AlertCircle, CheckCircle2,
-  RefreshCw, Send, ChevronRight, Sparkles,
-  Zap, Globe, ShieldCheck
+  RefreshCw, Send, ChevronRight,
+  ShieldCheck, GraduationCap,
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import api from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
-
-const isDev = import.meta.env.DEV;
 
 // ─── Step types ──────────────────────────────────────────────────────────────
 type Step = 'main' | 'code' | 'set-password';
@@ -101,15 +99,12 @@ export default function LoginPage() {
     if (code.length < 6) { setError("6 ta raqamli kodni kiriting"); return; }
     setLoading(true);
     try {
-      await api.post('/auth/check-code', { phone: normalizePhone(phone), code });
+      const digits = code.replace(/\D/g, '');
+      await api.post('/auth/check-code', { phone: normalizePhone(phone), code: digits });
       setStep('set-password');
     } catch (err: any) {
       const msg = err.response?.data?.message || err.response?.data?.data?.message || '';
-      if (err.response?.status === 404) {
-        setStep('set-password');
-      } else {
-        setError(msg || "Kod noto'g'ri. Telegram botdan tekshiring.");
-      }
+      setError(msg || "Kod noto'g'ri. Telegram botdan tekshiring.");
     } finally {
       setLoading(false);
     }
@@ -148,63 +143,50 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex bg-[#08060d] overflow-hidden font-sans">
-      {/* ── Left branding panel ── */}
-      <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-[#08060d] via-[#16171d] to-[#08060d] relative overflow-hidden flex-col justify-between p-16">
-        {/* Animated Background blobs */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#aa3bff]/10 rounded-full blur-[120px] -mr-32 -mt-32 animate-pulse" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-600/10 rounded-full blur-[100px] -ml-32 -mb-32" />
-        
-        <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-24 group">
-            <div className="w-16 h-16 bg-white rounded-[1.5rem] flex items-center justify-center shadow-2xl p-3 transform transition-transform group-hover:rotate-12 group-hover:scale-110">
-               <img 
-                 src="/Images/Logo.png" 
-                 alt="IT Park" 
-                 className="w-full h-full object-contain"
-               />
+      {/* ── Left: CRM login bilan bir xil nisbat va uslub (3/5, hero, gradient) ── */}
+      <div className="relative hidden min-h-screen w-full overflow-hidden bg-[#08060d] lg:flex lg:w-3/5">
+        <div
+          className="absolute inset-0 scale-105 bg-cover bg-center"
+          style={{ backgroundImage: "url('/images/uzbek-hero.png')" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#08060d]/88 via-[#1e1b4b]/80 to-[#4c1d95]/75" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#08060d] via-transparent to-[#08060d]/40" />
+        <div className="relative z-10 flex min-h-screen w-full flex-col justify-between p-12 xl:p-16">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="flex items-center gap-5"
+          >
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[1.35rem] bg-white/95 p-3 ring-1 ring-white/25">
+              <img src="/images/logo.png" alt="IT School" className="h-full w-full object-contain" />
             </div>
-            <div>
-              <span className="text-white font-black text-2xl uppercase tracking-tighter block leading-none">IT Academy</span>
-              <p className="text-[10px] text-[#aa3bff] uppercase tracking-[0.4em] font-black mt-2">Exam Platform v2.0</p>
-            </div>
-          </div>
+            <span className="text-2xl font-black uppercase leading-none tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)] xl:text-3xl">
+              IT SCHOOL
+            </span>
+          </motion.div>
 
-          <div className="space-y-12">
-            <h1 className="text-7xl font-black text-white leading-none tracking-tighter">
-              Potential <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#aa3bff] to-[#c084fc]">Unleashed.</span>
-            </h1>
-            <p className="text-[#9ca3af] text-xl font-medium leading-relaxed max-w-md">
-              Kelajakni biz bilan quring. <br />
-              Imtihonlar, natijalar va akademik rivojlanish markazi.
-            </p>
-          </div>
-        </div>
-
-        {/* Dynamic Feature list */}
-        <div className="relative z-10 grid grid-cols-2 gap-8">
-          {[
-            { icon: Zap, text: 'Real-time Natijalar', color: 'text-[#aa3bff]' },
-            { icon: ShieldCheck, text: 'Xavfsiz Tizim', color: 'text-emerald-400' },
-            { icon: Globe, text: 'Global Standart', color: 'text-indigo-400' },
-            { icon: Sparkles, text: 'AI Analitika', color: 'text-amber-400' },
-          ].map((f, i) => (
-            <div key={i} className="flex items-center gap-4 group cursor-default">
-              <div className="w-12 h-12 bg-white/5 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/5 group-hover:bg-[#aa3bff]/10 transition-colors">
-                <f.icon className={cn("w-6 h-6", f.color)} />
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.55 }}
+            className="mt-auto max-w-lg pt-12 xl:pt-20"
+          >
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
+                <GraduationCap className="h-7 w-7 text-[#c084fc]" strokeWidth={2.2} />
               </div>
-              <span className="text-white/60 font-black text-sm uppercase tracking-widest">{f.text}</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.25em] text-[#e9d5ff]/90">
+                Onlayn imtihon
+              </span>
             </div>
-          ))}
-        </div>
-
-        {/* Glassmorphism foot note */}
-        <div className="relative z-10 mt-12 p-6 bg-white/5 backdrop-blur-xl border border-white/5 rounded-3xl">
-           <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mb-2 leading-none">Status System</p>
-           <div className="flex items-center gap-3">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]" />
-              <p className="text-emerald-400 text-xs font-black uppercase tracking-widest leading-none">Barcha tizimlar faol · 200 OK</p>
-           </div>
+            <p className="text-lg font-bold leading-relaxed text-white/90 xl:text-xl">
+              CRM kabinetingiz bilan bir xil xavfsiz kirish: telefon, parol va Telegram tasdiqlash.
+            </p>
+            <p className="mt-4 text-sm font-medium text-white/50">
+              IT School · bilim va natijalar bir joyda
+            </p>
+          </motion.div>
         </div>
       </div>
 
@@ -216,11 +198,11 @@ export default function LoginPage() {
         <div className="w-full max-w-lg relative z-10">
 
           {/* Logo (mobile only) */}
-          <div className="lg:hidden flex items-center gap-4 mb-16 justify-center">
-            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center p-3 shadow-2xl">
-               <img src="/Images/Logo.png" alt="Logo" className="w-full h-full object-contain" />
+          <div className="mb-12 flex items-center justify-center gap-3 lg:hidden">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white p-2.5 shadow-sm">
+               <img src="/images/logo.png" alt="IT School" className="h-full w-full object-contain" />
             </div>
-            <span className="text-white font-black text-3xl uppercase tracking-tighter">IT Academy</span>
+            <span className="text-2xl font-black uppercase tracking-tight text-white">IT SCHOOL</span>
           </div>
 
           <div className="bg-[#16171d]/80 backdrop-blur-2xl rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] p-12 border border-[#2e303a]">
@@ -319,7 +301,7 @@ export default function LoginPage() {
                 </div>
 
                 <button type="submit" disabled={loading}
-                  className="w-full flex items-center justify-center gap-4 bg-[#aa3bff] hover:bg-[#9329e6] disabled:opacity-60 text-white font-black py-5 rounded-2xl shadow-2xl shadow-[#aa3bff]/30 active:scale-[0.98] transition-all uppercase tracking-widest text-xs mt-6">
+                  className="w-full flex items-center justify-center gap-4 bg-[#aa3bff] hover:bg-[#9329e6] disabled:opacity-60 text-white font-black py-5 rounded-2xl active:scale-[0.98] transition-[background-color,transform] duration-200 uppercase tracking-widest text-xs mt-6">
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Tizimga Kirish</span><ChevronRight className="w-5 h-5" /></>}
                 </button>
 
@@ -362,13 +344,13 @@ export default function LoginPage() {
                     className="w-full py-6 rounded-[2rem] border-2 border-[#2e303a] bg-[#1f2028] text-white focus:outline-none focus:border-[#aa3bff] text-center text-5xl font-black tracking-[0.3em] shadow-inner placeholder-white/5"
                     autoFocus
                   />
-                  <p className="text-[10px] text-[#6b6375] mt-6 text-center font-black uppercase tracking-[0.15em] leading-relaxed">
-                    Telegram botdan (@bots_tester_bot) <br/> yuborilgan tasdiqlash kodini kiriting
+                  <p className="mt-6 text-center text-[10px] font-black uppercase leading-relaxed tracking-[0.15em] text-[#6b6375]">
+                    Telegram bot orqali yuborilgan <br /> 6 xonali tasdiqlash kodini kiriting
                   </p>
                 </div>
 
                 <button type="submit" disabled={loading || code.length < 6}
-                  className="w-full flex items-center justify-center gap-4 bg-[#aa3bff] hover:bg-[#9329e6] disabled:opacity-60 text-white font-black py-5 rounded-2xl shadow-2xl shadow-[#aa3bff]/30 active:scale-[0.98] transition-all uppercase tracking-widest text-xs">
+                  className="w-full flex items-center justify-center gap-4 bg-[#aa3bff] hover:bg-[#9329e6] disabled:opacity-60 text-white font-black py-5 rounded-2xl active:scale-[0.98] transition-[background-color,transform] duration-200 uppercase tracking-widest text-xs">
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Kodini Tasdiqlash</span>}
                 </button>
 
@@ -427,7 +409,7 @@ export default function LoginPage() {
 
                 <div className="pt-4">
                   <button type="submit" disabled={loading || newPassword.length < 6 || newPassword !== confirmPassword}
-                    className="w-full flex items-center justify-center gap-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-black py-5 rounded-2xl shadow-2xl shadow-emerald-500/20 active:scale-[0.98] transition-all uppercase tracking-widest text-xs">
+                    className="w-full flex items-center justify-center gap-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-black py-5 rounded-2xl active:scale-[0.98] transition-[background-color,transform] duration-200 uppercase tracking-widest text-xs">
                     {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Parolni O'rnatish va Kirish</span>}
                   </button>
                 </div>
@@ -442,8 +424,8 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-12 text-center">
-            <p className="text-[10px] font-black text-[#6b6375] tracking-[0.3em] uppercase opacity-40">
-              Nexus Secure Authentication Node v2.04
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#6b6375] opacity-40">
+              IT School · Exam Platform · Secure auth
             </p>
             <div className="flex justify-center gap-6 mt-4 opacity-20">
                <span className="w-1.5 h-1.5 bg-[#aa3bff] rounded-full" />

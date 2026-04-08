@@ -18,15 +18,23 @@ export class ExamsController {
   @Permissions('EXAM_MANAGE')
   @Get()
   @ApiOperation({ summary: 'List all exams', description: 'Permissions: EXAM_MANAGE' })
-  findAll() {
-    return this.examsService.findAll();
+  findAll(@Request() req) {
+    return this.examsService.findAll(req.user);
+  }
+
+  /** O‘qituvchi: imtihon + bog‘langan savollar (GET /exams/:id talabada EXAM_PASS talab qiladi). */
+  @Permissions('EXAM_MANAGE')
+  @Get('manage/:examId')
+  @ApiOperation({ summary: 'Imtihon batafsil + savollar (tahrir / tekshirish)' })
+  getExamForManage(@Param('examId') examId: string) {
+    return this.examsService.findOne(examId);
   }
 
   @Permissions('EXAM_MANAGE')
   @Post()
   @ApiOperation({ summary: 'Create a new exam', description: 'Permissions: EXAM_MANAGE' })
   create(@Body() createExamDto: CreateExamDto, @Request() req) {
-    return this.examsService.create(createExamDto, req.user.id);
+    return this.examsService.create(createExamDto, req.user.id, req.user.role);
   }
 
   @Permissions('EXAM_MANAGE')
@@ -60,8 +68,8 @@ export class ExamsController {
   @Permissions('EXAM_MANAGE')
   @Post(':id/publish')
   @ApiOperation({ summary: 'Publish exam to students', description: 'Permissions: EXAM_MANAGE' })
-  publish(@Param('id') id: string) {
-    return this.examsService.update(id, { status: 'published' });
+  publish(@Param('id') id: string, @Request() req) {
+    return this.examsService.publishExam(id, req.user);
   }
 
   @Permissions('EXAM_MANAGE')

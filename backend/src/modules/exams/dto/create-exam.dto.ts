@@ -1,5 +1,5 @@
-import { IsString, IsNotEmpty, IsUUID } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsNotEmpty, IsUUID, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateExamDto {
   @ApiProperty({ description: 'Title of the exam (e.g Midterm)', example: 'Midterm Javascript' })
@@ -11,4 +11,9 @@ export class CreateExamDto {
   @IsUUID()
   @IsNotEmpty()
   course_id: string;
+
+  @ApiPropertyOptional({ description: 'Optional group — narrows AI context and matches class topics' })
+  @IsOptional()
+  @IsUUID()
+  group_id?: string;
 }

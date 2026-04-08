@@ -2,7 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { useStudentStore } from '../store/useStudentStore';
 import { useAuthStore } from '../store/useAuthStore';
 import {
-  BookOpen, Users, User, Loader2, TrendingUp,
+  BookOpen, User, Loader2, TrendingUp,
   Layers, CheckCircle2, Sparkles, Award, Zap, ChevronRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -103,7 +103,7 @@ const CoursePage: React.FC = () => {
                   <div>
                     <h3 className="text-[#6b6375] font-black text-[10px] uppercase tracking-[0.2em] mb-1">Mentor / O'qituvchi</h3>
                     <p className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-                      {course.teacher_name || 'Belgilanmagan'}
+                      {course.teacher_name?.trim() ? course.teacher_name : '—'}
                     </p>
                   </div>
                 </div>

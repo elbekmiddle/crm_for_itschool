@@ -6,6 +6,7 @@ import { all_exams_by_course } from './queries/all_exams_by_course';
 import { get_exam_results } from './queries/get_exam_results';
 import { create_exam } from './commands/create_exam';
 import { add_questions_to_exam } from './commands/add_questions_to_exam';
+import { insertQuestionCompat } from './commands/insert_question_compat';
 import * as dayjs from 'dayjs';
 
 import { TelegramService } from '../../infrastructure/notifications/telegram.service';
@@ -21,40 +22,116 @@ export class ExamsService {
     private readonly aiService: AiService,
   ) {}
 
-  async findAll() {
-    return this.dbService.query(`
-      SELECT 
-        e.*, 
-        c.name as course_name,
-        (SELECT COUNT(*) FROM exam_questions WHERE exam_id = e.id) as question_count,
-        (SELECT ROUND(AVG(score)) FROM exam_results WHERE exam_id = e.id) as avg_score
-      FROM exams e 
-      JOIN courses c ON e.course_id = c.id 
-      WHERE e.deleted_at IS NULL
+  private buildExamListSql(filterDeleted: boolean, joinGroup: boolean, teacherId: string | null) {
+    const parts: string[] = [];
+    const params: any[] = [];
+    if (filterDeleted) parts.push('e.deleted_at IS NULL');
+    if (teacherId) {
+      params.push(teacherId);
+      parts.push(`e.created_by = $${params.length}`);
+    }
+    const where = parts.length ? `WHERE ${parts.join(' AND ')}` : '';
+    const groupJoin = joinGroup ? 'LEFT JOIN groups eg ON eg.id = e.group_id' : '';
+    const groupSelect = joinGroup ? ', eg.name AS group_name' : '';
+    return {
+      sql: `
+      SELECT
+        e.*,
+        c.name AS course_name${groupSelect},
+        (SELECT COUNT(*) FROM exam_questions WHERE exam_id = e.id) AS question_count,
+        (SELECT ROUND(AVG(score)) FROM exam_results WHERE exam_id = e.id) AS avg_score
+      FROM exams e
+      JOIN courses c ON e.course_id = c.id
+      ${groupJoin}
+      ${where}
       ORDER BY e.created_at DESC
-    `);
+    `,
+      params,
+    };
+  }
+
+  async findAll(user?: { id: string; role: string }) {
+    const teacherId = user?.role === 'TEACHER' ? user.id : null;
+    let lastErr: any;
+    for (const joinGroup of [true, false]) {
+      for (const filterDeleted of [true, false]) {
+        try {
+          const { sql, params } = this.buildExamListSql(filterDeleted, joinGroup, teacherId);
+          return await this.dbService.query(sql, params);
+        } catch (e: any) {
+          lastErr = e;
+          if (e?.code !== '42703') throw e;
+        }
+      }
+    }
+    throw lastErr;
   }
 
   async findOne(id: string) {
-    const exam = await this.dbService.query(`
+    let exam: any[];
+    try {
+      exam = await this.dbService.query(`
       SELECT e.*, c.name as course_name
       FROM exams e
       JOIN courses c ON e.course_id = c.id
       WHERE e.id = $1 AND e.deleted_at IS NULL
     `, [id]);
+    } catch (e: any) {
+      if (e?.code !== '42703') throw e;
+      exam = await this.dbService.query(`
+      SELECT e.*, c.name as course_name
+      FROM exams e
+      JOIN courses c ON e.course_id = c.id
+      WHERE e.id = $1
+    `, [id]);
+    }
     if (!exam.length) throw new NotFoundException('Imtihon topilmadi');
     
-    const questions = await this.dbService.query(`
+    const questions = await this.dbService.query(
+      `
       SELECT q.* 
       FROM questions q
       JOIN exam_questions eq ON q.id = eq.question_id
       WHERE eq.exam_id = $1
-    `, [id]);
-    
-    return { ...exam[0], questions };
+    `,
+      [id],
+    );
+
+    const parseJson = (v: any, fb: any) => {
+      if (v == null) return fb;
+      if (typeof v === 'string') {
+        try {
+          return JSON.parse(v);
+        } catch {
+          return v;
+        }
+      }
+      return v;
+    };
+
+    const normalized = questions.map((q: any) => ({
+      ...q,
+      options: parseJson(q.options, []),
+      correct_answer: parseJson(q.correct_answer, q.correct_answer),
+      type: String(q.type || 'multiple_choice').toLowerCase().replace(/-/g, '_'),
+    }));
+
+    let group_name: string | null = null;
+    const gid = exam[0]?.group_id;
+    if (gid) {
+      const gr = await this.dbService.query(`SELECT name FROM groups WHERE id = $1`, [gid]);
+      group_name = gr[0]?.name ?? null;
+    }
+
+    return { ...exam[0], group_name, questions: normalized };
   }
 
-  async create(createExamDto: CreateExamDto, teacherId: string) {
+  async create(createExamDto: CreateExamDto, teacherId: string, role?: string) {
+    if (role === 'TEACHER' && !createExamDto.group_id?.trim()) {
+      throw new BadRequestException(
+        "Guruhni tanlang — nashr qilganda imtihon faqat shu guruh a'zolariga ko'rinadi.",
+      );
+    }
     const newExam = await create_exam(this.dbService, createExamDto, teacherId);
     this.socketsGateway.emitToAll('exam_created', newExam);
     this.socketsGateway.emitDashboardRefresh({ source: 'exam', action: 'created' });
@@ -62,11 +139,17 @@ export class ExamsService {
   }
 
   async update(id: string, data: any) {
-    const fields = Object.keys(data).map((key, i) => `${key} = $${i + 2}`).join(', ');
-    const values = Object.values(data);
+    const { questions: _nestedQuestions, ...rest } = data || {};
+    const keys = Object.keys(rest);
+    if (!keys.length) {
+      const one = await this.findOne(id);
+      return one;
+    }
+    const fields = keys.map((key, i) => `${key} = $${i + 2}`).join(', ');
+    const values = keys.map((k) => rest[k]);
     const result = await this.dbService.query(
       `UPDATE exams SET ${fields} WHERE id = $1 RETURNING *`,
-      [id, ...values]
+      [id, ...values],
     );
     this.socketsGateway.emitToAll('exam_updated', result[0]);
     if (data.status === 'published' || data.status === 'approved') {
@@ -76,10 +159,42 @@ export class ExamsService {
     return result[0];
   }
 
+  async publishExam(id: string, user: { id: string; role: string }) {
+    if (user.role === 'TEACHER') {
+      try {
+        const rows = await this.dbService.query(
+          `SELECT group_id, created_by FROM exams WHERE id = $1`,
+          [id],
+        );
+        const row = rows[0];
+        if (row && String(row.created_by) === String(user.id)) {
+          if (row.group_id == null || row.group_id === '') {
+            throw new BadRequestException(
+              "Avval imtihonni tahrirlab guruhni bog'lang — faqat tanlangan guruh o'quvchilari ko'radi.",
+            );
+          }
+        }
+      } catch (e: any) {
+        if (e instanceof BadRequestException) throw e;
+        if (e?.code !== '42703') throw e;
+        /* exams.group_id ustuni yo'q — eski sxema */
+      }
+    }
+    return this.update(id, { status: 'published' });
+  }
+
   async remove(id: string) {
-    const r = await this.dbService.query(`UPDATE exams SET deleted_at = NOW() WHERE id = $1`, [id]);
+    try {
+      await this.dbService.query(`UPDATE exams SET deleted_at = NOW() WHERE id = $1`, [id]);
+    } catch (e: any) {
+      if (e?.code === '42703') {
+        await this.dbService.query(`DELETE FROM exams WHERE id = $1`, [id]);
+      } else {
+        throw e;
+      }
+    }
     this.socketsGateway.emitDashboardRefresh({ source: 'exam', action: 'deleted' });
-    return r;
+    return { success: true };
   }
 
   async addQuestionsToExam(examId: string, questionIds: string[]) {
@@ -88,24 +203,34 @@ export class ExamsService {
 
   async addNewQuestion(examId: string, data: any) {
     const lessonId = data.lesson_id || null;
-    const result = await this.dbService.query(`
-      INSERT INTO questions (lesson_id, text, options, correct_answer, level, type, status)
-      VALUES ($1, $2, $3, $4, $5, $6, 'draft') RETURNING *
-    `, [
-      lessonId, 
-      data.text || 'Yangi savol', 
-      JSON.stringify(data.options || []), 
-      data.correct_answer ? JSON.stringify(data.correct_answer) : null, 
-      data.level || 'medium', 
-      data.type || 'multiple_choice'
-    ]);
-    
-    await this.dbService.query(`
-      INSERT INTO exam_questions (exam_id, question_id) VALUES ($1, $2)
-    `, [examId, result[0].id]);
+    const createdBy = data.teacherId || data.created_by;
+    if (!createdBy) throw new BadRequestException('created_by (o‘qituvchi) kerak');
 
+    const type = String(data.type || 'multiple_choice').replace(/-/g, '_');
+    const correctRaw = data.correct_answer;
+    const correctJson =
+      correctRaw !== undefined && correctRaw !== null
+        ? JSON.stringify(correctRaw)
+        : JSON.stringify(type === 'multiple_select' ? [] : 0);
+
+    const qid = await insertQuestionCompat(this.dbService, {
+      lessonId,
+      createdBy,
+      level: data.level || 'medium',
+      text: data.text || 'Yangi savol',
+      optionsJson: JSON.stringify(data.options || []),
+      correctJson,
+      type,
+    });
+
+    await this.dbService.query(`INSERT INTO exam_questions (exam_id, question_id) VALUES ($1, $2)`, [
+      examId,
+      qid,
+    ]);
+
+    const rows = await this.dbService.query(`SELECT * FROM questions WHERE id = $1`, [qid]);
     this.socketsGateway.emitToAll('exam_updated', { examId });
-    return result[0];
+    return rows[0];
   }
 
   async removeQuestionFromExam(examId: string, questionId: string) {
@@ -116,11 +241,30 @@ export class ExamsService {
   }
 
   async updateQuestion(examId: string, questionId: string, data: any) {
-    const fields = Object.keys(data).map((key, i) => `${key} = $${i + 2}`).join(', ');
-    const values = Object.values(data);
+    const row: Record<string, any> = { ...data };
+    delete row.id;
+    delete row.teacherId;
+    delete row.created_by;
+    if (row.options !== undefined && typeof row.options !== 'string') {
+      row.options = JSON.stringify(row.options ?? []);
+    }
+    if (
+      row.correct_answer !== undefined &&
+      row.correct_answer !== null &&
+      typeof row.correct_answer !== 'string'
+    ) {
+      row.correct_answer = JSON.stringify(row.correct_answer);
+    }
+    const keys = Object.keys(row).filter((k) => row[k] !== undefined);
+    if (!keys.length) {
+      const existing = await this.dbService.query(`SELECT * FROM questions WHERE id = $1`, [questionId]);
+      return existing[0];
+    }
+    const fields = keys.map((key, i) => `${key} = $${i + 2}`).join(', ');
+    const values = keys.map((k) => row[k]);
     const result = await this.dbService.query(
       `UPDATE questions SET ${fields} WHERE id = $1 RETURNING *`,
-      [questionId, ...values]
+      [questionId, ...values],
     );
     this.socketsGateway.emitToAll('exam_updated', { examId });
     return result[0];
@@ -130,12 +274,20 @@ export class ExamsService {
     const exam = await this.dbService.query(`SELECT id FROM exams WHERE id = $1`, [examId]);
     if (!exam.length) throw new NotFoundException('Imtihon topilmadi');
 
-    await this.dbService.query(`
+    try {
+      await this.dbService.query(
+        `
       UPDATE questions 
       SET status = 'approved' 
       WHERE id IN (SELECT question_id FROM exam_questions WHERE exam_id = $1)
       AND status = 'draft'
-    `, [examId]);
+    `,
+        [examId],
+      );
+    } catch (e: any) {
+      if (e?.code !== '42703') throw e;
+      /* questions.status ustuni yo'q — imtihonni baribir e'lon qilamiz */
+    }
 
     // Update exam status if it was pending
     await this.dbService.query(`UPDATE exams SET status = 'published' WHERE id = $1`, [examId]);
@@ -145,21 +297,79 @@ export class ExamsService {
   }
 
   async generateAiExam(examId: string, lessonId: string, topic: string, level: string, count: number, teacherId: string) {
-    const exam = await this.dbService.query(`SELECT id, title, teacher_id FROM exams WHERE id = $1`, [examId]);
+    let exam: any[];
+    try {
+      exam = await this.dbService.query(
+        `SELECT e.id, e.title, e.created_by, e.group_id, c.name AS course_name
+         FROM exams e
+         JOIN courses c ON c.id = e.course_id
+         WHERE e.id = $1`,
+        [examId],
+      );
+    } catch (e: any) {
+      if (e?.code !== '42703') throw e;
+      exam = await this.dbService.query(
+        `SELECT e.id, e.title, e.created_by, c.name AS course_name
+         FROM exams e
+         JOIN courses c ON c.id = e.course_id
+         WHERE e.id = $1`,
+        [examId],
+      );
+    }
     if (!exam.length) throw new NotFoundException('Exam not found');
 
-    const job = await this.queueService.addExamJob({
-      examId,
-      lessonId,
-      topic,
-      level: level as any,
-      count,
-      teacherId
-    });
+    const title = (exam[0].title || '').trim();
+    const courseName = (exam[0].course_name || '').trim();
+    const topicTrim = (topic || '').trim();
+
+    let groupHint = '';
+    const gid = exam[0]?.group_id;
+    if (gid) {
+      try {
+        const gr = await this.dbService.query(
+          `SELECT g.name, g.schedule, c.name AS cn
+           FROM groups g
+           JOIN courses c ON c.id = g.course_id
+           WHERE g.id = $1`,
+          [gid],
+        );
+        if (gr.length) {
+          const gn = (gr[0].name || '').trim();
+          const cn = (gr[0].cn || '').trim();
+          const sch = (gr[0].schedule || '').trim();
+          groupHint =
+            `Guruh: ${gn || '—'}. Kurs: ${cn || '—'}. ` + (sch ? `O‘tiladigan blok / jadval: ${sch}. ` : '');
+        }
+      } catch {
+        /* non-blocking */
+      }
+    }
+
+    const effectiveTopic =
+      topicTrim ||
+      `${groupHint}${[title, courseName ? `(${courseName})` : ''].filter(Boolean).join(' ').trim()}`.trim() ||
+      'Umumiy akademik savollar';
+
+    let job: { id?: string } | null;
+    try {
+      job = await this.queueService.addExamJob({
+        examId,
+        lessonId,
+        topic: effectiveTopic,
+        level: level as any,
+        count,
+        teacherId,
+      });
+    } catch (e: any) {
+      throw new BadRequestException(
+        e?.message ||
+          "AI imtihon yaratilmadi: OpenAI kvota/kalit, tarmoq yoki ma'lumotlar bazasi xatosi.",
+      );
+    }
 
     if (!job?.id) {
       throw new BadRequestException(
-        "AI imtihon yaratilmadi: OPENAI_API_KEY yoki Redis (REDIS_URL) tekshiring.",
+        "AI navbat ishga tushmadi: Redis (REDIS_URL) yoki queue sozlamalarini tekshiring.",
       );
     }
 
@@ -178,36 +388,89 @@ export class ExamsService {
   // --- Student Logic ---
 
   async getAvailableExams(studentId: string) {
-    return this.dbService.query(`
-      SELECT 
-        e.*, 
+    const build = (deletedFilter: string, groupScoped: boolean) => {
+      const scope = groupScoped
+        ? 'AND (e.group_id IS NULL OR e.group_id = gx.id)'
+        : '';
+      return `
+      SELECT
+        e.*,
         c.name as course_name,
         e.duration_minutes as duration,
         (SELECT COUNT(*) FROM exam_questions WHERE exam_id = e.id) as questions_count,
-        ea.status as attempt_status,
-        ea.score,
-        CASE 
-          WHEN ea.status = 'submitted' THEN 'COMPLETED'
-          WHEN ea.status = 'in_progress' THEN 'IN_PROGRESS'
+        (SELECT ea.status FROM exam_attempts ea
+         WHERE ea.exam_id = e.id AND ea.student_id = $1
+         ORDER BY ea.started_at DESC NULLS LAST LIMIT 1) as attempt_status,
+        (SELECT ea.score FROM exam_attempts ea
+         WHERE ea.exam_id = e.id AND ea.student_id = $1
+         ORDER BY ea.started_at DESC NULLS LAST LIMIT 1) as score,
+        CASE
+          WHEN (SELECT ea.status FROM exam_attempts ea WHERE ea.exam_id = e.id AND ea.student_id = $1 ORDER BY ea.started_at DESC NULLS LAST LIMIT 1) = 'submitted' THEN 'COMPLETED'
+          WHEN (SELECT ea.status FROM exam_attempts ea WHERE ea.exam_id = e.id AND ea.student_id = $1 ORDER BY ea.started_at DESC NULLS LAST LIMIT 1) = 'in_progress' THEN 'IN_PROGRESS'
           ELSE 'UPCOMING'
         END as status
       FROM exams e
       JOIN courses c ON e.course_id = c.id
-      JOIN groups g ON g.course_id = c.id
-      JOIN group_students gs ON gs.group_id = g.id
-      LEFT JOIN exam_attempts ea ON ea.exam_id = e.id AND ea.student_id = gs.student_id
-      WHERE gs.student_id = $1
-      AND e.status = 'published'
-      AND e.deleted_at IS NULL
-    `, [studentId]);
+      WHERE e.status = 'published'
+      ${deletedFilter}
+      AND EXISTS (
+        SELECT 1 FROM groups gx
+        INNER JOIN group_students gs ON gs.group_id = gx.id AND gs.student_id = $1
+        WHERE gx.course_id = e.course_id
+        ${scope}
+      )
+    `;
+    };
+
+    let lastErr: any;
+    for (const groupScoped of [true, false]) {
+      for (const deletedPart of ['AND e.deleted_at IS NULL', '']) {
+        try {
+          return await this.dbService.query(build(deletedPart, groupScoped), [studentId]);
+        } catch (e: any) {
+          lastErr = e;
+          if (e?.code !== '42703') throw e;
+        }
+      }
+    }
+    throw lastErr;
   }
 
   async startExamAttempt(examId: string, studentUserId: string) {
-    const exam = await this.dbService.query(`SELECT id, time_limit FROM exams WHERE id = $1 AND status = 'published'`, [examId]);
-    if (!exam.length) throw new NotFoundException('Exam not found or not published.');
-
-    // 1. In this system, req.user.id for students matches students.id
     const studentId = studentUserId;
+    let exam: any[];
+    try {
+      exam = await this.dbService.query(
+        `SELECT e.id, e.time_limit FROM exams e
+         WHERE e.id = $1 AND e.status = 'published'
+         AND EXISTS (
+           SELECT 1 FROM groups gx
+           INNER JOIN group_students gs ON gs.group_id = gx.id AND gs.student_id = $2
+           WHERE gx.course_id = e.course_id
+           AND (e.group_id IS NULL OR e.group_id = gx.id)
+         )`,
+        [examId, studentId],
+      );
+    } catch (e: any) {
+      if (e?.code !== '42703') throw e;
+      exam = await this.dbService.query(
+        `SELECT e.id, e.time_limit FROM exams e
+         WHERE e.id = $1 AND e.status = 'published'
+         AND EXISTS (
+           SELECT 1 FROM groups gx
+           INNER JOIN group_students gs ON gs.group_id = gx.id AND gs.student_id = $2
+           WHERE gx.course_id = e.course_id
+         )`,
+        [examId, studentId],
+      );
+    }
+    if (!exam.length) {
+      throw new NotFoundException(
+        "Imtihon topilmadi, nashr qilinmagan yoki sizga biriktirilgan guruh uchun emas.",
+      );
+    }
+
+    // 1. req.user.id for students matches students.id (studentId above)
 
     // 2. Check for active attempt
     const activeAttempt = await this.dbService.query(`
@@ -250,15 +513,34 @@ export class ExamsService {
     const attempt = await this.dbService.query(`SELECT exam_id FROM exam_attempts WHERE id = $1`, [attemptId]);
     if (!attempt.length) throw new NotFoundException('Attempt not found.');
 
-    const questions = await this.dbService.query(`
-      SELECT q.id, q.text, q.options, q.level
+    const questions = await this.dbService.query(
+      `
+      SELECT q.id, q.text, q.options, q.level, q.type
       FROM questions q
       JOIN exam_questions eq ON eq.question_id = q.id
       WHERE eq.exam_id = $1
       ORDER BY q.id ASC
-    `, [attempt[0].exam_id]);
+    `,
+      [attempt[0].exam_id],
+    );
 
-    return questions;
+    const parseJson = (v: any, fb: any) => {
+      if (v == null) return fb;
+      if (typeof v === 'string') {
+        try {
+          return JSON.parse(v);
+        } catch {
+          return v;
+        }
+      }
+      return v;
+    };
+
+    return questions.map((q: any) => ({
+      ...q,
+      type: String(q.type || 'multiple_choice').toLowerCase().replace(/-/g, '_'),
+      options: parseJson(q.options, []),
+    }));
   }
 
   async getAttemptAnswers(attemptId: string) {
@@ -340,21 +622,48 @@ export class ExamsService {
          .toLowerCase()
          .replace(/-/g, '_');
        if (qType === 'select' || qType === 'mcq') qType = 'multiple_choice';
-       const qCorrect = question[0].correct_answer;
+       if (qType === 'boolean' || qType === 'tf') qType = 'true_false';
+
+       const unwrapPayload = (raw: string | null) => {
+         if (raw == null || raw === '') return null;
+         try {
+           return JSON.parse(raw);
+         } catch {
+           return raw;
+         }
+       };
+       const unwrapCorrect = (v: any) => {
+         if (v == null) return null;
+         if (typeof v === 'string') {
+           try {
+             return JSON.parse(v);
+           } catch {
+             return v;
+           }
+         }
+         return v;
+       };
+
+       const qCorrectRaw = unwrapCorrect(question[0].correct_answer);
        const qText = String(question[0].text || '');
-       const uPayload = ans.answer_payload;
+       const uPayload = unwrapPayload(ans.answer_payload);
        const refStr =
-         typeof qCorrect === 'string' || typeof qCorrect === 'number'
-           ? String(qCorrect)
-           : JSON.stringify(qCorrect ?? '');
+         typeof qCorrectRaw === 'string' || typeof qCorrectRaw === 'number'
+           ? String(qCorrectRaw)
+           : JSON.stringify(qCorrectRaw ?? '');
+
+       const numEq = (a: any, b: any) => Number(a) === Number(b);
 
        // Enhanced AI evaluation
-       if (qType === 'multiple_choice') {
-         isCorrect = String(uPayload) === String(qCorrect);
-       } else if (qType === 'multi_select') {
-         const pArr = Array.isArray(uPayload) ? uPayload : [];
-         const cArr = Array.isArray(qCorrect) ? qCorrect : [];
-         isCorrect = pArr.length === cArr.length && pArr.every(v => cArr.includes(v));
+       if (qType === 'multiple_choice' || qType === 'true_false') {
+         isCorrect = numEq(uPayload, qCorrectRaw);
+       } else if (qType === 'multi_select' || qType === 'multiple_select') {
+         const pArr = (Array.isArray(uPayload) ? uPayload : []).map((x) => Number(x)).sort((a, b) => a - b);
+         const cArr = (Array.isArray(qCorrectRaw) ? qCorrectRaw : []).map((x) => Number(x)).sort((a, b) => a - b);
+         isCorrect =
+           cArr.length > 0 &&
+           pArr.length === cArr.length &&
+           pArr.every((v, i) => v === cArr[i]);
        } else if (qType === 'text') {
          const aiGr = await this.aiService.gradeExamAnswer({
            questionText: qText,

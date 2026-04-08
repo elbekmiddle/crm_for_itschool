@@ -5,10 +5,11 @@ import {
   LayoutDashboard, User, BookOpen,
   CalendarCheck, CreditCard, ClipboardList, LogOut,
   Menu, X, Bell, Moon, Sun, ChevronLeft, ChevronRight,
-  AlertTriangle, GraduationCap, Sparkles, Zap, ShieldCheck
+  AlertTriangle, GraduationCap, ShieldCheck
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useStudentStore } from '../store/useStudentStore';
+import { getRealtimeSocket } from '../lib/realtimeSocket';
 import { cn } from '../lib/utils';
 const Logo = "/Images/Logo.png";
 
@@ -97,7 +98,7 @@ const LogoutModal: React.FC<{ onConfirm: () => void; onCancel: () => void }> = (
 // ─── Main Layout ──────────────────────────────────────────────────────────────
 const AppLayout: React.FC = () => {
   const { user, logout } = useAuthStore();
-  const { notifications, fetchNotifications, markNotificationRead } = useStudentStore();
+  const { notifications, fetchNotifications, markNotificationRead, fetchCourse } = useStudentStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [dark, setDark] = useDarkMode();
@@ -105,14 +106,42 @@ const AppLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [isAppLoading, setIsAppLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsAppLoading(false), 1500);
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 60000);
-    return () => { clearInterval(interval); clearTimeout(timer); };
+    return () => { clearInterval(interval); };
   }, [fetchNotifications]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const s = getRealtimeSocket();
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        debounce = null;
+        void fetchNotifications();
+        void fetchCourse();
+        void useStudentStore.getState().fetchStats();
+      }, 400);
+    };
+    const join = () => {
+      s.emit('join_app', { userId: user.id, role: user.role || 'STUDENT' });
+    };
+    s.on('connect', join);
+    if (s.connected) join();
+    s.on('dashboard_refresh', scheduleRefresh);
+    s.on('exam_updated', scheduleRefresh);
+    s.on('exam_approved', scheduleRefresh);
+    return () => {
+      if (debounce) clearTimeout(debounce);
+      s.off('connect', join);
+      s.off('dashboard_refresh', scheduleRefresh);
+      s.off('exam_updated', scheduleRefresh);
+      s.off('exam_approved', scheduleRefresh);
+    };
+  }, [user?.id, user?.role, fetchNotifications, fetchCourse]);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -150,13 +179,21 @@ const AppLayout: React.FC = () => {
 
       {/* ── Desktop Sidebar ── */}
       <aside className={cn(
-        "hidden lg:flex flex-col bg-white dark:bg-[#16171d] border-r border-[#e5e4e7] dark:border-[#2e303a] fixed top-0 left-0 h-full z-30 transition-all duration-500 ease-in-out overflow-hidden shadow-2xl shadow-black/5",
+        "hidden lg:flex flex-col border-r border-[#e5e4e7] dark:border-[#2e303a] fixed top-0 left-0 h-full z-30 transition-all duration-200 ease-in-out overflow-hidden shadow-2xl shadow-black/5",
         sidebarW
       )}>
+        <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-[0.2] dark:opacity-[0.16]"
+            style={{ backgroundImage: "url('/images/uzbek-hero.png')" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-[#f4f3ec]/92 to-white/97 dark:from-[#16171d]/96 dark:via-[#16171d]/90 dark:to-[#16171d]/97" />
+        </div>
+        <div className="relative z-10 flex h-full min-h-0 flex-col">
         {/* Brand */}
-        <div className="p-6 border-b border-[#f4f3ec] dark:border-[#2e303a] flex items-center justify-between min-h-[90px] shrink-0">
-          <div className={cn("flex items-center gap-4 transition-all duration-500 overflow-hidden", sidebarCollapsed && "opacity-0 invisible w-0")}>
-            <div className="w-14 h-14 bg-white dark:bg-[#1f2028] rounded-2xl flex items-center justify-center shadow-xl p-3 shrink-0 transform transition-transform hover:rotate-12">
+        <div className="p-6 border-b border-[#f4f3ec]/80 dark:border-[#2e303a] flex items-center justify-between min-h-[90px] shrink-0">
+          <div className={cn("flex items-center gap-4 transition-all duration-200 overflow-hidden", sidebarCollapsed && "opacity-0 invisible w-0")}>
+            <div className="w-14 h-14 bg-white/90 dark:bg-[#1f2028]/90 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-xl p-3 shrink-0 transform transition-transform duration-200 hover:rotate-12">
               <img src={Logo} alt="IT Park" className="w-full h-full object-contain" />
             </div>
             <div className="overflow-hidden">
@@ -168,31 +205,49 @@ const AppLayout: React.FC = () => {
           <button
             type="button"
             onClick={() => setSidebarCollapsed(v => !v)}
-            className="w-10 h-10 rounded-xl bg-[#f4f3ec] dark:bg-[#1f2028] flex items-center justify-center text-[#6b6375] hover:text-[#aa3bff] hover:bg-[#aa3bff]/10 transition-all duration-300 shrink-0 shadow-inner"
+            className="w-10 h-10 rounded-xl bg-[#f4f3ec]/90 dark:bg-[#1f2028]/90 backdrop-blur-sm flex items-center justify-center text-[#6b6375] hover:text-[#aa3bff] hover:bg-[#aa3bff]/10 transition-all duration-200 shrink-0 shadow-inner"
           >
             {sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
           </button>
         </div>
 
+        {!sidebarCollapsed && user && (
+          <div className="mx-4 mb-2 flex items-center gap-3 rounded-2xl border border-[#e5e4e7]/80 bg-white/60 px-4 py-3 backdrop-blur-md dark:border-[#2e303a] dark:bg-[#1f2028]/50">
+            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-[#aa3bff] to-[#c084fc] text-center text-xs font-black leading-[3rem] text-white shadow-lg shadow-[#aa3bff]/20">
+              {user.image_url ? (
+                <img src={user.image_url} className="h-full w-full object-cover" alt="" />
+              ) : (
+                initials
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-black text-[#08060d] dark:text-white">
+                {user.first_name} {user.last_name}
+              </p>
+              <p className="truncate text-[10px] font-bold uppercase tracking-widest text-[#aa3bff]/80">Talaba</p>
+            </div>
+          </div>
+        )}
+
         {/* User Card (Collapsed) */}
         {sidebarCollapsed && (
-          <div className="p-4 flex flex-col items-center gap-4 border-b border-[#f4f3ec] dark:border-[#2e303a] py-6">
-             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#aa3bff] to-[#c084fc] flex items-center justify-center text-white text-xs font-black shadow-lg shadow-[#aa3bff]/20">
-                {user?.image_url ? <img src={user.image_url} className="w-full h-full rounded-xl object-cover" alt="" /> : initials}
+          <div className="p-4 flex flex-col items-center gap-4 border-b border-[#f4f3ec]/80 dark:border-[#2e303a] py-6">
+             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#aa3bff] to-[#c084fc] flex items-center justify-center text-white text-xs font-black shadow-lg shadow-[#aa3bff]/20 overflow-hidden">
+                {user?.image_url ? <img src={user.image_url} className="w-full h-full object-cover" alt="" /> : initials}
              </div>
           </div>
         )}
 
         {/* Nav */}
-        <nav className="flex-1 p-4 space-y-2 mt-4 overflow-y-auto no-scrollbar">
+        <nav className="flex-1 p-4 space-y-2 mt-2 overflow-y-auto no-scrollbar">
           {navItems.map(({ to, icon: Icon, label, shortcut }) => (
             <NavLink
               key={to} to={to}
               className={({ isActive }) => cn(
-                "flex items-center gap-4 px-4 py-3.5 rounded-2xl font-black text-sm transition-all duration-300 group relative",
+                "flex items-center gap-4 px-4 py-3.5 rounded-2xl font-black text-sm transition-all duration-200 group relative",
                 isActive
                   ? "bg-[#aa3bff] text-white shadow-xl shadow-[#aa3bff]/20 translate-x-1"
-                  : "text-[#6b6375] dark:text-[#9ca3af] hover:bg-[#f4f3ec] dark:hover:bg-[#1f2028] hover:text-[#08060d] dark:hover:text-white",
+                  : "text-[#6b6375] dark:text-[#9ca3af] hover:bg-[#f4f3ec]/80 dark:hover:bg-[#1f2028]/80 hover:text-[#08060d] dark:hover:text-white",
                 sidebarCollapsed && "justify-center px-0"
               )}
             >
@@ -210,7 +265,7 @@ const AppLayout: React.FC = () => {
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             className={cn(
-              "flex items-center gap-4 px-4 py-3.5 rounded-2xl font-black text-sm transition-all duration-300 w-full text-[#6b6375] dark:text-[#9ca3af] hover:bg-[#f4f3ec] dark:hover:bg-[#1f2028] relative group",
+              "flex items-center gap-4 px-4 py-3.5 rounded-2xl font-black text-sm transition-all duration-200 w-full text-[#6b6375] dark:text-[#9ca3af] hover:bg-[#f4f3ec]/80 dark:hover:bg-[#1f2028]/80 relative group",
               sidebarCollapsed && "justify-center px-0"
             )}
           >
@@ -227,24 +282,25 @@ const AppLayout: React.FC = () => {
           <button
             onClick={() => setDark(v => !v)}
             className={cn(
-              "flex items-center gap-4 px-4 py-3.5 rounded-2xl font-black text-sm transition-all duration-300 w-full text-[#6b6375] dark:text-[#9ca3af] hover:bg-[#f4f3ec] dark:hover:bg-[#1f2028] group",
+              "flex items-center gap-4 px-4 py-3.5 rounded-2xl font-black text-sm transition-all duration-200 w-full text-[#6b6375] dark:text-[#9ca3af] hover:bg-[#f4f3ec]/80 dark:hover:bg-[#1f2028]/80 group",
               sidebarCollapsed && "justify-center px-0"
             )}
           >
-            {dark ? <Sun className="w-5 h-5 text-amber-500 shrink-0 group-hover:rotate-90" /> : <Moon className="w-5 h-5 text-[#aa3bff] shrink-0 group-hover:-rotate-12" />}
+            {dark ? <Sun className="w-5 h-5 text-amber-500 shrink-0 group-hover:rotate-90 transition-transform duration-200" /> : <Moon className="w-5 h-5 text-[#aa3bff] shrink-0 group-hover:-rotate-12 transition-transform duration-200" />}
             {!sidebarCollapsed && <span className="flex-1 tracking-tight">{dark ? "Yorug' rejim" : 'Tungi rejim'}</span>}
           </button>
 
           <button
             onClick={() => setShowLogoutModal(true)}
             className={cn(
-              "flex items-center gap-4 px-4 py-3.5 rounded-2xl font-black text-sm transition-all duration-300 w-full text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 group",
+              "flex items-center gap-4 px-4 py-3.5 rounded-2xl font-black text-sm transition-all duration-200 w-full text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 group",
               sidebarCollapsed && "justify-center px-0"
             )}
           >
             <LogOut className={cn("w-5 h-5 shrink-0 group-hover:-translate-x-1", sidebarCollapsed ? "w-6 h-6" : "")} />
             {!sidebarCollapsed && <span className="flex-1 tracking-tight uppercase tracking-widest text-[10px]">Chiqish</span>}
           </button>
+        </div>
         </div>
       </aside>
 
@@ -307,8 +363,16 @@ const AppLayout: React.FC = () => {
                <div className="absolute inset-0 bg-[#08060d]/60 backdrop-blur-md" onClick={() => setMobileOpen(false)} />
                <motion.div 
                   initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }}
-                  className="relative w-80 bg-white dark:bg-[#16171d] h-full flex flex-col shadow-2xl"
+                  className="relative w-80 h-full flex flex-col overflow-hidden shadow-2xl"
                >
+                  <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+                    <div
+                      className="absolute inset-0 bg-cover bg-center opacity-[0.18] dark:opacity-[0.14]"
+                      style={{ backgroundImage: "url('/images/uzbek-hero.png')" }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/96 via-[#f4f3ec]/93 to-white/98 dark:from-[#16171d]/97 dark:via-[#16171d]/92 dark:to-[#16171d]/98" />
+                  </div>
+                  <div className="relative z-10 flex h-full min-h-0 flex-col bg-transparent">
                   <div className="p-6 border-b border-[#f4f3ec] dark:border-[#2e303a] flex items-center justify-between">
                      <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-[#aa3bff]/10 rounded-xl flex items-center justify-center">
@@ -347,6 +411,7 @@ const AppLayout: React.FC = () => {
                      <button onClick={() => { setMobileOpen(false); setShowLogoutModal(true); }} className="flex items-center gap-4 px-4 py-4 rounded-2xl font-black text-sm w-full text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20">
                         <LogOut className="w-6 h-6" /> Chiqish Tizimidan
                      </button>
+                  </div>
                   </div>
                </motion.div>
             </motion.div>

@@ -54,6 +54,10 @@ export class SchemaBootstrapService implements OnModuleInit {
         sql: `ALTER TABLE groups ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`,
       },
       {
+        label: 'groups.schedule',
+        sql: `ALTER TABLE groups ADD COLUMN IF NOT EXISTS schedule TEXT`,
+      },
+      {
         label: 'group_students.left_at',
         sql: `ALTER TABLE group_students ADD COLUMN IF NOT EXISTS left_at TIMESTAMP`,
       },
@@ -106,6 +110,13 @@ export class SchemaBootstrapService implements OnModuleInit {
         `,
       },
       {
+        label: 'student_courses started_at / ended_at',
+        sql: `
+          ALTER TABLE student_courses ADD COLUMN IF NOT EXISTS started_at TIMESTAMP;
+          ALTER TABLE student_courses ADD COLUMN IF NOT EXISTS ended_at TIMESTAMP;
+        `,
+      },
+      {
         label: 'leads',
         sql: `
           CREATE TABLE IF NOT EXISTS leads (
@@ -119,6 +130,14 @@ export class SchemaBootstrapService implements OnModuleInit {
             status TEXT DEFAULT 'new',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           );
+        `,
+      },
+      {
+        label: 'exams.deleted_at + group_id',
+        sql: `
+          ALTER TABLE exams ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+          ALTER TABLE exams ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES groups(id) ON DELETE SET NULL;
+          CREATE INDEX IF NOT EXISTS idx_exams_group_id ON exams(group_id) WHERE group_id IS NOT NULL;
         `,
       },
       {

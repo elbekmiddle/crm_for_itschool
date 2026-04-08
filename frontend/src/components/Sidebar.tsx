@@ -4,14 +4,12 @@ import {
   LayoutDashboard,
   GraduationCap,
   Users,
-  BookOpen,
   Calendar,
   ClipboardList,
   Wallet,
   Settings,
   LogOut,
   X,
-  UserPlus,
 } from 'lucide-react';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
@@ -20,7 +18,7 @@ import { useConfirm } from '../context/ConfirmContext';
 /**
  * Role-based navigation:
  * ADMIN  → Dedicated layout (pages/admin/Layout.tsx), not rendered here
- * MANAGER → Dashboard, Students (create/manage), Payments, Courses, Groups (view), Leads
+ * MANAGER → Dashboard, Students (create/manage), Payments
  * TEACHER → Dashboard, Groups (create/manage students), Attendance, Exams
  * STUDENT → Dashboard, Profile, Exams
  */
@@ -29,13 +27,11 @@ const getNavItems = (role: string) => {
     { to: '/manager/dashboard', icon: LayoutDashboard, label: 'Bosh sahifa' },
     { to: '/manager/students', icon: GraduationCap, label: "O'quvchilar" },
     { to: '/manager/payments', icon: Wallet, label: "To'lovlar" },
-    { to: '/manager/courses', icon: BookOpen, label: 'Kurslar' },
-    { to: '/manager/groups', icon: Users, label: 'Guruhlar' },
-    { to: '/manager/leads', icon: UserPlus, label: 'Lidlar' },
   ];
 
   if (role === 'TEACHER') return [
     { to: '/teacher/dashboard', icon: LayoutDashboard, label: 'Bosh sahifa' },
+    { to: '/teacher/students', icon: GraduationCap, label: "O'quvchilarim" },
     { to: '/teacher/groups', icon: Users, label: 'Guruhlar' },
     { to: '/teacher/attendance', icon: Calendar, label: 'Davomat' },
     { to: '/teacher/exams', icon: ClipboardList, label: 'Imtihonlar' },
@@ -88,10 +84,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
 
       <aside
         className={cn(
-          'fixed top-0 left-0 h-screen bg-[var(--bg-card)] border-r border-[var(--border)] flex flex-col z-50 transition-all duration-300',
+          'fixed top-0 left-0 h-screen border-r border-[var(--border)] flex flex-col z-50 transition-all duration-300 overflow-hidden',
           isOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:translate-x-0 md:w-20',
         )}
       >
+        <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-[0.22] dark:opacity-[0.18]"
+            style={{ backgroundImage: "url('/images/uzbek-hero.png')" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[var(--bg-card)]/96 via-[var(--bg-card)]/92 to-[var(--bg-card)]/98" />
+        </div>
+        <div className="relative z-10 flex h-full min-h-0 flex-col">
         {/* Brand */}
         <div className="p-5 border-b border-[var(--border)] flex items-center justify-between min-h-[73px]">
           <div className={cn('flex items-center gap-3 overflow-hidden', !isOpen && 'md:justify-center w-full')}>
@@ -172,6 +176,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
             <LogOut className="w-[18px] h-[18px]" />
             <span className={cn(!isOpen && "md:hidden")}>Chiqish</span>
           </button>
+        </div>
         </div>
       </aside>
     </>

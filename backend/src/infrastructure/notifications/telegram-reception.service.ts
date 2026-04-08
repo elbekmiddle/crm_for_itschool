@@ -5,6 +5,13 @@ import { TelegramService } from './telegram.service';
 import { SocketsGateway } from '../../modules/sockets/sockets.gateway';
 import { Bot, InlineKeyboard, session } from 'grammy';
 
+function isTelegramPollingConflict(err: unknown): boolean {
+  const e = err as { error_code?: number; message?: string; description?: string };
+  if (e?.error_code === 409) return true;
+  const s = `${e?.message ?? ''} ${e?.description ?? ''} ${String(err)}`;
+  return s.includes('409') && (s.includes('Conflict') || s.includes('getUpdates') || s.includes('terminated by other'));
+}
+
 @Injectable()
 export class TelegramReceptionBot implements OnModuleInit {
   private bot: Bot<any>;
@@ -20,6 +27,14 @@ export class TelegramReceptionBot implements OnModuleInit {
   onModuleInit() {
     const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
     if (!token) return;
+
+    const pollingFlag = this.configService.get<string>('TELEGRAM_RECEPTION_POLLING');
+    if (pollingFlag === '0' || pollingFlag === 'false') {
+      this.logger.log(
+        'Telegram qabul boti: polling o‘chirilgan (TELEGRAM_RECEPTION_POLLING=false). Xabar yuborish (notify) baribir ishlaydi.',
+      );
+      return;
+    }
 
     try {
         this.bot = new Bot(token);
@@ -186,9 +201,22 @@ export class TelegramReceptionBot implements OnModuleInit {
            }
         });
 
-        this.bot.start().then(() => this.logger.log('Grammy Reception Bot Started')).catch(e => this.logger.error('Grammy start error:', e));
+        this.bot
+          .start()
+          .then(() => this.logger.log('Grammy qabul boti polling bilan ishga tushdi'))
+          .catch((e) => {
+            if (isTelegramPollingConflict(e)) {
+              this.logger.warn(
+                'Telegram qabul boti: 409 — bu token bilan boshqa joyda getUpdates (polling) ishlayapti. ' +
+                  'Faqat bitta Nest instansiyasini qoldiring, yoki .env da TELEGRAM_RECEPTION_POLLING=false qo‘ying. ' +
+                  'CRM Telegram bildirishnomalari (sendMessage) bundan mustaqil ishlaydi.',
+              );
+              return;
+            }
+            this.logger.error('Grammy qabul boti ishga tushmadi:', e);
+          });
     } catch (err) {
-        this.logger.error("Failed to init Grammy", err);
+        this.logger.error('Grammy qabul botini yaratishda xato:', err);
     }
   }
 }
