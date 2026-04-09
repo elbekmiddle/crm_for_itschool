@@ -1,0 +1,72 @@
+# Bitta domen: https://sizning-domen.uz
+#   /api/* va /socket.io/* → Nest (127.0.0.1:5001)
+#   / → CRM (Vite dist)
+#
+# Exam-platform uchun alohida subdomain tavsiya (itschool-subdomains.conf.example).
+# Subpath /exam/ SPA + asosiy / CRM bir serverda nginx bilan ishonchli qilish murakkab.
+#
+# Frontend CRM .env.production:
+#   VITE_API_URL=https://sizning-domen.uz/api/v1
+#   VITE_SOCKET_URL=https://sizning-domen.uz
+#
+# Backend ALLOWED_ORIGINS=https://sizning-domen.uz
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+upstream nest_backend {
+    server 127.0.0.1:5001;
+    keepalive 32;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name sizning-domen.uz www.sizning-domen.uz;
+    location /.well-known/acme-challenge/ { root /var/www/certbot; }
+    location / { return 301 https://sizning-domen.uz$request_uri; }
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name sizning-domen.uz;
+
+    client_max_body_size 25m;
+
+    # SSL: certbot
+
+    # --- Nest: REST + Socket.IO ---
+    location /api/ {
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 86400s;
+        proxy_pass http://nest_backend;
+    }
+
+    location /socket.io/ {
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 86400s;
+        proxy_pass http://nest_backend;
+    }
+
+    # --- Exam SPA (Vite base: '/exam/') — /exam dan keyin slash ---
+    # --- CRM SPA ---
+    location / {
+        root /var/www/crm/dist;
+        try_files $uri $uri/ /index.html;
+    }
+}
