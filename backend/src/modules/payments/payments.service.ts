@@ -1,6 +1,7 @@
-import { Injectable, OnModuleInit, Logger, ForbiddenException } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { all_payments } from './queries/all_payments';
+import { list_debtor_students } from './queries/debtors';
 import { get_student_payments_raw } from './queries/get_student_payments_raw';
 import { create_payment } from './commands/create_payment';
 import { TelegramService } from '../../infrastructure/notifications/telegram.service';
@@ -46,8 +47,9 @@ export class PaymentsService implements OnModuleInit {
     if (!group_id && data.student_id) {
       const rows = await this.dbService.query(
         `SELECT gs.group_id FROM group_students gs
+         INNER JOIN groups g ON g.id = gs.group_id
          WHERE gs.student_id = $1 AND gs.left_at IS NULL
-         ORDER BY gs.joined_at DESC NULLS LAST
+         ORDER BY g.name ASC NULLS LAST
          LIMIT 1`,
         [data.student_id],
       );
@@ -77,6 +79,47 @@ export class PaymentsService implements OnModuleInit {
 
   async findAll() {
     return all_payments(this.dbService);
+  }
+
+  async listDebtors() {
+    return list_debtor_students(this.dbService);
+  }
+
+  async updatePayment(id: string, data: { amount?: number; paid_at?: string; description?: string | null }) {
+    const keys: string[] = [];
+    const vals: unknown[] = [];
+    let i = 1;
+    if (data.amount != null) {
+      keys.push(`amount = $${i++}`);
+      vals.push(data.amount);
+    }
+    if (data.paid_at != null) {
+      keys.push(`paid_at = $${i++}::timestamptz`);
+      vals.push(data.paid_at);
+    }
+    if (data.description !== undefined) {
+      keys.push(`description = $${i++}`);
+      vals.push(data.description);
+    }
+    if (!keys.length) {
+      throw new BadRequestException("Yangilanadigan maydon yo'q");
+    }
+    vals.push(id);
+    const q = `UPDATE payments SET ${keys.join(', ')} WHERE id = $${i} RETURNING *`;
+    try {
+      const rows = await this.dbService.query(q, vals);
+      if (!rows?.length) {
+        throw new NotFoundException("To'lov topilmadi");
+      }
+      this.socketsGateway.emitDashboardRefresh({ source: 'payment', action: 'updated' });
+      return rows[0];
+    } catch (e: any) {
+      if (e?.status === 404) throw e;
+      if (e?.code === '42703' && String(e?.message || '').includes('description')) {
+        throw new BadRequestException("description ustuni bazada yo'q — migratsiyani tekshiring");
+      }
+      throw e;
+    }
   }
 
   async remove(_id: string) {

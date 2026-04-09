@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { useToast } from '../context/ToastContext';
+import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
 
 const difficultyBars = (d: string) => {
   const m: Record<string, number> = { easy: 1, medium: 2, hard: 3 };
@@ -30,6 +31,8 @@ const QuestionsPage: React.FC = () => {
   const [form, setForm] = useState({ question_text: '', option_a: '', option_b: '', option_c: '', option_d: '', correct_answer: 'a', difficulty: 'medium' });
   const [page, setPage] = useState(1);
   const perPage = 10;
+
+  useModalOverlayEffects(modal, { onEscape: () => setModal(false) });
 
   useEffect(() => { fetchCourses(); fetchQuestionStats(); }, []);
 
@@ -147,11 +150,11 @@ const QuestionsPage: React.FC = () => {
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-50">
             <span className="text-xs text-slate-400">Sahifa {page} / {totalPages}</span>
             <div className="flex gap-1">
-              <button disabled={page === 1} onClick={() => setPage(page - 1)} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
+              <button type="button" disabled={page === 1} onClick={() => setPage(page - 1)} className="btn-pagination"><ChevronLeft className="w-4 h-4" /></button>
               {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
                 <button key={n} onClick={() => setPage(n)} className={cn("w-8 h-8 rounded-lg text-xs font-bold", page === n ? "bg-primary-600 text-white" : "hover:bg-slate-100 text-slate-500")}>{n}</button>
               ))}
-              <button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
+              <button type="button" disabled={page === totalPages} onClick={() => setPage(page + 1)} className="btn-pagination"><ChevronRight className="w-4 h-4" /></button>
             </div>
           </div>
         )}

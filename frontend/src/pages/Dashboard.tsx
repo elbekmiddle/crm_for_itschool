@@ -668,14 +668,6 @@ const Dashboard: React.FC = () => {
             </p>
           </div>
 
-          {/* Support */}
-          <div className="bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl p-6 text-white">
-            <h3 className="text-lg font-black">Yordam kerakmi? 🏖</h3>
-            <p className="text-sm text-primary-200 mt-1">Bizning qo'llab-quvvatlash jamoasi onlayn.</p>
-            <button className="mt-4 px-5 py-2.5 bg-white text-primary-700 rounded-xl text-sm font-bold hover:bg-primary-50 transition-all">
-              Bog'lanish
-            </button>
-          </div>
         </div>
       </div>
     </div>

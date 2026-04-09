@@ -12,8 +12,8 @@ export class CreateAttendanceDto {
   @IsNotEmpty()
   student_id: string;
 
-  @ApiProperty({ example: 'PRESENT', enum: ['PRESENT', 'ABSENT'] })
-  @IsEnum(['PRESENT', 'ABSENT'])
+  @ApiProperty({ example: 'PRESENT', enum: ['PRESENT', 'ABSENT', 'LATE'] })
+  @IsEnum(['PRESENT', 'ABSENT', 'LATE'])
   @IsNotEmpty()
   status: string;
 

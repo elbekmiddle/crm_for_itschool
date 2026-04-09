@@ -16,6 +16,7 @@ interface AdminState {
   examResults: any[];
   users: any[];
   payments: any[];
+  debtors: any[];
   lessons: any[];
   questions: any[];
   questionStats: any | null;
@@ -82,6 +83,7 @@ interface AdminState {
   // Payments
   fetchPayments: () => Promise<void>;
   createPayment: (data: any) => Promise<void>;
+  updatePayment: (id: string, data: Partial<{ amount: number; paid_at: string; description: string | null }>) => Promise<void>;
   deletePayment: (id: string) => Promise<void>;
   getStudentPayments: (studentId: string) => Promise<any>;
   
@@ -117,6 +119,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   examResults: [],
   users: [],
   payments: [],
+  debtors: [],
   lessons: [],
   questions: [],
   questionStats: null,
@@ -474,14 +477,31 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   fetchPayments: async () => {
     set({ isLoading: true });
     try {
-      const { data } = await api.get('/payments');
-      set({ payments: data, isLoading: false });
-    } catch (e: any) { set({ error: e.message, isLoading: false }); }
+      const [payRes, debtRes] = await Promise.all([
+        api.get('/payments'),
+        api.get('/payments/debtors').catch(() => ({ data: [] })),
+      ]);
+      const debtRaw = debtRes?.data;
+      set({
+        payments: payRes.data,
+        debtors: Array.isArray(debtRaw) ? debtRaw : [],
+        isLoading: false,
+      });
+    } catch (e: any) {
+      set({ error: e.message, isLoading: false });
+    }
   },
 
   createPayment: async (data) => {
     await api.post('/payments', data);
     await get().fetchPayments();
+    await get().fetchStats();
+  },
+
+  updatePayment: async (id, data) => {
+    await api.patch(`/payments/${id}`, data);
+    await get().fetchPayments();
+    await get().fetchStats();
   },
 
   deletePayment: async (id) => {

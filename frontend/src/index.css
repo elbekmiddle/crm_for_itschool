@@ -333,6 +333,13 @@ h1, h2, h3, h4, h5, h6 {
 .data-table tbody tr:hover {
   background-color: var(--hover-bg);
 }
+.data-table.data-table--compact th {
+  padding: 0.5rem 0.75rem;
+}
+.data-table.data-table--compact td {
+  padding: 0.5rem 0.75rem;
+  vertical-align: middle;
+}
 
 /* ─── Nav (no @apply) ─── */
 .nav-link {
@@ -357,23 +364,47 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 4px 12px var(--accent-bg);
 }
 
+/* ─── Pagination / icon nav: disabled = no hover, obvious blocked state ─── */
+.btn-pagination {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
+}
+.btn-pagination:not(:disabled) {
+  cursor: pointer;
+}
+.btn-pagination:not(:disabled):hover {
+  background-color: rgb(241 245 249);
+}
+.dark .btn-pagination:not(:disabled):hover {
+  background-color: var(--hover-bg);
+}
+.btn-pagination:disabled,
+.btn-pagination[disabled] {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
 /* ─── Modal ─── */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
   padding-top: max(1rem, env(safe-area-inset-top));
-  background-color: rgba(15, 23, 42, 0.48);
-  backdrop-filter: blur(20px) saturate(1.15);
-  -webkit-backdrop-filter: blur(20px) saturate(1.15);
+  background-color: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px) saturate(1.1);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
   animation: modalBackdropIn 0.22s ease-out;
+  overscroll-behavior: contain;
 }
 .dark .modal-overlay {
-  background-color: rgba(0, 0, 0, 0.62);
+  background-color: rgba(0, 0, 0, 0.55);
 }
 @keyframes modalBackdropIn {
   from { opacity: 0; }
@@ -382,7 +413,7 @@ h1, h2, h3, h4, h5, h6 {
 .modal-content {
   background-color: var(--bg-card);
   border-radius: 1.25rem;
-  box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
   width: 100%;
   max-width: min(36rem, 100vw - 2rem);
   max-height: min(90vh, 100dvh - 2rem);

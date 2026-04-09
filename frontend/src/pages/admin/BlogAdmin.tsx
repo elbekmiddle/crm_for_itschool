@@ -7,7 +7,8 @@ import {
   Link as LinkIcon, Type, Palette, FileText
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import toast from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
+import { useModalOverlayEffects } from '../../hooks/useModalOverlayEffects';
 
 // ─── Rich Text Block Types ───
 type BlockType = 'paragraph' | 'heading' | 'list' | 'image' | 'divider';
@@ -39,6 +40,16 @@ const RichTextEditor: React.FC<{
   content: ContentBlock[];
   onChange: (blocks: ContentBlock[]) => void;
 }> = ({ content, onChange }) => {
+  const [colorOpen, setColorOpen] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (!t.closest?.('[data-blog-color-picker]')) setColorOpen(null);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
 
   const addBlock = (type: BlockType) => {
     const newBlock: ContentBlock = {
@@ -152,19 +163,49 @@ const RichTextEditor: React.FC<{
                       className={cn("w-7 h-7 rounded-lg flex items-center justify-center transition-all text-xs",
                         run.underline ? "bg-[#aa3bff] text-white" : "bg-slate-100 dark:bg-[#16171d] text-slate-500 hover:text-[#aa3bff]"
                       )}><UnderlineIcon className="w-3.5 h-3.5" /></button>
-                    <div className="relative group/color">
-                      <button className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-100 dark:bg-[#16171d] text-slate-500 hover:text-[#aa3bff] transition-all">
+                    <div className="relative" data-blog-color-picker>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setColorOpen((o) => (o === `${bIdx}-${rIdx}` ? null : `${bIdx}-${rIdx}`))
+                        }
+                        className={cn(
+                          'w-7 h-7 rounded-lg flex items-center justify-center bg-slate-100 dark:bg-[#16171d] text-slate-500 hover:text-[#aa3bff] transition-all',
+                          colorOpen === `${bIdx}-${rIdx}` && 'ring-2 ring-[#aa3bff]/50',
+                        )}
+                      >
                         <Palette className="w-3.5 h-3.5" />
                       </button>
-                      <div className="absolute top-full left-0 mt-1 p-2 bg-white dark:bg-[#1f2028] border border-slate-200 dark:border-[#2e303a] rounded-xl shadow-2xl hidden group-hover/color:grid grid-cols-4 gap-1 z-50 w-28">
-                        {colors.map(c => (
-                          <button key={c} onClick={() => updateRunStyle(bIdx, rIdx, { color: c })}
-                            className="w-6 h-6 rounded-lg border border-slate-100 dark:border-[#2e303a] hover:scale-125 transition-transform"
-                            style={{ backgroundColor: c }} />
-                        ))}
-                        <button onClick={() => updateRunStyle(bIdx, rIdx, { color: undefined })}
-                          className="w-6 h-6 rounded-lg border border-slate-200 dark:border-[#2e303a] text-[8px] font-bold text-slate-400 hover:scale-110 transition-transform">✕</button>
-                      </div>
+                      {colorOpen === `${bIdx}-${rIdx}` && (
+                        <div
+                          className="absolute top-full left-0 z-[80] mt-1 grid w-28 grid-cols-4 gap-1 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl dark:border-[#2e303a] dark:bg-[#1f2028]"
+                          data-blog-color-picker
+                          onMouseDown={(e) => e.preventDefault()}
+                        >
+                          {colors.map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => {
+                                updateRunStyle(bIdx, rIdx, { color: c });
+                                setColorOpen(null);
+                              }}
+                              className="h-6 w-6 rounded-lg border border-slate-100 transition-transform hover:scale-125 dark:border-[#2e303a]"
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateRunStyle(bIdx, rIdx, { color: undefined });
+                              setColorOpen(null);
+                            }}
+                            className="col-span-4 h-6 rounded-lg border border-slate-200 text-[9px] font-bold text-slate-500 hover:bg-slate-50 dark:border-[#2e303a] dark:hover:bg-[#2e303a]"
+                          >
+                            Tozalash
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <textarea
@@ -271,7 +312,9 @@ const BlogAdminPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
+  const [saveBusy, setSaveBusy] = useState(false);
   const confirm = useConfirm();
+  const { showToast } = useToast();
 
   const [form, setForm] = useState({
     title: '',
@@ -279,6 +322,12 @@ const BlogAdminPage: React.FC = () => {
     image_url: '',
     category: '',
     status: 'draft'
+  });
+
+  useModalOverlayEffects(!!modal, {
+    onEscape: () => {
+      if (!saveBusy) setModal(null);
+    },
   });
 
   const fetchBlogs = useCallback(async () => {
@@ -319,20 +368,27 @@ const BlogAdminPage: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!form.title.trim()) { toast.error("Sarlavha kiritilishi shart!"); return; }
+    if (!form.title.trim()) {
+      showToast("Sarlavha kiritilishi shart!", 'error');
+      return;
+    }
+    if (saveBusy) return;
+    setSaveBusy(true);
     try {
       const payload = { ...form, content: JSON.stringify(form.content) };
       if (modal === 'create') {
         await api.post('/blogs', payload);
-        toast.success("Blog muvaffaqiyatli yaratildi!");
+        showToast('Blog muvaffaqiyatli yaratildi!', 'success');
       } else if (editTarget) {
         await api.patch(`/blogs/${editTarget.id}`, payload);
-        toast.success("Blog yangilandi!");
+        showToast('Blog yangilandi!', 'success');
       }
       setModal(null);
       fetchBlogs();
     } catch (e: any) {
-      toast.error(e.response?.data?.message || "Xatolik yuz berdi");
+      showToast(e.response?.data?.message || 'Xatolik yuz berdi', 'error');
+    } finally {
+      setSaveBusy(false);
     }
   };
 
@@ -341,9 +397,11 @@ const BlogAdminPage: React.FC = () => {
     if (ok) {
       try {
         await api.delete(`/blogs/${id}`);
-        toast.success("O'chirildi!");
+        showToast("O'chirildi!", 'success');
         fetchBlogs();
-      } catch { toast.error("O'chirishda xatolik"); }
+      } catch {
+        showToast("O'chirishda xatolik", 'error');
+      }
     }
   };
 
@@ -413,32 +471,53 @@ const BlogAdminPage: React.FC = () => {
 
       {/* Create/Edit Modal (Full Screen) */}
       {modal && (
-        <div className="fixed inset-0 z-[100] bg-white dark:bg-[#16171d] overflow-y-auto">
-          <div className="sticky top-0 z-50 border-b border-[#e5e4e7] bg-white/80 backdrop-blur-2xl dark:border-[#2e303a] dark:bg-[#16171d]/80">
-            <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-            <div className="flex min-w-0 flex-1 items-center gap-4">
-              <button onClick={() => setModal(null)} className="p-2 rounded-xl bg-slate-100 dark:bg-[#1f2028] text-slate-500 hover:text-slate-700 dark:hover:text-white transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-              <h2 className="text-xl font-black text-[#08060d] dark:text-white tracking-tight">
-                {modal === 'create' ? 'Yangi Blog Yaratish' : 'Blogni Tahrirlash'}
-              </h2>
+        <div className="fixed inset-0 z-[100] m-0 flex min-h-[100dvh] flex-col p-0">
+          <button
+            type="button"
+            aria-label="Yopish fon"
+            className="absolute inset-0 bg-[#08060d]/55 backdrop-blur-[6px]"
+            onClick={() => !saveBusy && setModal(null)}
+          />
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden bg-white dark:bg-[#16171d]">
+            <div className="shrink-0 border-b border-[#e5e4e7] bg-white/90 backdrop-blur-[6px] dark:border-[#2e303a] dark:bg-[#16171d]/90">
+              <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-4 px-4 py-4 md:px-6">
+                <div className="flex min-w-0 flex-1 items-center gap-4">
+                  <button
+                    type="button"
+                    disabled={saveBusy}
+                    onClick={() => setModal(null)}
+                    className="rounded-xl bg-slate-100 p-2 text-slate-500 transition-colors hover:text-slate-700 disabled:opacity-50 dark:bg-[#1f2028] dark:hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                  <h2 className="text-xl font-black tracking-tight text-[#08060d] dark:text-white">
+                    {modal === 'create' ? 'Yangi Blog Yaratish' : 'Blogni Tahrirlash'}
+                  </h2>
+                </div>
+                <div className="flex w-fit shrink-0 flex-wrap items-center gap-3">
+                  <select
+                    value={form.status}
+                    onChange={(e) => setForm({ ...form, status: e.target.value })}
+                    className="rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-bold text-[#08060d] outline-none dark:border-[#2e303a] dark:bg-[#1f2028] dark:text-white"
+                  >
+                    <option value="draft">Qoralama</option>
+                    <option value="published">Nashr qilish</option>
+                  </select>
+                  <button
+                    type="button"
+                    disabled={saveBusy}
+                    onClick={handleSave}
+                    className="flex items-center gap-2 rounded-xl bg-[#aa3bff] px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#aa3bff]/20 transition-all hover:bg-[#9329e6] active:scale-[0.98] disabled:opacity-60"
+                  >
+                    {saveBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {saveBusy ? 'Saqlanmoqda…' : 'Saqlash'}
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="flex w-fit shrink-0 flex-wrap items-center gap-3">
-              <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}
-                className="px-4 py-2.5 bg-slate-100 dark:bg-[#1f2028] border border-slate-200 dark:border-[#2e303a] rounded-xl text-sm font-bold outline-none text-[#08060d] dark:text-white">
-                <option value="draft">Qoralama</option>
-                <option value="published">Nashr qilish</option>
-              </select>
-              <button onClick={handleSave}
-                className="flex items-center gap-2 px-6 py-2.5 bg-[#aa3bff] text-white rounded-xl font-bold text-sm hover:bg-[#9329e6] transition-all shadow-lg shadow-[#aa3bff]/20 active:scale-95">
-                <Save className="w-4 h-4" /> Saqlash
-              </button>
-            </div>
-            </div>
-          </div>
 
-          <div className="max-w-4xl mx-auto p-6 space-y-6">
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-6">
             {/* Meta Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
@@ -472,6 +551,8 @@ const BlogAdminPage: React.FC = () => {
             <div>
               <label className="text-[10px] font-black text-[#6b6375] uppercase tracking-widest mb-3 block">Maqola matni (Rich Editor)</label>
               <RichTextEditor content={form.content} onChange={content => setForm({ ...form, content })} />
+            </div>
+              </div>
             </div>
           </div>
         </div>

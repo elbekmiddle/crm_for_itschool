@@ -156,7 +156,13 @@ export class AuthService {
     this.logger.debug(`[checkPhone] normalized: ${dto.phone} → ${phone}`);
     const students = await get_student_by_phone(this.dbService, phone);
     if (!students.length) {
-      throw new NotFoundException(`Bu telefon raqam (${phone}) tizimda yo'q. Admin bilan bog'laning.`);
+      return {
+        exists: false,
+        is_verified: false,
+        has_telegram: false,
+        first_name: null as string | null,
+        message: `Bu telefon raqam (${phone}) tizimda yo'q. Admin bilan bog'laning.`,
+      };
     }
     const student = students[0];
     return {

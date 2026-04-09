@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
 import MiniGrowthChart from '../components/charts/MiniGrowthChart';
+import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
 
 const CoursesPage: React.FC = () => {
   const { user, courses, fetchCourses, fetchStats, stats, createCourse, updateCourse, deleteCourse, isLoading } = useAdminStore();
@@ -18,6 +19,8 @@ const CoursesPage: React.FC = () => {
   const [editTarget, setEditTarget] = useState<any>(null);
   const [form, setForm] = useState({ name: '', description: '', price: '', duration_months: '' });
   const [search, setSearch] = useState('');
+
+  useModalOverlayEffects(!!modal, { onEscape: () => setModal(null) });
 
   useEffect(() => {
     fetchCourses();

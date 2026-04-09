@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import SparklineChart from '../components/charts/SparklineChart';
 import { useAdminStore } from '../store/useAdminStore';
@@ -8,8 +8,7 @@ import api from '../lib/api';
 import { formatUzbekDayMonthYear } from '../lib/uzbekDate';
 import { isGroupLessonDay } from '../lib/groupSchedule';
 import { Calendar, Loader2 } from 'lucide-react';
-
-const todayIso = () => new Date().toISOString().split('T')[0];
+import { localYmd, toLocalYmd } from '../lib/localDate';
 
 const AttendancePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -17,14 +16,21 @@ const AttendancePage: React.FC = () => {
   const { fetchGroupStudents } = useAdminStore();
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [students, setStudents] = useState<any[]>([]);
-  const [lessonDate, setLessonDate] = useState(todayIso());
+  const [lessonDate, setLessonDate] = useState(() => localYmd());
   const [topic, setTopic] = useState('');
   const [topicSaving, setTopicSaving] = useState(false);
   const { showToast } = useToast();
+  const markDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchGroups();
   }, [fetchGroups]);
+
+  useEffect(() => {
+    return () => {
+      if (markDebounceRef.current) clearTimeout(markDebounceRef.current);
+    };
+  }, []);
 
   const loadGroup = async (groupId: string) => {
     setSelectedGroupId(groupId);
@@ -56,6 +62,10 @@ const AttendancePage: React.FC = () => {
     if (!y || !m || !d) return true;
     return isGroupLessonDay(selectedGroup.schedule, new Date(y, m - 1, d));
   }, [selectedGroup, lessonDate]);
+
+  const todayStr = localYmd();
+  const isFutureDate = lessonDate > todayStr;
+  const canMarkDate = lessonDate <= todayStr;
 
   useEffect(() => {
     if (!selectedGroupId || !lessonDate) {
@@ -104,28 +114,39 @@ const AttendancePage: React.FC = () => {
     }
   };
 
-  const handleMark = async (studentId: string, status: 'PRESENT' | 'ABSENT') => {
-    if (!scheduleAllowsMarking) {
-      showToast('Bu sanada jadval bo‘yicha dars kuni emas', 'error');
+  const handleMark = (studentId: string, status: 'PRESENT' | 'ABSENT' | 'LATE') => {
+    if (isFutureDate) {
+      showToast('Kelajak sanasiga davomat qo‘yib bo‘lmaydi', 'error');
       return;
     }
-    try {
-      await markAttendance({
-        student_id: studentId,
-        group_id: selectedGroupId,
-        status,
-        lesson_date: lessonDate,
-      });
-      await fetchAttendance(selectedGroupId);
-    } catch (e: any) {
-      showToast(e?.response?.data?.message || 'Davomat yozilmadi', 'error');
+    if (!canMarkDate) {
+      showToast('Sana noto‘g‘ri', 'error');
+      return;
     }
+    if (markDebounceRef.current) clearTimeout(markDebounceRef.current);
+    markDebounceRef.current = setTimeout(async () => {
+      markDebounceRef.current = null;
+      try {
+        await markAttendance({
+          student_id: studentId,
+          group_id: selectedGroupId,
+          status,
+          lesson_date: lessonDate,
+        });
+        await fetchAttendance(selectedGroupId);
+      } catch (e: any) {
+        showToast(e?.response?.data?.message || 'Davomat yozilmadi', 'error');
+      }
+    }, 380);
   };
 
   const rowsForDate = attendance.filter(
-    (a: any) => String(a.lesson_date || '').slice(0, 10) === lessonDate,
+    (a: any) => toLocalYmd(a.lesson_date) === lessonDate,
   );
-  const presentCount = rowsForDate.filter((a: any) => String(a.status || '').toUpperCase() === 'PRESENT').length;
+  const presentCount = rowsForDate.filter((a: any) => {
+    const u = String(a.status || '').toUpperCase();
+    return u === 'PRESENT' || u === 'LATE';
+  }).length;
   const totalStudents = students.length || 1;
   const attendancePercent = Math.round((presentCount / totalStudents) * 100);
 
@@ -169,15 +190,20 @@ const AttendancePage: React.FC = () => {
                   <input
                     type="date"
                     value={lessonDate}
+                    max={todayStr}
                     onChange={(e) => setLessonDate(e.target.value)}
                     className="input max-w-[200px] text-sm"
                   />
                 </div>
               </div>
-              {!scheduleAllowsMarking && (
+              {isFutureDate && (
+                <p className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-800 dark:text-red-200">
+                  Kelajak sanasi tanlangan. Davomat faqat bugun yoki o‘tgan kunlar uchun.
+                </p>
+              )}
+              {!scheduleAllowsMarking && !isFutureDate && (
                 <p className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-800 dark:text-amber-200">
-                  Jadvalga ko‘ra bu kunda dars yo‘q. Faqat mavzu yozish yoki boshqa sana tanlash mumkin; davomatni jadval
-                  kunlarida belgilang.
+                  Jadval bo‘yicha bu kunda dars kuni ko‘rinmayapti — baribir davomatni belgilashingiz mumkin (masalan, qo‘shimcha dars yoki jadval yangilanmagan bo‘lsa).
                 </p>
               )}
               <label className="input-label">Bugun nima o‘tilgani?</label>
@@ -224,7 +250,9 @@ const AttendancePage: React.FC = () => {
                           <p className="text-sm font-bold text-slate-700 dark:text-[var(--text-h)]">
                             {s.first_name} {s.last_name}
                           </p>
-                          <p className="text-[10px] text-slate-400">ID: {s.id?.slice(0, 8)}</p>
+                          <p className="text-[10px] text-slate-400">
+                            Tel: {s.phone?.trim() ? s.phone : '—'}
+                          </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                           <span
@@ -238,31 +266,45 @@ const AttendancePage: React.FC = () => {
                           {s.status === 'frozen' ? (
                             <span className="text-xs font-semibold text-slate-400">—</span>
                           ) : (
-                            <div className="flex gap-1.5">
+                            <div className="flex flex-wrap gap-1.5">
                               <button
                                 type="button"
-                                disabled={!scheduleAllowsMarking}
+                                disabled={!canMarkDate || isFutureDate}
                                 onClick={() => handleMark(s.id, 'PRESENT')}
                                 className={cn(
-                                  'rounded-lg border px-4 py-2 text-xs font-bold transition-all',
+                                  'rounded-lg border px-3 py-2 text-xs font-bold transition-all',
                                   status?.toUpperCase() === 'PRESENT'
                                     ? 'border-green-500 bg-green-500 text-white'
                                     : 'border-slate-200 text-slate-500 hover:border-green-300 hover:text-green-600 dark:border-[var(--border)]',
-                                  !scheduleAllowsMarking && 'cursor-not-allowed opacity-40',
+                                  (!canMarkDate || isFutureDate) && 'cursor-not-allowed opacity-40',
                                 )}
                               >
                                 Keldi
                               </button>
                               <button
                                 type="button"
-                                disabled={!scheduleAllowsMarking}
+                                disabled={!canMarkDate || isFutureDate}
+                                onClick={() => handleMark(s.id, 'LATE')}
+                                className={cn(
+                                  'rounded-lg border px-3 py-2 text-xs font-bold transition-all',
+                                  status?.toUpperCase() === 'LATE'
+                                    ? 'border-amber-500 bg-amber-500 text-white'
+                                    : 'border-slate-200 text-slate-500 hover:border-amber-300 hover:text-amber-700 dark:border-[var(--border)]',
+                                  (!canMarkDate || isFutureDate) && 'cursor-not-allowed opacity-40',
+                                )}
+                              >
+                                Kech qoldi
+                              </button>
+                              <button
+                                type="button"
+                                disabled={!canMarkDate || isFutureDate}
                                 onClick={() => handleMark(s.id, 'ABSENT')}
                                 className={cn(
-                                  'rounded-lg border px-4 py-2 text-xs font-bold transition-all',
+                                  'rounded-lg border px-3 py-2 text-xs font-bold transition-all',
                                   status?.toUpperCase() === 'ABSENT'
                                     ? 'border-red-500 bg-red-500 text-white'
                                     : 'border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-600 dark:border-[var(--border)]',
-                                  !scheduleAllowsMarking && 'cursor-not-allowed opacity-40',
+                                  (!canMarkDate || isFutureDate) && 'cursor-not-allowed opacity-40',
                                 )}
                               >
                                 Kelmagan

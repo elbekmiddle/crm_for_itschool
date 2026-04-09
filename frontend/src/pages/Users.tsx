@@ -9,6 +9,7 @@ import { Plus, Loader2, Pencil, Trash2, X } from 'lucide-react';
 
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
+import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
 
 const MAX_TEACHER_COURSES = 5;
 
@@ -51,6 +52,8 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
     role: roleFilter || 'TEACHER',
     course_ids: [] as string[],
   });
+
+  useModalOverlayEffects(!!modal, { onEscape: () => setModal(null) });
 
   const filteredUsers = roleFilter ? users.filter((u: any) => u.role === roleFilter) : users;
 

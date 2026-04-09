@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 import { toast } from 'react-hot-toast';
+import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
 
 const statusMap: Record<string, { label: string; cls: string }> = {
   new: { label: 'YANGI', cls: 'pill-pending' },
@@ -22,6 +23,8 @@ const LeadsPage: React.FC = () => {
   const [form, setForm] = useState({ group_id: '', branch_id: '' });
   const [page, setPage] = useState(1);
   const perPage = 10;
+
+  useModalOverlayEffects(!!modal, { onEscape: () => setModal(null) });
 
   useEffect(() => {
     fetchLeads();
@@ -73,7 +76,7 @@ const LeadsPage: React.FC = () => {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Ism yoki telefon orqali qidirish..."
-            className="input pl-10"
+            className="input search-input"
           />
         </div>
       </div>
@@ -154,10 +157,10 @@ const LeadsPage: React.FC = () => {
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-50">
             <span className="text-xs text-slate-400">Sahifa {page} / {totalPages}</span>
             <div className="flex gap-1">
-              <button disabled={page === 1} onClick={() => setPage(page - 1)} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30">
+              <button type="button" disabled={page === 1} onClick={() => setPage(page - 1)} className="btn-pagination">
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30">
+              <button type="button" disabled={page === totalPages} onClick={() => setPage(page + 1)} className="btn-pagination">
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>

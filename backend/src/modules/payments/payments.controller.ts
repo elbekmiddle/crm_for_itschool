@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, UseGuards, Delete } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -33,6 +33,20 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Get all payments', description: 'Permissions: PAYMENT_READ' })
   findAll() {
     return this.paymentsService.findAll();
+  }
+
+  @Permissions('PAYMENT_READ')
+  @Get('debtors')
+  @ApiOperation({ summary: 'Talabalar: qarz (to‘lov yo‘q yoki 60+ kun)', description: 'Permissions: PAYMENT_READ' })
+  listDebtors() {
+    return this.paymentsService.listDebtors();
+  }
+
+  @Permissions('PAYMENT_UPDATE')
+  @Patch(':id')
+  @ApiOperation({ summary: "To'lov yozuvini tahrirlash", description: 'Permissions: PAYMENT_UPDATE' })
+  update(@Param('id') id: string, @Body() body: { amount?: number; paid_at?: string; description?: string | null }) {
+    return this.paymentsService.updatePayment(id, body);
   }
 
   @Permissions('PAYMENT_DELETE')

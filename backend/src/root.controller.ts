@@ -16,7 +16,7 @@ export class RootController {
     };
   }
 
-  @Get('api/docs')
+  @Get('api/v1/docs')
   @Redirect('/api/v1/docs', 301)
   redirectToDocs() {}
 

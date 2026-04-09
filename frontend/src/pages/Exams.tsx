@@ -9,6 +9,7 @@ import {
 
 import { useConfirm } from '../context/ConfirmContext';
 import { toast } from 'react-hot-toast';
+import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
 
 const statusMap: Record<string, { label: string; cls: string }> = {
   draft: { label: 'DRAFT', cls: 'pill-draft' },
@@ -86,6 +87,13 @@ const ExamsPage: React.FC = () => {
     fetchCourses();
     if (user?.role === 'TEACHER' || user?.role === 'ADMIN' || user?.role === 'MANAGER') fetchGroups();
   }, [user?.role]);
+
+  useModalOverlayEffects(!!modal, {
+    onEscape: () => {
+      if (aiGenerating || reviewLoading) return;
+      setModal(null);
+    },
+  });
 
   const filtered = exams
     .filter((e: any) => tab === 'all' || e.status?.toLowerCase() === tab)
@@ -379,7 +387,7 @@ const ExamsPage: React.FC = () => {
         </div>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Imtihon qidirish..." className="input pl-10" />
+          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Imtihon qidirish..." className="input search-input" />
         </div>
       </div>
 
@@ -389,7 +397,7 @@ const ExamsPage: React.FC = () => {
           <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary-500" /></div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table">
+            <table className="data-table data-table--compact">
               <thead>
                 <tr>
                   <th>Imtihon nomi</th>
@@ -397,7 +405,7 @@ const ExamsPage: React.FC = () => {
                   <th>Vaqt</th>
                   <th>Status</th>
                   <th>Natijalar</th>
-                  <th className="text-right">Amallar</th>
+                  <th className="text-center w-[1%] whitespace-nowrap">Amallar</th>
                 </tr>
               </thead>
               <tbody>
@@ -440,22 +448,22 @@ const ExamsPage: React.FC = () => {
                           <span className="text-slate-300">—</span>
                         }
                       </td>
-                      <td>
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="align-middle w-[1%]">
+                        <div className="flex flex-row flex-nowrap items-center justify-end gap-0.5 min-w-[11rem] sm:min-w-0">
                           {exam.status === 'draft' && (
                             <>
                               <button
                                 type="button"
                                 onClick={() => openManualQuestion(exam)}
-                                className="p-2 rounded-lg hover:bg-sky-50 text-sky-600"
+                                className="shrink-0 p-1.5 rounded-lg hover:bg-sky-50 text-sky-600 dark:hover:bg-sky-950/40"
                                 title="Qo'lda savol qo'shish"
                               >
                                 <PenLine className="w-4 h-4" />
                               </button>
-                              <button onClick={() => { setTargetExam(exam); setAiForm({ ...aiForm, topic: exam.title }); setModal('ai'); }} className="p-2 rounded-lg hover:bg-indigo-50 text-indigo-600" title="AI Savol Yaratish">
+                              <button onClick={() => { setTargetExam(exam); setAiForm({ ...aiForm, topic: exam.title }); setModal('ai'); }} className="shrink-0 p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600 dark:hover:bg-indigo-950/40" title="AI Savol Yaratish">
                                 <Sparkles className="w-4 h-4" />
                               </button>
-                              <button onClick={() => handlePublish(exam.id)} className="p-2 rounded-lg hover:bg-green-50 text-green-600" title="Nashr qilish">
+                              <button onClick={() => handlePublish(exam.id)} className="shrink-0 p-1.5 rounded-lg hover:bg-green-50 text-green-600 dark:hover:bg-green-950/40" title="Nashr qilish">
                                 <Play className="w-4 h-4" />
                               </button>
                             </>
@@ -463,18 +471,18 @@ const ExamsPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => void openReview(exam)}
-                            className="p-2 rounded-lg hover:bg-violet-50 text-violet-600 dark:hover:bg-violet-950/40 dark:text-violet-400"
+                            className="shrink-0 p-1.5 rounded-lg hover:bg-violet-50 text-violet-600 dark:hover:bg-violet-950/40 dark:text-violet-400"
                             title="Savollar — tekshirish"
                           >
                             <ListChecks className="w-4 h-4" />
                           </button>
-                          <button onClick={() => viewResults(exam.id)} className="p-2 rounded-lg hover:bg-primary-50 text-primary-600" title="Natijalar">
+                          <button onClick={() => viewResults(exam.id)} className="shrink-0 p-1.5 rounded-lg hover:bg-primary-50 text-primary-600 dark:hover:bg-primary-950/30" title="Natijalar">
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button onClick={() => openEdit(exam)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500" title="Tahrirlash">
+                          <button onClick={() => openEdit(exam)} className="shrink-0 p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 dark:hover:bg-slate-800" title="Tahrirlash">
                             <Pencil className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleDelete(exam.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-500" title="O'chirish">
+                          <button onClick={() => handleDelete(exam.id)} className="shrink-0 p-1.5 rounded-lg hover:bg-red-50 text-red-500 dark:hover:bg-red-950/30" title="O'chirish">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -494,11 +502,11 @@ const ExamsPage: React.FC = () => {
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-50">
             <span className="text-xs text-slate-400">Sahifa {page} / {totalPages}</span>
             <div className="flex gap-1">
-              <button disabled={page === 1} onClick={() => setPage(page - 1)} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
+              <button disabled={page === 1} onClick={() => setPage(page - 1)} type="button" className="btn-pagination"><ChevronLeft className="w-4 h-4" /></button>
               {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
                 <button key={n} onClick={() => setPage(n)} className={cn("w-8 h-8 rounded-lg text-xs font-bold", page === n ? "bg-primary-600 text-white" : "hover:bg-slate-100 text-slate-500")}>{n}</button>
               ))}
-              <button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
+              <button disabled={page === totalPages} onClick={() => setPage(page + 1)} type="button" className="btn-pagination"><ChevronRight className="w-4 h-4" /></button>
             </div>
           </div>
         )}

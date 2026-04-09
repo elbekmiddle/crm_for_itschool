@@ -1,7 +1,13 @@
 import axios from 'axios';
 
+function normalizeApiBase(): string {
+  const raw = (import.meta.env.VITE_API_URL || 'http://localhost:5001').replace(/\/$/, '');
+  if (raw.includes('/api/v1')) return raw;
+  return `${raw}/api/v1`;
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api/v1',
+  baseURL: normalizeApiBase(),
   withCredentials: true, // Cookie'larni yuborish va qabul qilish
   headers: {
     'Content-Type': 'application/json',
@@ -34,9 +40,19 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+    const reqUrl = String(originalRequest?.url || '');
+    const skipRefresh401 =
+      reqUrl.includes('/auth/login') ||
+      reqUrl.includes('/auth/student-login') ||
+      reqUrl.includes('/auth/student-login-password') ||
+      reqUrl.includes('/auth/check-phone') ||
+      reqUrl.includes('/auth/send-verify-code') ||
+      reqUrl.includes('/auth/check-code') ||
+      reqUrl.includes('/auth/verify-code') ||
+      reqUrl.includes('/auth/refresh');
 
-    // 401 - token muddati tugagan
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // 401 - token muddati tugagan (login/check-phone kabi endpointlarda refresh qilmaslik)
+    if (error.response?.status === 401 && !skipRefresh401 && !originalRequest._retry) {
       if (isRefreshing) {
         // Agar refresh jarayonda bo'lsa, navbatga qo'shamiz
         return new Promise((resolve, reject) => {

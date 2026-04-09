@@ -501,7 +501,8 @@ const AIExamBuilder: React.FC<AIExamBuilderProps> = ({
                           setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))
                         }
                         disabled={currentQuestionIndex === 0}
-                        className="flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-200 font-bold text-sm disabled:opacity-50 hover:bg-slate-50 transition"
+                        type="button"
+                        className="flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-200 font-bold text-sm transition enabled:hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
                       >
                         <ChevronLeft className="w-4 h-4" />
                         Orqaga
@@ -509,18 +510,20 @@ const AIExamBuilder: React.FC<AIExamBuilderProps> = ({
 
                       {currentQuestionIndex === questions.length - 1 ? (
                         <button
+                          type="button"
                           onClick={handleSaveQuestions}
-                          className="flex items-center gap-2 px-6 py-3 bg-primary-600 text-white font-bold text-sm rounded-xl hover:bg-primary-700 transition"
+                          className="flex items-center gap-2 px-6 py-3 bg-primary-600 text-white font-bold text-sm rounded-xl transition enabled:hover:bg-primary-700"
                         >
                           <Check className="w-4 h-4" />
                           TASDIQLA VA QO'SHISH
                         </button>
                       ) : (
                         <button
+                          type="button"
                           onClick={() =>
                             setCurrentQuestionIndex(Math.min(questions.length - 1, currentQuestionIndex + 1))
                           }
-                          className="flex items-center gap-2 px-4 py-3 rounded-xl bg-primary-100 text-primary-700 font-bold text-sm hover:bg-primary-200 transition"
+                          className="flex items-center gap-2 px-4 py-3 rounded-xl bg-primary-100 text-primary-700 font-bold text-sm transition enabled:hover:bg-primary-200"
                         >
                           Keyingi
                           <ChevronRight className="w-4 h-4" />

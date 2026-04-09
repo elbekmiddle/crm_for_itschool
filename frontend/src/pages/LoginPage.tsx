@@ -37,9 +37,9 @@ const LoginPage: React.FC = () => {
         const { data } = await api.post('/auth/check-phone', { phone: loginValue });
         setStudentInfo(data);
         if (data.exists) {
-           setStep('PASSWORD');
+          setStep('PASSWORD');
         } else {
-           showToast("Ushbu raqam tizimda mavjud emas.", "error");
+          showToast(data.message || "Ushbu raqam tizimda mavjud emas.", "error");
         }
       } else {
         // Assume email/admin

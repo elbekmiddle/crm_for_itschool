@@ -8,39 +8,101 @@ import {
 
 import { useToast } from '../context/ToastContext';
 import MiniGrowthChart from '../components/charts/MiniGrowthChart';
+import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
 import { paymentMethodLabel } from '../lib/paymentLabels';
 
 const PaymentsPage: React.FC = () => {
-  const { payments, students, stats, fetchPayments, fetchStudents, fetchCourses, fetchStats, createPayment, isLoading } = useAdminStore();
+  const {
+    payments,
+    debtors,
+    students,
+    stats,
+    user,
+    fetchPayments,
+    fetchStudents,
+    fetchCourses,
+    fetchStats,
+    createPayment,
+    updatePayment,
+    isLoading,
+  } = useAdminStore();
   const { showToast } = useToast();
   const [modal, setModal] = useState(false);
+  const [editRow, setEditRow] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({ amount: '', paid_at: '', description: '' });
   const [form, setForm] = useState({ student_id: '', amount: '', payment_method: 'cash', description: '' });
   const [tab, setTab] = useState<'all' | 'debt'>('all');
   const [page, setPage] = useState(1);
+  const [chartPeriod, setChartPeriod] = useState<'month' | 'year'>('month');
+  const [paymentBusy, setPaymentBusy] = useState(false);
   const perPage = 10;
 
-  useEffect(() => { fetchPayments(); fetchStudents(); fetchCourses(); fetchStats(); }, []);
+  useModalOverlayEffects(modal || !!editRow, {
+    onEscape: () => {
+      if (editRow) setEditRow(null);
+      else setModal(false);
+    },
+  });
+
+  useEffect(() => {
+    fetchPayments();
+    fetchStudents();
+    fetchCourses();
+    fetchStats();
+  }, []);
 
   const totalRevenue = stats?.totalRevenue || payments.reduce((a: number, p: any) => a + (Number(p.amount) || 0), 0);
-  const list =
-    tab === 'all'
-      ? payments
-      : payments.filter((p: any) => {
-          const st = (p.status || '').toLowerCase();
-          return st === 'pending' || st === 'overdue';
-        });
-  const totalPages = Math.ceil(list.length / perPage);
-  const paginated = list.slice((page - 1) * perPage, page * perPage);
+  const chartTrend =
+    chartPeriod === 'year'
+      ? (stats?.growthTrendYearly || []).map((g: { year?: string; count?: number }) => ({
+          month: String(g.year ?? '—'),
+          count: Number(g.count) || 0,
+        }))
+      : stats?.growthTrend || [];
+  const mom = stats?.revenueMonthOverMonthPct;
+  const list = tab === 'all' ? payments : [];
+  const totalPages = tab === 'all' ? Math.ceil(list.length / perPage) : 1;
+  const paginated = tab === 'all' ? list.slice((page - 1) * perPage, page * perPage) : [];
+  const canEditPayment = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   const handleCreate = async () => {
+    if (paymentBusy) return;
+    setPaymentBusy(true);
     try {
       await createPayment({ ...form, amount: Number(form.amount) });
       showToast("To'lov muvaffaqiyatli qo'shildi", 'success');
       setModal(false);
-      fetchStats();
+      setForm({ student_id: '', amount: '', payment_method: 'cash', description: '' });
     } catch (e: any) {
       const msg = e?.response?.data?.message || "To'lov saqlanmadi";
       showToast(msg, 'error');
+    } finally {
+      setPaymentBusy(false);
+    }
+  };
+
+  const openEdit = (p: any) => {
+    setEditRow(p);
+    const d = p.paid_at || p.created_at;
+    setEditForm({
+      amount: String(p.amount ?? ''),
+      paid_at: d ? new Date(d).toISOString().slice(0, 16) : '',
+      description: p.description ?? '',
+    });
+  };
+
+  const handleEditSave = async () => {
+    if (!editRow?.id) return;
+    try {
+      await updatePayment(editRow.id, {
+        amount: Number(editForm.amount),
+        paid_at: editForm.paid_at ? new Date(editForm.paid_at).toISOString() : undefined,
+        description: editForm.description || null,
+      });
+      showToast("To'lov yangilandi", 'success');
+      setEditRow(null);
+    } catch (e: any) {
+      showToast(e?.response?.data?.message || 'Saqlanmadi', 'error');
     }
   };
 
@@ -65,13 +127,31 @@ const PaymentsPage: React.FC = () => {
               <p className="text-4xl font-black text-slate-800">{totalRevenue.toLocaleString()} <span className="text-sm font-semibold text-slate-400">so'm</span></p>
             </div>
             <div className="flex bg-slate-100 rounded-xl p-1">
-              <button className="px-4 py-2 rounded-lg text-xs font-bold bg-white shadow-sm text-slate-700">Oylik</button>
-              <button className="px-4 py-2 rounded-lg text-xs font-bold text-slate-400">Yillik</button>
+              <button
+                type="button"
+                onClick={() => setChartPeriod('month')}
+                className={cn(
+                  'px-4 py-2 rounded-lg text-xs font-bold transition-all',
+                  chartPeriod === 'month' ? 'bg-white shadow-sm text-slate-700' : 'text-slate-400',
+                )}
+              >
+                Oylik
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartPeriod('year')}
+                className={cn(
+                  'px-4 py-2 rounded-lg text-xs font-bold transition-all',
+                  chartPeriod === 'year' ? 'bg-white shadow-sm text-slate-700' : 'text-slate-400',
+                )}
+              >
+                Yillik
+              </button>
             </div>
           </div>
           <div className="h-48 w-full min-h-[12rem]">
             <MiniGrowthChart
-              trend={stats?.growthTrend}
+              trend={chartTrend}
               title=""
               subtitle=""
               height={192}
@@ -85,17 +165,28 @@ const PaymentsPage: React.FC = () => {
           <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl p-5 text-white">
             <p className="text-xs font-bold uppercase tracking-widest opacity-80">Kutilayotgan to'lovlar</p>
             <p className="text-3xl font-black mt-2">{(stats?.pendingAmount || 0).toLocaleString()} <span className="text-sm">so'm</span></p>
+            <p className="mt-1 text-[11px] opacity-90">
+              Qarzdor talabalar: <strong>{stats?.debtorStudentCount ?? debtors?.length ?? 0}</strong> ta
+            </p>
             <div className="flex items-center gap-1 mt-2 text-xs opacity-80">
-              <TrendingUp className="w-3 h-3" /> +12% o'tgan oydan
+              <TrendingUp className="w-3 h-3" />
+              {typeof mom === 'number' ? (
+                <span>
+                  {mom >= 0 ? '+' : ''}
+                  {mom}% oylik tushum (o‘tgan oy bilan)
+                </span>
+              ) : (
+                <span>—</span>
+              )}
             </div>
           </div>
           <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl p-5 text-white">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-widest opacity-80">Muzlatilgan hisoblar</p>
+              <p className="text-xs font-bold uppercase tracking-widest opacity-80">60+ kun to'lamagan</p>
               <Snowflake className="w-5 h-5 opacity-80" />
             </div>
-            <p className="text-3xl font-black mt-2">{stats?.frozenAccounts || 0}</p>
-            <p className="text-xs mt-1 opacity-70">2+ oy muddat o'tgan</p>
+            <p className="text-3xl font-black mt-2">{stats?.overdue60DayStudentCount ?? stats?.frozenAccounts ?? 0}</p>
+            <p className="text-xs mt-1 opacity-70">Oxirgi to'lovdan 60 kundan ortiq</p>
           </div>
           <div className="card p-5">
             <p className="label-subtle mb-1">Undirish darajasi</p>
@@ -112,12 +203,14 @@ const PaymentsPage: React.FC = () => {
           </button>
           <button onClick={() => { setTab('debt'); setPage(1); }} className={cn("text-sm font-bold pb-1 border-b-2 transition-all flex items-center gap-1.5", tab === 'debt' ? "text-primary-600 border-primary-600" : "text-slate-400 border-transparent")}>
             Qarzdor talabalar
-            <span className="w-5 h-5 bg-red-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center">{payments.filter((p: any) => p.status === 'pending').length}</span>
+            <span className="w-5 h-5 bg-red-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center">
+              {debtors?.length ?? 0}
+            </span>
           </button>
         </div>
         {isLoading ? (
           <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary-500" /></div>
-        ) : (
+        ) : tab === 'all' ? (
           <div className="overflow-x-auto">
             <table className="data-table">
               <thead>
@@ -127,6 +220,7 @@ const PaymentsPage: React.FC = () => {
                   <th>Summa</th>
                   <th>Usul</th>
                   <th>Status</th>
+                  {canEditPayment && <th className="text-right">Amallar</th>}
                 </tr>
               </thead>
               <tbody>
@@ -153,26 +247,102 @@ const PaymentsPage: React.FC = () => {
                     </td>
                     <td>
                       <span className={cn("status-pill", p.status === 'paid' ? 'pill-paid' : p.status === 'pending' ? 'pill-pending' : 'pill-active')}>
-                        ● {p.status || 'paid'}
+                        ● {p.status || 'completed'}
                       </span>
+                    </td>
+                    {canEditPayment && (
+                      <td className="text-right">
+                        <button type="button" onClick={() => openEdit(p)} className="text-xs font-bold text-primary-600 hover:underline">
+                          Tahrirlash
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+                {paginated.length === 0 && (
+                  <tr>
+                    <td colSpan={canEditPayment ? 6 : 5} className="text-center py-12 text-slate-400">
+                      To'lovlar topilmadi
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Talaba</th>
+                  <th>Guruh / kurs</th>
+                  <th>Telefon</th>
+                  <th>Oxirgi to'lov</th>
+                  <th>Qo'shilgan</th>
+                  <th>Holat</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(debtors || []).map((d: any) => (
+                  <tr key={d.id}>
+                    <td className="font-bold text-slate-800 dark:text-[var(--text-h)]">
+                      {d.first_name} {d.last_name}
+                    </td>
+                    <td className="text-xs text-slate-600 dark:text-slate-300">
+                      <div className="font-semibold">{d.group_name || '—'}</div>
+                      <div className="text-[10px] text-slate-400">{d.course_name || ''}</div>
+                    </td>
+                    <td className="text-xs text-slate-500">{d.phone || '—'}</td>
+                    <td className="text-xs text-slate-500">
+                      {d.last_paid ? new Date(d.last_paid).toLocaleDateString('uz-UZ') : "— (to'lov yo'q)"}
+                    </td>
+                    <td className="text-xs text-slate-500">
+                      {d.joined_at
+                        ? new Date(d.joined_at).toLocaleString('uz-UZ', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : '—'}
+                    </td>
+                    <td>
+                      <span
+                        className={cn(
+                          'status-pill',
+                          d.debt_status === 'FROZEN' ? 'pill-frozen' : 'pill-pending',
+                        )}
+                      >
+                        ● {d.debt_status === 'FROZEN' ? '60+ kun' : "Kutilmoqda"}
+                      </span>
+                      {d.days_since_payment != null && (
+                        <span className="ml-2 text-[10px] text-slate-400">{d.days_since_payment} kun o'tgan</span>
+                      )}
                     </td>
                   </tr>
                 ))}
-                {paginated.length === 0 && <tr><td colSpan={5} className="text-center py-12 text-slate-400">To'lovlar topilmadi</td></tr>}
+                {(!debtors || debtors.length === 0) && (
+                  <tr>
+                    <td colSpan={6} className="text-center py-12 text-slate-400">
+                      Qarzdor talaba yo'q
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         )}
 
-        {totalPages > 1 && (
+        {tab === 'all' && totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-50">
             <span className="text-xs text-slate-400">{list.length} ta natija</span>
             <div className="flex gap-1">
-              <button disabled={page === 1} onClick={() => setPage(page - 1)} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
+              <button type="button" disabled={page === 1} onClick={() => setPage(page - 1)} className="btn-pagination"><ChevronLeft className="w-4 h-4" /></button>
               {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
                 <button key={n} onClick={() => setPage(n)} className={cn("w-8 h-8 rounded-lg text-xs font-bold", page === n ? "bg-primary-600 text-white" : "hover:bg-slate-100 text-slate-500")}>{n}</button>
               ))}
-              <button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
+              <button type="button" disabled={page === totalPages} onClick={() => setPage(page + 1)} className="btn-pagination"><ChevronRight className="w-4 h-4" /></button>
             </div>
           </div>
         )}
@@ -219,8 +389,67 @@ const PaymentsPage: React.FC = () => {
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setModal(false)} className="btn-secondary">Bekor qilish</button>
-              <button onClick={handleCreate} className="btn-primary">To'lovni saqlash</button>
+              <button type="button" onClick={() => setModal(false)} className="btn-secondary">
+                Bekor qilish
+              </button>
+              <button
+                type="button"
+                disabled={paymentBusy}
+                onClick={handleCreate}
+                className="btn-primary inline-flex items-center gap-2 disabled:opacity-60"
+              >
+                {paymentBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                To'lovni saqlash
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editRow && (
+        <div className="modal-overlay" onClick={() => setEditRow(null)}>
+          <div className="modal-content p-6 animate-in-scale max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-black">To'lovni tahrirlash</h2>
+              <button type="button" onClick={() => setEditRow(null)} className="p-2 rounded-lg hover:bg-slate-100">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="input-label">Summa</label>
+                <input
+                  type="number"
+                  className="input"
+                  value={editForm.amount}
+                  onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="input-label">To'langan vaqt</label>
+                <input
+                  type="datetime-local"
+                  className="input"
+                  value={editForm.paid_at}
+                  onChange={(e) => setEditForm({ ...editForm, paid_at: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="input-label">Izoh</label>
+                <input
+                  className="input"
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button type="button" onClick={() => setEditRow(null)} className="btn-secondary">
+                Bekor
+              </button>
+              <button type="button" onClick={handleEditSave} className="btn-primary">
+                Saqlash
+              </button>
             </div>
           </div>
         </div>

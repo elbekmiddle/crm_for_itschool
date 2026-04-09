@@ -10,6 +10,7 @@ import {
 import api from '../lib/api';
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
+import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
 
 const statusPill = (s: string) => {
   const m: Record<string, string> = {
@@ -41,6 +42,13 @@ const StudentsPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [courseFilter, setCourseFilter] = useState('');
   const perPage = 10;
+
+  useModalOverlayEffects(!!modal || !!enrollModal, {
+    onEscape: () => {
+      if (enrollModal) setEnrollModal(null);
+      else setModal(null);
+    },
+  });
 
   useEffect(() => { fetchStudents(); fetchCourses(); }, []);
 
@@ -302,7 +310,7 @@ const StudentsPage: React.FC = () => {
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-50">
             <span className="text-xs text-slate-400">Sahifa {page} / {totalPages}</span>
             <div className="flex gap-1">
-              <button disabled={page === 1} onClick={() => setPage(page - 1)} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30">
+              <button type="button" disabled={page === 1} onClick={() => setPage(page - 1)} className="btn-pagination">
                 <ChevronLeft className="w-4 h-4" />
               </button>
               {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
@@ -310,7 +318,7 @@ const StudentsPage: React.FC = () => {
                   {n}
                 </button>
               ))}
-              <button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30">
+              <button type="button" disabled={page === totalPages} onClick={() => setPage(page + 1)} className="btn-pagination">
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>

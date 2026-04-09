@@ -323,6 +323,7 @@ export class ExamsService {
     const topicTrim = (topic || '').trim();
 
     let groupHint = '';
+    let lessonTopicsHint = '';
     const gid = exam[0]?.group_id;
     if (gid) {
       try {
@@ -340,6 +341,20 @@ export class ExamsService {
           groupHint =
             `Guruh: ${gn || '—'}. Kurs: ${cn || '—'}. ` + (sch ? `O‘tiladigan blok / jadval: ${sch}. ` : '');
         }
+        const logs = await this.dbService.query(
+          `SELECT topic FROM group_lesson_log
+           WHERE group_id = $1 AND topic IS NOT NULL AND TRIM(topic) <> ''
+           ORDER BY lesson_date DESC
+           LIMIT 20`,
+          [gid],
+        );
+        const topics = (logs || [])
+          .map((r: { topic?: string }) => String(r.topic || '').trim())
+          .filter(Boolean);
+        if (topics.length) {
+          const uniq = [...new Set(topics)].slice(0, 12);
+          lessonTopicsHint = ` Darslarda o‘tilgan mavzular (davomat/mavzu jurnali): ${uniq.join('; ')}.`;
+        }
       } catch {
         /* non-blocking */
       }
@@ -347,7 +362,7 @@ export class ExamsService {
 
     const effectiveTopic =
       topicTrim ||
-      `${groupHint}${[title, courseName ? `(${courseName})` : ''].filter(Boolean).join(' ').trim()}`.trim() ||
+      `${groupHint}${lessonTopicsHint}${[title, courseName ? `(${courseName})` : ''].filter(Boolean).join(' ').trim()}`.trim() ||
       'Umumiy akademik savollar';
 
     let job: { id?: string } | null;
@@ -519,9 +534,9 @@ export class ExamsService {
       FROM questions q
       JOIN exam_questions eq ON eq.question_id = q.id
       WHERE eq.exam_id = $1
-      ORDER BY q.id ASC
+      ORDER BY md5(q.id::text || '|' || $2::text)
     `,
-      [attempt[0].exam_id],
+      [attempt[0].exam_id, attemptId],
     );
 
     const parseJson = (v: any, fb: any) => {

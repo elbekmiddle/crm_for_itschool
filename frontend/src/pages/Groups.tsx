@@ -9,6 +9,7 @@ import {
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
 import api from '../lib/api';
+import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
 
 const GroupsPage: React.FC = () => {
   const { user, groups, courses, students, fetchGroups, fetchCourses, fetchStudents, createGroup, updateGroup, deleteGroup, addStudentToGroup, removeStudentFromGroup, fetchGroupStudents, isLoading } = useAdminStore();
@@ -22,6 +23,13 @@ const GroupsPage: React.FC = () => {
   const [addStudentModal, setAddStudentModal] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [groupAttendancePct, setGroupAttendancePct] = useState<number | null>(null);
+
+  useModalOverlayEffects(!!modal || addStudentModal, {
+    onEscape: () => {
+      if (addStudentModal) setAddStudentModal(false);
+      else setModal(null);
+    },
+  });
 
   useEffect(() => { fetchGroups(); fetchCourses(); fetchStudents(); }, []);
 

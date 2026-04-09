@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { RedisService } from '../../infrastructure/redis/redis.service';
 import { AiService } from '../ai/ai.service';
@@ -10,6 +10,8 @@ import { monthly_report_data } from './queries/monthly_report_data';
 
 @Injectable()
 export class AnalyticsService {
+  private readonly logger = new Logger(AnalyticsService.name);
+
   constructor(
     private readonly dbService: DbService,
     private readonly redisService: RedisService,
@@ -18,9 +20,13 @@ export class AnalyticsService {
   ) {}
 
   async getDashboard() {
-    const cacheKey = 'analytics:dashboard:v2';
-    const cached = await this.redisService.get(cacheKey);
-    if (cached) return typeof cached === 'string' ? JSON.parse(cached) : cached;
+    const cacheKey = 'analytics:dashboard:v5';
+    try {
+      const cached = await this.redisService.get(cacheKey);
+      if (cached) return typeof cached === 'string' ? JSON.parse(cached) : cached;
+    } catch (e) {
+      this.logger.warn(`Redis get failed for ${cacheKey}`, e);
+    }
 
     const data = await dashboard_stats(this.dbService);
 
@@ -32,7 +38,11 @@ export class AnalyticsService {
     }
 
     const payload = { ...data, ai_insight };
-    await this.redisService.set(cacheKey, payload, { ex: 60 });
+    try {
+      await this.redisService.set(cacheKey, payload, { ex: 60 });
+    } catch (e) {
+      this.logger.warn('Redis cache set failed (dashboard still returned)', e);
+    }
     return payload;
   }
 

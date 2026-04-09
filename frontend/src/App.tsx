@@ -27,8 +27,6 @@ const StudentExams = lazy(() => import('./pages/StudentExams'));
 const ExamSession = lazy(() => import('./pages/ExamSession'));
 const ExamResult = lazy(() => import('./pages/ExamResult'));
 const TeacherExamReview = lazy(() => import('./pages/TeacherExamReview'));
-const LeadsPage = lazy(() => import('./pages/Leads'));
-
 // Admin dedicated layout & pages
 const AdminLayout = lazy(() => import('./pages/admin/Layout'));
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
@@ -106,7 +104,6 @@ const App: React.FC = () => {
                   <Route path="courses" element={<CoursesPage />} />
                   <Route path="groups" element={<GroupsPage />} />
                   <Route path="analytics" element={<AnalyticsPage />} />
-                  <Route path="leads" element={<LeadsPage />} />
                   <Route path="payments" element={<PaymentsPage />} />
                   <Route path="blog" element={<BlogAdminPage />} />
                   <Route path="settings" element={<SettingsPage />} />

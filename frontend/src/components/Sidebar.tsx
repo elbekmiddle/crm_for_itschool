@@ -95,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
           />
           <div className="absolute inset-0 bg-gradient-to-b from-[var(--bg-card)]/96 via-[var(--bg-card)]/92 to-[var(--bg-card)]/98" />
         </div>
-        <div className="relative z-10 flex h-full min-h-0 flex-col">
+        <div className="relative z-10 flex h-full min-h-0 flex-col overflow-hidden">
         {/* Brand */}
         <div className="p-5 border-b border-[var(--border)] flex items-center justify-between min-h-[73px]">
           <div className={cn('flex items-center gap-3 overflow-hidden', !isOpen && 'md:justify-center w-full')}>
@@ -128,7 +128,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
         )}
 
         {/* Nav */}
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto no-scrollbar">
+        <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 space-y-0.5 no-scrollbar">
           {navItems.map((item) => (
             <NavLink
               key={item.to}

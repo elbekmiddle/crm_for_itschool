@@ -11,6 +11,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'GROUP_UPDATE',
     'PAYMENT_READ',
     'PAYMENT_CREATE',
+    'PAYMENT_UPDATE',
     'ANALYTICS_VIEW',
   ],
   TEACHER: [

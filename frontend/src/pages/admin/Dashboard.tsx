@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   Users, UserCheck, GraduationCap, TrendingUp, 
   ArrowUpRight, ArrowDownRight, Activity, Calendar,
@@ -25,6 +25,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 const AdminDashboard: React.FC = () => {
   const { user, stats, fetchStats, isLoading } = useAdminStore();
+  const [growthPeriod, setGrowthPeriod] = useState<'week' | 'month' | 'year'>('month');
 
   useEffect(() => {
     fetchStats();
@@ -50,8 +51,37 @@ const AdminDashboard: React.FC = () => {
     { label: 'Oylik Mavjudlik', value: `${Number(stats?.attendanceAvg || 0)}%`, icon: UserCheck, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '-1.2%', isUp: false },
   ];
 
-  const growthLabels = stats?.growthTrend?.map((g: any) => g.month) || ['Yan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-  const growthCounts = stats?.growthTrend?.map((g: any) => g.count) || [30, 45, 57, 48, 63, 72];
+  const { growthLabels, growthCounts, growthSubtitle } = useMemo(() => {
+    if (growthPeriod === 'week') {
+      const w = stats?.growthTrendWeek;
+      if (Array.isArray(w) && w.length) {
+        return {
+          growthLabels: w.map((g: any) => g.month),
+          growthCounts: w.map((g: any) => Number(g.count) || 0),
+          growthSubtitle: "So'nggi 7 kun",
+        };
+      }
+      return { growthLabels: ['—'], growthCounts: [0], growthSubtitle: "So'nggi 7 kun" };
+    }
+    if (growthPeriod === 'year') {
+      const y = stats?.growthTrendYearly;
+      if (Array.isArray(y) && y.length) {
+        return {
+          growthLabels: y.map((g: any) => String(g.year)),
+          growthCounts: y.map((g: any) => Number(g.count) || 0),
+          growthSubtitle: "So'nggi yillar",
+        };
+      }
+      return { growthLabels: ['—'], growthCounts: [0], growthSubtitle: "So'nggi yillar" };
+    }
+    const m = stats?.growthTrend;
+    return {
+      growthLabels: m?.map((g: any) => g.month) || ['Yan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+      growthCounts: m?.map((g: any) => g.count) || [30, 45, 57, 48, 63, 72],
+      growthSubtitle: "So'nggi 6 oy",
+    };
+  }, [growthPeriod, stats]);
+
   const chartData = {
     labels: growthLabels,
     datasets: [
@@ -158,16 +188,29 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 <div>
                    <h3 className="text-2xl font-black text-[#08060d] dark:text-white tracking-tight mb-1">O'sish Tendentsiyasi</h3>
-                   <p className="text-xs text-[#6b6375] dark:text-[#9ca3af] font-bold uppercase tracking-widest opacity-60">Yangi ro'yxatga olishlar (so'nggi 6 oy)</p>
+                   <p className="text-xs text-[#6b6375] dark:text-[#9ca3af] font-bold uppercase tracking-widest opacity-60">
+                     Yangi ro&apos;yxatga olishlar · {growthSubtitle}
+                   </p>
                 </div>
              </div>
              <div className="flex bg-[#f4f3ec] dark:bg-[#16171d] p-1.5 rounded-[1.25rem] border border-[#e5e4e7] dark:border-[#2e303a]">
-                {['Hafta', 'Oy', 'Yil'].map(t => (
-                   <button key={t} className={cn(
-                     "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300",
-                     t === 'Oy' ? "bg-white dark:bg-[#1f2028] text-[#aa3bff] shadow-lg shadow-black/5" : "text-[#6b6375] hover:text-[#aa3bff]"
-                   )}>
-                      {t}
+                {([
+                  { key: 'week' as const, label: 'Hafta' },
+                  { key: 'month' as const, label: 'Oy' },
+                  { key: 'year' as const, label: 'Yil' },
+                ]).map(({ key, label }) => (
+                   <button
+                     key={key}
+                     type="button"
+                     onClick={() => setGrowthPeriod(key)}
+                     className={cn(
+                       "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300",
+                       growthPeriod === key
+                         ? "bg-white dark:bg-[#1f2028] text-[#aa3bff] shadow-lg shadow-black/5"
+                         : "text-[#6b6375] hover:text-[#aa3bff]",
+                     )}
+                   >
+                      {label}
                    </button>
                 ))}
              </div>

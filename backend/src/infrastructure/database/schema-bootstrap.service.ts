@@ -62,11 +62,16 @@ export class SchemaBootstrapService implements OnModuleInit {
         sql: `ALTER TABLE group_students ADD COLUMN IF NOT EXISTS left_at TIMESTAMP`,
       },
       {
+        label: 'group_students.joined_at',
+        sql: `ALTER TABLE group_students ADD COLUMN IF NOT EXISTS joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`,
+      },
+      {
         label: 'students columns',
         sql: `
           ALTER TABLE students ADD COLUMN IF NOT EXISTS email TEXT;
           ALTER TABLE students ADD COLUMN IF NOT EXISTS status TEXT;
           ALTER TABLE students ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;
+          ALTER TABLE students ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
         `,
       },
       {

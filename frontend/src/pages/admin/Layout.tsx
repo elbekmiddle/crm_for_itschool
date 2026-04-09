@@ -5,7 +5,7 @@ import {
   Bell, Menu, X, 
   LayoutDashboard, Users, UserCheck,
   BookOpen, Calendar, CreditCard, PieChart, 
-  MessageSquare, Sliders, LogOut, Moon, Sun,
+  Sliders, LogOut, Moon, Sun,
   FileText
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -52,7 +52,6 @@ const AdminLayout: React.FC = () => {
     { to: '/admin/groups', icon: Calendar, label: 'Guruhlar' },
     { to: '/admin/payments', icon: CreditCard, label: "To'lovlar" },
     { to: '/admin/analytics', icon: PieChart, label: 'Analitika' },
-    { to: '/admin/leads', icon: MessageSquare, label: 'Lidlar' },
     { to: '/admin/blog', icon: FileText, label: 'Blog' },
     { to: '/admin/settings', icon: Sliders, label: 'Sozlamalar' },
   ];
@@ -95,10 +94,10 @@ const AdminLayout: React.FC = () => {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed top-0 left-0 h-full bg-[var(--bg-card)]/98 backdrop-blur-md border-r border-[var(--border)] z-50 transition-all duration-500 shadow-2xl lg:shadow-none",
+        "fixed top-0 left-0 flex h-full max-h-[100dvh] min-h-0 flex-col bg-[var(--bg-card)]/98 backdrop-blur-[6px] border-r border-[var(--border)] z-50 transition-all duration-500 shadow-2xl lg:shadow-none",
         sidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:translate-x-0 lg:w-20"
       )}>
-        <div className="p-6 border-b border-[var(--border)] flex items-center justify-between">
+        <div className="shrink-0 p-6 border-b border-[var(--border)] flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-[var(--bg)] rounded-2xl flex items-center justify-center shadow-lg border border-[var(--border)]">
               <img src="/images/logo.png" alt="IT School" className="w-8 h-8 object-contain" />
@@ -115,7 +114,7 @@ const AdminLayout: React.FC = () => {
           </button>
         </div>
 
-        <nav className="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-160px)] no-scrollbar mt-4">
+        <nav className="mt-4 flex min-h-0 flex-1 flex-col space-y-1.5 overflow-y-auto overflow-x-hidden p-4 no-scrollbar">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -146,7 +145,7 @@ const AdminLayout: React.FC = () => {
           ))}
         </nav>
 
-        <div className="absolute bottom-0 left-0 w-full p-4 border-t border-[var(--border)] space-y-1.5 bg-[var(--bg-card)]">
+        <div className="shrink-0 w-full space-y-1.5 border-t border-[var(--border)] bg-[var(--bg-card)] p-4">
           <button 
             onClick={toggleDark}
             className="flex items-center gap-4 px-4 py-3 rounded-2xl font-bold text-sm w-full text-[#6b6375] dark:text-[#9ca3af] hover:bg-[#f4f3ec] dark:hover:bg-[#1f2028] transition-all duration-300"
@@ -186,7 +185,7 @@ const AdminLayout: React.FC = () => {
         {/* Header — fixed, sidebar bilan bir xil fon */}
         <header
           className={cn(
-            'fixed top-0 right-0 z-40 flex items-center justify-between overflow-visible border-b border-[var(--border)] bg-[var(--bg-card)]/95 px-4 py-3 shadow-sm backdrop-blur-md md:px-8',
+            'fixed top-0 right-0 z-40 flex items-center justify-between overflow-visible border-b border-[var(--border)] bg-[var(--bg-card)]/90 px-4 py-3 shadow-sm backdrop-blur-[6px] md:px-8',
             sidebarOpen ? 'lg:left-72' : 'lg:left-20',
             'left-0',
           )}

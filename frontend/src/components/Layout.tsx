@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
-import { Search, Bell, Settings, Menu, X, GraduationCap, Moon, Sun } from 'lucide-react';
+import { Search, Bell, Menu, X, GraduationCap, Moon, Sun } from 'lucide-react';
 import { useAdminStore } from '../store/useAdminStore';
 import { useNotifications } from '../hooks/useNotifications';
 import { useSocketEvents } from '../hooks/useSocketEvents';
@@ -63,7 +63,7 @@ const Layout: React.FC = () => {
         {/* Header — fixed (sticky ba’zi scroll kontekstlarda ishlamasligi mumkin) */}
         <header
           className={cn(
-            'fixed right-0 top-0 z-40 flex min-h-[73px] items-center justify-between gap-4 border-b border-[var(--border)] bg-[var(--bg-card)]/95 px-6 py-3 backdrop-blur-xl transition-all duration-200',
+            'fixed right-0 top-0 z-40 flex min-h-[73px] items-center justify-between gap-4 border-b border-[var(--border)] bg-[var(--bg-card)]/92 px-6 py-3 backdrop-blur-[6px] transition-all duration-200',
             sidebarOpen ? 'md:left-64' : 'md:left-20',
             'left-0',
           )}
@@ -77,11 +77,11 @@ const Layout: React.FC = () => {
               <Menu className="w-5 h-5" />
             </button>
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text)]/35 pointer-events-none" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text)]/35 pointer-events-none z-[1]" />
               <input
                 type="text"
                 placeholder="Qidirish... (⌘K)"
-                className="w-full pl-11 pr-4 py-2.5 bg-[var(--bg-muted)] border border-[var(--border)] rounded-xl text-sm text-[var(--text-h)] outline-none focus:border-[var(--accent-border)] transition-all placeholder:text-[var(--text)]/40"
+                className="input search-input w-full py-2.5 pr-4"
               />
             </div>
           </div>
@@ -194,13 +194,6 @@ const Layout: React.FC = () => {
               </AnimatePresence>
             </div>
 
-            <button
-              type="button"
-              onClick={() => navigate('/settings')}
-              className="p-2.5 rounded-xl hover:bg-[var(--hover-bg)] text-[var(--text)]/60 transition-all cursor-pointer"
-            >
-              <Settings className="w-[18px] h-[18px]" />
-            </button>
             <div className="flex items-center gap-3 pl-3 ml-1 border-l border-[var(--border)]">
               <div className="min-w-0 text-left">
                 <p className="max-w-[180px] truncate text-sm font-black leading-none text-[var(--text-h)]">
