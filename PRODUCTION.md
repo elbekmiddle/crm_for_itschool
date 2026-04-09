@@ -40,6 +40,21 @@
 1. O‘z `VITE_*` / API base URL’ini productionga moslang.
 2. `npm run build` va statik hosting.
 
+## Nginx (Google Cloud VM)
+
+**Ketma-ket server o‘rnatish** (git clone, UFW, nginx, Node, PM2, build, certbot): [`deploy/SERVER-SETUP.md`](deploy/SERVER-SETUP.md).
+
+Namuna konfiglar repoda:
+
+- **Subdomenlar** (tavsiya): `api.*`, `app.*` (CRM), `exam.*` — [`deploy/nginx/itschool-subdomains.conf.example`](deploy/nginx/itschool-subdomains.conf.example)
+- **Bitta domen**: faqat `/api/` + `/socket.io/` proxy va ildizda CRM — [`deploy/nginx/itschool-single-domain.conf.example`](deploy/nginx/itschool-single-domain.conf.example)
+
+VM da: `sudo apt install nginx`, faylni `sites-available` ga qo‘ying, `nginx -t`, `certbot --nginx`, `systemctl reload nginx`. Statik papkalar: masalan `/var/www/crm/dist`, `/var/www/exam-platform/dist` (loyihadan `rsync` yoki `scp`).
+
+**GCP firewall**: VPC tarmog‘ida 80 va 443 kiruvchi qoidalarini oching (Compute Engine → Firewall rules yoki VM “Allow HTTP/HTTPS”).
+
+**Ishlatish**: `server_name` va `root` yo‘llarini o‘z domeningiz va deploy path’laringizga almashtiring; SSL qatorlarini `certbot` to‘ldiradi.
+
 ## Tekshiruv ro‘yxati (qisqa)
 
 - [ ] `NODE_ENV=production`, JWT va DB parollari almashtirilgan
