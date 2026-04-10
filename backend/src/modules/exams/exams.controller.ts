@@ -144,6 +144,14 @@ export class ExamsController {
     return this.examsService.getAttemptResult(attemptId);
   }
 
+  /** Javoblarni ko‘rish sahifasi (natija bilan bir xil yuk); `GET :id` bilan chalkashmasin. */
+  @Permissions('EXAM_PASS')
+  @Get('review/:attemptId')
+  @ApiOperation({ summary: 'Review attempt (same payload as result)', description: 'Permissions: EXAM_PASS' })
+  getAttemptReview(@Param('attemptId') attemptId: string) {
+    return this.examsService.getAttemptResult(attemptId);
+  }
+
   @Permissions('EXAM_PASS')
   @Get('attempt/:attemptId/answers')
   @ApiOperation({ summary: 'Get already saved answers for an attempt', description: 'Permissions: EXAM_PASS' })

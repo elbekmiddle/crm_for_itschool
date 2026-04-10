@@ -18,10 +18,12 @@ export async function get_student_dashboard(dbService: DbService, studentId: str
     const counts = await dbService.query(
       `SELECT 
         (SELECT COUNT(*)::int FROM attendance WHERE student_id = $1 AND UPPER(TRIM(COALESCE(status::text, ''))) = 'PRESENT') as p,
-        (SELECT COUNT(*)::int FROM attendance WHERE student_id = $1 AND UPPER(TRIM(COALESCE(status::text, ''))) = 'ABSENT') as a`,
+        (SELECT GREATEST((SELECT COUNT(*)::int FROM attendance WHERE student_id = $1) - 
+          (SELECT COUNT(*)::int FROM attendance WHERE student_id = $1 AND UPPER(TRIM(COALESCE(status::text, ''))) = 'PRESENT'), 0)) as a`,
       [studentId],
     );
     present_days = Number(counts[0]?.p) || 0;
+    /** PRESENT bo‘lmagan barcha qatorlar — tarixda «Qoldirdi» ko‘rinadiganlar bilan mos. */
     absent_days = Number(counts[0]?.a) || 0;
   } catch {
     present_days = 0;

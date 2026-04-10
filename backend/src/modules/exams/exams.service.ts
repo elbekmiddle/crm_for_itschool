@@ -428,7 +428,7 @@ export class ExamsService {
 
   async getAvailableExams(studentId: string) {
     try {
-      const build = (deletedFilter: string, groupScoped: boolean) => {
+      const build = (deletedFilter: string, groupScoped: boolean, durationExpr: string) => {
       const scope = groupScoped
         ? 'AND (e.group_id IS NULL OR e.group_id = gx.id)'
         : '';
@@ -436,7 +436,7 @@ export class ExamsService {
       SELECT
         e.*,
         c.name as course_name,
-        e.duration_minutes as duration,
+        ${durationExpr} as duration,
         (SELECT COUNT(*) FROM exam_questions WHERE exam_id = e.id) as questions_count,
         (SELECT ea.status FROM exam_attempts ea
          WHERE ea.exam_id = e.id AND ea.student_id = $1
@@ -462,14 +462,20 @@ export class ExamsService {
     `;
       };
 
+      const durationVariants = [
+        'COALESCE(e.time_limit, e.duration_minutes, 60)',
+        'COALESCE(e.duration_minutes, 60)',
+      ];
       let lastErr: any;
       for (const groupScoped of [true, false]) {
         for (const deletedPart of ['AND e.deleted_at IS NULL', '']) {
-          try {
-            return await this.dbService.query(build(deletedPart, groupScoped), [studentId]);
-          } catch (e: any) {
-            lastErr = e;
-            if (e?.code !== '42703') throw e;
+          for (const dur of durationVariants) {
+            try {
+              return await this.dbService.query(build(deletedPart, groupScoped, dur), [studentId]);
+            } catch (e: any) {
+              lastErr = e;
+              if (e?.code !== '42703') throw e;
+            }
           }
         }
       }
@@ -576,16 +582,32 @@ export class ExamsService {
     const attempt = await this.dbService.query(`SELECT exam_id FROM exam_attempts WHERE id = $1`, [attemptId]);
     if (!attempt.length) throw new NotFoundException('Attempt not found.');
 
-    const questions = await this.dbService.query(
-      `
+    /** Tartibni imtihon savollari bilan moslashtiramiz (random tartib to‘g‘ri javob bilan chalkashmasin). */
+    let questions: any[];
+    try {
+      questions = await this.dbService.query(
+        `
       SELECT q.id, q.text, q.options, q.level, q.type
       FROM questions q
       JOIN exam_questions eq ON eq.question_id = q.id
       WHERE eq.exam_id = $1
-      ORDER BY md5(q.id::text || '|' || $2::text)
+      ORDER BY COALESCE(eq.question_order, 2147483647), eq.created_at ASC NULLS LAST, q.id
     `,
-      [attempt[0].exam_id, attemptId],
-    );
+        [attempt[0].exam_id],
+      );
+    } catch (e: any) {
+      if (e?.code !== '42703') throw e;
+      questions = await this.dbService.query(
+        `
+      SELECT q.id, q.text, q.options, q.level, q.type
+      FROM questions q
+      JOIN exam_questions eq ON eq.question_id = q.id
+      WHERE eq.exam_id = $1
+      ORDER BY eq.created_at ASC NULLS LAST, q.id
+    `,
+        [attempt[0].exam_id],
+      );
+    }
 
     const parseJson = (v: any, fb: any) => {
       if (v == null) return fb;
@@ -905,25 +927,52 @@ export class ExamsService {
       );
     }
 
-    try {
-      const updated = await this.dbService.query(
-        `UPDATE exam_results SET score = $3::numeric, correct_count = $4, incorrect_count = $5, total_questions = $6, time_taken = $7, updated_at = NOW()
+    const syncExamResults = async () => {
+      const baseParams = [
+        exam_id,
+        student_id,
+        finalScore,
+        correctCount,
+        incorrectCount,
+        totalCount,
+        timeTakenRow,
+      ];
+      const updates: Array<{ sql: string; params: any[] }> = [
+        {
+          sql: `UPDATE exam_results SET score = $3::numeric, correct_count = $4, incorrect_count = $5, total_questions = $6, time_taken = $7, updated_at = NOW()
          WHERE exam_id = $1 AND student_id = $2 RETURNING id`,
-        [
-          exam_id,
-          student_id,
-          finalScore,
-          correctCount,
-          incorrectCount,
-          totalCount,
-          timeTakenRow,
-        ],
-      );
-      if (!updated.length) {
-        await this.dbService.query(
-          `INSERT INTO exam_results (id, attempt_id, exam_id, student_id, score, passed, correct_count, incorrect_count, total_questions, time_taken)
+          params: baseParams,
+        },
+        {
+          sql: `UPDATE exam_results SET score = $3::numeric, correct_count = $4, incorrect_count = $5, total_questions = $6, time_taken = $7
+         WHERE exam_id = $1 AND student_id = $2 RETURNING id`,
+          params: baseParams,
+        },
+        {
+          sql: `UPDATE exam_results SET score = $3::numeric, correct_count = $4, incorrect_count = $5, total_questions = $6
+         WHERE exam_id = $1 AND student_id = $2 RETURNING id`,
+          params: baseParams.slice(0, 6),
+        },
+        {
+          sql: `UPDATE exam_results SET score = $3::numeric WHERE exam_id = $1 AND student_id = $2 RETURNING id`,
+          params: [exam_id, student_id, finalScore],
+        },
+      ];
+      for (const u of updates) {
+        try {
+          const updated = await this.dbService.query(u.sql, u.params);
+          if (updated.length) return;
+        } catch (e: any) {
+          if (e?.code !== '42703' && e?.code !== '42P01') {
+            this.logger.warn(`exam_results UPDATE variant skipped: ${e?.message || e}`);
+          }
+        }
+      }
+      const inserts: Array<{ sql: string; params: any[] }> = [
+        {
+          sql: `INSERT INTO exam_results (id, attempt_id, exam_id, student_id, score, passed, correct_count, incorrect_count, total_questions, time_taken)
            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-          [
+          params: [
             attemptId,
             exam_id,
             student_id,
@@ -934,11 +983,23 @@ export class ExamsService {
             totalCount,
             timeTakenRow,
           ],
-        );
+        },
+        {
+          sql: `INSERT INTO exam_results (id, attempt_id, exam_id, student_id, score, passed)
+           VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)`,
+          params: [attemptId, exam_id, student_id, finalScore, passed],
+        },
+      ];
+      for (const ins of inserts) {
+        try {
+          await this.dbService.query(ins.sql, ins.params);
+          return;
+        } catch (e: any) {
+          this.logger.warn(`exam_results INSERT skipped: ${e?.message || e}`);
+        }
       }
-    } catch (e: any) {
-      this.logger.warn(`exam_results sync skipped: ${e?.message || e}`);
-    }
+    };
+    await syncExamResults();
 
     // Send Telegram Notification
     try {
@@ -970,29 +1031,66 @@ export class ExamsService {
 
     if (!attempt.length) return null;
 
-    const details = await this.dbService.query(`
+    let details: any[];
+    try {
+      details = await this.dbService.query(
+        `
+      SELECT aa.*, q.text as question_text, q.options as question_options, q.correct_answer, q.type as question_type
+      FROM attempt_answers aa
+      JOIN questions q ON aa.question_id = q.id
+      WHERE aa.attempt_id = $1
+    `,
+        [attemptId],
+      );
+    } catch (e: any) {
+      if (e?.code !== '42703') throw e;
+      details = await this.dbService.query(
+        `
       SELECT aa.*, q.text as question_text, q.correct_answer, q.type as question_type
       FROM attempt_answers aa
       JOIN questions q ON aa.question_id = q.id
       WHERE aa.attempt_id = $1
-    `, [attemptId]);
+    `,
+        [attemptId],
+      );
+    }
 
-    const correct_count = details.filter(d => d.is_correct).length;
+    const correct_count = details.filter((d) => d.is_correct).length;
     const incorrect_count = details.length - correct_count;
     
-    // Time calculation
+    // Time calculation (sekundlar; 0 ham “sarf vaqt” hisoblanadi)
     let time_taken = 0;
-    if (attempt[0].finished_at && attempt[0].started_at) {
-      time_taken = Math.floor((new Date(attempt[0].finished_at).getTime() - new Date(attempt[0].started_at).getTime()) / 1000);
+    const started = attempt[0].started_at ? new Date(attempt[0].started_at).getTime() : NaN;
+    const finished = attempt[0].finished_at ? new Date(attempt[0].finished_at).getTime() : NaN;
+    if (!Number.isNaN(started) && !Number.isNaN(finished) && finished >= started) {
+      time_taken = Math.floor((finished - started) / 1000);
     }
+    if (time_taken <= 0) {
+      try {
+        const er = await this.dbService.query(`SELECT time_taken FROM exam_results WHERE attempt_id = $1 LIMIT 1`, [
+          attemptId,
+        ]);
+        const tt = er[0]?.time_taken;
+        if (tt != null && Number(tt) >= 0) time_taken = Number(tt);
+      } catch {
+        /* */
+      }
+    }
+
+    const rawScore = attempt[0].score;
+    const scoreNum =
+      rawScore === null || rawScore === undefined || rawScore === ''
+        ? null
+        : Number(rawScore);
 
     return { 
       ...attempt[0], 
+      score: scoreNum != null && !Number.isNaN(scoreNum) ? scoreNum : rawScore,
       details,
       correct_count,
       incorrect_count,
       total_questions: details.length,
-      time_taken
+      time_taken,
     };
   }
 

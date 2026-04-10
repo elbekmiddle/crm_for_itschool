@@ -150,16 +150,16 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     // Don't show loading for stats as it's background info
     try {
       const { data } = await api.get('/students/me/dashboard');
-      const totalExams = data.exams?.length || 0;
-      const avgScore = totalExams > 0 
-        ? Math.round(data.exams.reduce((acc: number, ex: any) => acc + (ex.score || 0), 0) / totalExams)
-        : 0;
+      const examRows = Array.isArray(data.exams) ? data.exams : [];
+      const scored = examRows.map((ex: any) => Number(ex.score)).filter((n: number) => !Number.isNaN(n));
+      const avgScore =
+        scored.length > 0 ? Math.round(scored.reduce((a: number, b: number) => a + b, 0) / scored.length) : 0;
       const totalLessons = (data.present_days || 0) + (data.absent_days || 0);
       const attPct = totalLessons > 0 ? Math.round((data.present_days / totalLessons) * 100) : 0;
 
       set({ 
         stats: {
-          total_exams: totalExams,
+          total_exams: examRows.length,
           average_score: avgScore,
           attendance_percentage: attPct,
           missed_lessons: data.absent_days || 0,

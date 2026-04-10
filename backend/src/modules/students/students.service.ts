@@ -227,9 +227,10 @@ export class StudentsService {
       }
     }
 
-    const present = records.filter((r: any) => String(r.status).toUpperCase() === 'PRESENT').length;
-    const absent = records.filter((r: any) => String(r.status).toUpperCase() === 'ABSENT').length;
+    const present = records.filter((r: any) => String(r.status).toUpperCase().trim() === 'PRESENT').length;
     const total = records.length;
+    /** UI «Qoldirdi» barcha PRESENT emas yozuvlar uchun; statistikada ham shu bilan moslashadi. */
+    const absent = Math.max(0, total - present);
 
     const payload = {
       records,
@@ -271,15 +272,19 @@ export class StudentsService {
     const dashboard = await this.getDashboard(studentId);
     if (!dashboard) return null;
 
-    const totalExams = dashboard.exams?.length || 0;
-    const avgScore = totalExams > 0 
-      ? Math.round(dashboard.exams.reduce((acc: number, ex: any) => acc + (ex.score || 0), 0) / totalExams)
-      : 0;
+    const examRows = Array.isArray(dashboard.exams) ? dashboard.exams : [];
+    const scored = examRows
+      .map((ex: any) => Number(ex.score))
+      .filter((n: number) => !Number.isNaN(n));
+    const avgScore =
+      scored.length > 0
+        ? Math.round(scored.reduce((acc: number, n: number) => acc + n, 0) / scored.length)
+        : 0;
 
     const totalPayments = dashboard.payments?.reduce((acc: number, p: any) => acc + (p.amount || 0), 0) || 0;
 
     return {
-      total_exams: totalExams,
+      total_exams: examRows.length,
       average_score: avgScore,
       attendance_percentage: dashboard.attendance_percentage || 0,
       missed_lessons: dashboard.absent_days || 0,

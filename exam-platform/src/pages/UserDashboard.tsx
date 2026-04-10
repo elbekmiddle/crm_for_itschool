@@ -196,7 +196,9 @@ const UserDashboard: React.FC = () => {
                    </div>
                    <div className="flex-1 min-w-0">
                      <p className="font-black text-[#08060d] dark:text-[#f3f4f6] truncate text-lg tracking-tight mb-1">{exam.title}</p>
-                     <p className="text-[10px] font-black text-[#6b6375] uppercase tracking-widest opacity-60">{exam.duration} daqiqa · {exam.questions_count} ta savol</p>
+                     <p className="text-[10px] font-black text-[#6b6375] uppercase tracking-widest opacity-60">
+                       {Number(exam.duration ?? exam.time_limit ?? exam.duration_minutes) || 60} daqiqa · {exam.questions_count} ta savol
+                     </p>
                    </div>
                    <span className="px-4 py-2 bg-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-widest rounded-2xl group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-500">Kutilmoqda</span>
                  </button>
@@ -236,14 +238,20 @@ const UserDashboard: React.FC = () => {
                        <p className="font-black text-[#08060d] dark:text-[#f3f4f6] truncate text-lg tracking-tight mb-1">{exam.title}</p>
                        <p className="text-[10px] font-black text-[#6b6375] uppercase tracking-widest opacity-60">Imtihon muvaffaqiyatli topshirildi</p>
                      </div>
-                     {exam.score !== undefined && (
-                       <div className="text-right">
-                         <p className={cn(
-                           "text-3xl font-black tabular-nums tracking-tighter",
-                           exam.score >= 70 ? 'text-emerald-600 shadow-emerald-500/10' : 'text-red-500 shadow-red-500/10'
-                         )}>{exam.score}%</p>
-                       </div>
-                     )}
+                     {(() => {
+                       const sc = exam.score;
+                       if (sc === null || sc === undefined || sc === '') return null;
+                       const n = Math.round(Number(sc));
+                       if (Number.isNaN(n)) return null;
+                       return (
+                         <div className="text-right">
+                           <p className={cn(
+                             "text-3xl font-black tabular-nums tracking-tighter",
+                             n >= 70 ? 'text-emerald-600 shadow-emerald-500/10' : 'text-red-500 shadow-red-500/10'
+                           )}>{n}%</p>
+                         </div>
+                       );
+                     })()}
                    </button>
                  ))}
                </div>

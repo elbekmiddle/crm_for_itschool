@@ -1,42 +1,62 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useExamStore } from '../store/useExamStore';
 import { Trophy, Clock, CheckCircle2, XCircle, ArrowLeft, BookOpen, Loader2, AlertCircle } from 'lucide-react';
 import api from '../lib/api';
 
+function formatDurationSec(sec: unknown): string {
+  if (sec === null || sec === undefined || sec === '') return '—';
+  const n = Number(sec);
+  if (Number.isNaN(n) || n < 0) return '—';
+  if (n < 60) return `${n}s`;
+  const m = Math.floor(n / 60);
+  const s = n % 60;
+  return `${m}m ${s}s`;
+}
+
 const ResultPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { attemptId, questions, answers, finishReason } = useExamStore();
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
-      // Try server result first
+      const aid = searchParams.get('attempt') || attemptId || undefined;
       try {
-        const aid = attemptId || id;
         if (aid) {
           const { data } = await api.get(`/exams/attempt/${aid}/result`);
           setResult(data);
           setLoading(false);
           return;
         }
-      } catch {}
-      // Fallback: compute locally
+      } catch {
+        /* */
+      }
       if (questions && answers) {
         const answered = Object.keys(answers).length;
-        setResult({ score: Math.round((answered / Math.max(questions.length, 1)) * 100), correct: answered, total: questions.length });
+        setResult({
+          score: Math.round((answered / Math.max(questions.length, 1)) * 100),
+          correct: answered,
+          total: questions.length,
+        });
       }
       setLoading(false);
     };
     load();
-  }, [id, attemptId]);
+  }, [id, attemptId, searchParams, questions, answers]);
 
-  const score = result?.score ?? 0;
-  const emoji = score >= 80 ? '😎' : score >= 50 ? '🙂' : '😢';
-  const badge = score >= 80 ? 'Ajoyib natija!' : score >= 50 ? 'Yaxshi harakat!' : 'Ko\'proq o\'rgan!';
-  const color = score >= 80 ? 'from-green-500 to-emerald-600' : score >= 50 ? 'from-amber-400 to-orange-500' : 'from-red-500 to-rose-600';
+  const rawScore = result?.score;
+  const score =
+    rawScore === null || rawScore === undefined || rawScore === ''
+      ? 0
+      : Number(rawScore);
+  const safeScore = Number.isNaN(score) ? 0 : score;
+  const emoji = safeScore >= 80 ? '😎' : safeScore >= 50 ? '🙂' : '😢';
+  const badge = safeScore >= 80 ? 'Ajoyib natija!' : safeScore >= 50 ? 'Yaxshi harakat!' : 'Ko\'proq o\'rgan!';
+  const color = safeScore >= 80 ? 'from-green-500 to-emerald-600' : safeScore >= 50 ? 'from-amber-400 to-orange-500' : 'from-red-500 to-rose-600';
 
   if (loading) return <div className="min-h-screen flex justify-center items-center"><Loader2 className="w-8 h-8 text-[var(--accent)] animate-spin" /></div>;
 
@@ -54,7 +74,7 @@ const ResultPage: React.FC = () => {
           <div className="relative z-10">
             <div className="text-7xl mb-4 drop-shadow-lg">{emoji}</div>
             <p className="text-white/90 text-[10px] font-black uppercase tracking-[0.2em] mb-2">{badge}</p>
-            <div className="text-7xl font-black mb-1 tracking-tighter tabular-nums">{score}%</div>
+            <div className="text-7xl font-black mb-1 tracking-tighter tabular-nums">{safeScore}%</div>
             <div className="flex items-center justify-center gap-1.5 opacity-80">
                <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                <p className="text-xs font-bold">Umumiy natija</p>
@@ -112,7 +132,7 @@ const ResultPage: React.FC = () => {
               <Clock className="w-7 h-7 text-amber-500" />
             </div>
             <p className="text-[10px] font-black text-[var(--text)] uppercase tracking-widest mb-1">Sarf vaqt</p>
-            <p className="text-3xl font-black text-[var(--text-h)] tabular-nums">{result?.time_taken ? `${result.time_taken}s` : '—'}</p>
+            <p className="text-3xl font-black text-[var(--text-h)] tabular-nums">{formatDurationSec(result?.time_taken)}</p>
           </div>
         </div>
 
@@ -124,7 +144,11 @@ const ResultPage: React.FC = () => {
         <div className="space-y-2">
           <button
             type="button"
-            onClick={() => navigate(`/exams/${id}/review`)}
+            onClick={() => {
+              const aid = searchParams.get('attempt') || attemptId;
+              if (aid) navigate(`/exams/${id}/review?attempt=${encodeURIComponent(aid)}`);
+              else navigate(`/exams/${id}/review`);
+            }}
             className="cursor-pointer btn-secondary w-full py-3.5 flex items-center justify-center gap-2"
           >
             <BookOpen className="w-4 h-4" /> Javoblarni ko&apos;rish

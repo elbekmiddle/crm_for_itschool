@@ -24,6 +24,7 @@ const ExamPage: React.FC = () => {
     isExamFinished,
     timeLeft,
     examId,
+    attemptId,
     finishReason,
     setAnswer,
     nextQuestion,
@@ -110,11 +111,13 @@ const ExamPage: React.FC = () => {
   useEffect(() => {
     if (isExamFinished && examId) {
       const timer = setTimeout(() => {
-        navigate(`/exams/${examId}/result`);
+        navigate(
+          attemptId ? `/exams/${examId}/result?attempt=${encodeURIComponent(attemptId)}` : `/exams/${examId}/result`,
+        );
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [isExamFinished, examId, navigate]);
+  }, [isExamFinished, examId, attemptId, navigate]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -277,7 +280,16 @@ const ExamPage: React.FC = () => {
           />
         )}
         {showAlreadySubmitted && (
-          <AlreadySubmittedModal isOpen={showAlreadySubmitted} onGoHome={() => navigate(`/exams/${examId}/result`)} />
+          <AlreadySubmittedModal
+            isOpen={showAlreadySubmitted}
+            onGoHome={() =>
+              navigate(
+                attemptId
+                  ? `/exams/${examId}/result?attempt=${encodeURIComponent(attemptId)}`
+                  : `/exams/${examId}/result`,
+              )
+            }
+          />
         )}
       </AnimatePresence>
     </div>

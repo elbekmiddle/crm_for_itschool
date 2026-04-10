@@ -4,6 +4,9 @@ import api from '../lib/api';
 import { socket } from '../lib/socket';
 import type { Question } from '../types';
 
+const answerSyncTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const ANSWER_SYNC_DEBOUNCE_MS = 450;
+
 interface ExamState {
   // Session
   examId: string | null;
@@ -127,8 +130,16 @@ export const useExamStore = create<ExamState>()(
       setAnswer: (questionId, answer) => {
         const { answers } = get();
         set({ answers: { ...answers, [questionId]: answer } });
-        // Debounced sync
-        get().syncAnswer(questionId, answer);
+        const prev = answerSyncTimers.get(questionId);
+        if (prev) clearTimeout(prev);
+        answerSyncTimers.set(
+          questionId,
+          setTimeout(() => {
+            answerSyncTimers.delete(questionId);
+            const latest = get().answers[questionId];
+            get().syncAnswer(questionId, latest);
+          }, ANSWER_SYNC_DEBOUNCE_MS),
+        );
       },
 
       syncAnswer: async (questionId, answer) => {
@@ -216,12 +227,17 @@ export const useExamStore = create<ExamState>()(
       jumpToQuestion: (index) => set({ currentQuestionIndex: index }),
 
       finishExam: async (reason: 'time_up' | 'manual' | 'cheating' = 'manual') => {
-        const { attemptId, isExamFinished } = get();
+        const { attemptId, isExamFinished, answers } = get();
         if (!attemptId || isExamFinished) return;
-        
+
+        answerSyncTimers.forEach((t) => clearTimeout(t));
+        answerSyncTimers.clear();
+        const flush = Object.entries(answers).map(([qid, val]) => get().syncAnswer(qid, val));
+        await Promise.allSettled(flush);
+
         set({ isExamFinished: true, isExamStarted: false, finishReason: reason });
         localStorage.removeItem('exam-lock');
-        
+
         try {
           await api.post(`/exams/attempt/${attemptId}/submit`, { reason });
         } catch {
