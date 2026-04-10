@@ -20,8 +20,9 @@ import { StudentPasswordLoginDto } from './dto/student-password-login.dto';
 import { get_user_by_email } from './queries/get_user_by_email';
 import { get_user_by_id_for_auth } from './queries/get_user_by_id_for_auth';
 import { get_student_by_phone } from './queries/get_student_by_phone';
+import { get_staff_by_phone } from './queries/get_staff_by_phone';
 import { get_student_by_id_with_auth_data } from './queries/get_student_by_id_with_auth_data';
-import { permissionsForRole } from '../../common/constants/role-permissions';
+import { normalizeRole, permissionsForRole } from '../../common/constants/role-permissions';
 
 @Injectable()
 export class AuthService {
@@ -155,21 +156,36 @@ export class AuthService {
     const phone = this.normalizePhone(dto.phone);
     this.logger.debug(`[checkPhone] normalized: ${dto.phone} → ${phone}`);
     const students = await get_student_by_phone(this.dbService, phone);
-    if (!students.length) {
+    if (students.length) {
+      const student = students[0];
       return {
-        exists: false,
-        is_verified: false,
-        has_telegram: false,
-        first_name: null as string | null,
-        message: `Bu telefon raqam (${phone}) tizimda yo'q. Admin bilan bog'laning.`,
+        exists: true,
+        login_kind: 'student' as const,
+        is_verified: !!student.is_verified,
+        has_telegram: !!student.telegram_chat_id,
+        first_name: student.first_name,
       };
     }
-    const student = students[0];
+    const staffRows = await get_staff_by_phone(this.dbService, phone);
+    if (staffRows.length) {
+      const u = staffRows[0] as any;
+      return {
+        exists: true,
+        login_kind: 'staff' as const,
+        role: u.role,
+        is_verified: true,
+        has_telegram: !!u.telegram_chat_id,
+        first_name: u.first_name,
+        message: 'Xodim akkaunti topildi',
+      };
+    }
     return {
-      exists: true,
-      is_verified: !!student.is_verified,
-      has_telegram: !!student.telegram_chat_id,
-      first_name: student.first_name,
+      exists: false,
+      login_kind: null,
+      is_verified: false,
+      has_telegram: false,
+      first_name: null as string | null,
+      message: `Bu telefon raqam (${phone}) tizimda yo'q. Admin bilan bog'laning.`,
     };
   }
 
@@ -313,10 +329,49 @@ export class AuthService {
     }
 
     // Update student last login
-    await this.dbService.query('UPDATE students SET last_login_at = NOW() WHERE id = $1', [student.id]);
+    try {
+      await this.dbService.query('UPDATE students SET last_login_at = NOW() WHERE id = $1', [student.id]);
+    } catch {
+      /* ustun bo‘lmasa */
+    }
 
     const tokens = await this.generateTokens({ ...student, role: 'STUDENT' });
     return { ...tokens, user: { id: student.id, phone: student.phone, role: 'STUDENT', first_name: student.first_name, last_name: student.last_name } };
+  }
+
+  /** O‘qituvchi / menejer / admin — telefon + parol (users jadvali) */
+  async staffPhoneLogin(dto: StudentPasswordLoginDto) {
+    const phone = this.normalizePhone(dto.phone);
+    const rows = await get_staff_by_phone(this.dbService, phone);
+    if (!rows.length) {
+      throw new NotFoundException('Bu telefon raqam xodimlar ro‘yxatida yo‘q.');
+    }
+    const user = rows[0] as any;
+    if (!user.password) {
+      throw new UnauthorizedException('Parol o‘rnatilmagan — administrator bilan bog‘laning.');
+    }
+    const ok = await bcrypt.compare(dto.password, user.password).catch(() => false);
+    if (!ok) {
+      throw new UnauthorizedException('Telefon yoki parol noto‘g‘ri.');
+    }
+    try {
+      await this.dbService.query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);
+    } catch {
+      /* */
+    }
+    const tokens = await this.generateTokens(user);
+    return {
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        phone: user.phone,
+        telegram_chat_id: user.telegram_chat_id,
+      },
+    };
   }
 
   async refreshToken(refreshToken: string) {
@@ -346,10 +401,11 @@ export class AuthService {
   }
 
   private async generateTokens(user: any) {
+    const role = normalizeRole(user.role) || user.role;
     const payload = {
       sub: user.id,
-      role: user.role,
-      permissions: permissionsForRole(user.role),
+      role,
+      permissions: permissionsForRole(role),
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       phone: user.phone || '',

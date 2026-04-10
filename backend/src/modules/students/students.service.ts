@@ -1,5 +1,6 @@
-import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
+import { RedisService } from '../../infrastructure/redis/redis.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { all_students } from './queries/all_students';
@@ -15,10 +16,13 @@ import { SocketsGateway } from '../sockets/sockets.gateway';
 
 @Injectable()
 export class StudentsService {
+  private readonly logger = new Logger(StudentsService.name);
+
   constructor(
     private readonly dbService: DbService,
     private readonly aiService: AiService,
     private readonly socketsGateway: SocketsGateway,
+    private readonly redisService: RedisService,
   ) {}
 
   async create(createStudentDto: CreateStudentDto, createdBy: string) {
@@ -170,8 +174,20 @@ export class StudentsService {
   }
 
   async getAttendance(studentId: string) {
-    const records = await this.dbService.query(
-      `SELECT 
+    const cacheKey = `attendance:student:v1:${studentId}`;
+    if (this.redisService.isEnabled()) {
+      try {
+        const raw = await this.redisService.get(cacheKey);
+        if (raw != null && raw !== '') {
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          if (parsed?.records) return parsed;
+        }
+      } catch (e) {
+        this.logger.debug(`Attendance cache read skipped: ${(e as Error)?.message}`);
+      }
+    }
+
+    const sqlFull = `SELECT 
          a.id,
          a.student_id,
          a.status,
@@ -184,15 +200,38 @@ export class StudentsService {
        LEFT JOIN groups g ON a.group_id = g.id
        LEFT JOIN courses c ON g.course_id = c.id
        WHERE a.student_id = $1
-       ORDER BY a.lesson_date DESC NULLS LAST, a.created_at DESC`,
-      [studentId]
-    );
+       ORDER BY a.lesson_date DESC NULLS LAST, a.created_at DESC`;
 
-    const present = records.filter((r: any) => r.status === 'PRESENT').length;
-    const absent = records.filter((r: any) => r.status === 'ABSENT').length;
+    const sqlNoNotes = `SELECT 
+         a.id,
+         a.student_id,
+         a.status,
+         a.lesson_date,
+         a.created_at,
+         g.name AS group_name,
+         c.name AS course_name
+       FROM attendance a
+       LEFT JOIN groups g ON a.group_id = g.id
+       LEFT JOIN courses c ON g.course_id = c.id
+       WHERE a.student_id = $1
+       ORDER BY a.lesson_date DESC NULLS LAST, a.created_at DESC`;
+
+    let records: any[];
+    try {
+      records = await this.dbService.query(sqlFull, [studentId]);
+    } catch (e: any) {
+      if (e?.code === '42703') {
+        records = await this.dbService.query(sqlNoNotes, [studentId]);
+      } else {
+        throw e;
+      }
+    }
+
+    const present = records.filter((r: any) => String(r.status).toUpperCase() === 'PRESENT').length;
+    const absent = records.filter((r: any) => String(r.status).toUpperCase() === 'ABSENT').length;
     const total = records.length;
 
-    return {
+    const payload = {
       records,
       stats: {
         total_lessons: total,
@@ -201,12 +240,23 @@ export class StudentsService {
         attendance_percentage: total > 0 ? Math.round((present / total) * 100) : 0,
       },
     };
+
+    if (this.redisService.isEnabled()) {
+      try {
+        await this.redisService.set(cacheKey, payload, { ex: 45 });
+      } catch {
+        /* */
+      }
+    }
+
+    return payload;
   }
 
   async getNotifications(studentId: string) {
-    return this.dbService.query(
+    return this.dbService.querySafe(
       `SELECT * FROM notifications WHERE student_id = $1 ORDER BY created_at DESC LIMIT 50`,
-      [studentId]
+      [studentId],
+      [],
     );
   }
 

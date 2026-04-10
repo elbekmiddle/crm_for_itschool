@@ -16,7 +16,9 @@ const LoginPage: React.FC = () => {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<LoginStep>('IDENTIFY');
-  
+  /** Telefon: talaba yoki xodim (check-phone javobi) */
+  const [phoneLoginKind, setPhoneLoginKind] = useState<'student' | 'staff'>('student');
+
   // Telegram flow state
   const [verificationCode, setVerificationCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -35,11 +37,13 @@ const LoginPage: React.FC = () => {
     try {
       if (isPhone(loginValue)) {
         const { data } = await api.post('/auth/check-phone', { phone: loginValue });
-        setStudentInfo(data);
-        if (data.exists) {
+        const d = (data as any)?.data ?? data;
+        setStudentInfo(d);
+        setPhoneLoginKind(d?.login_kind === 'staff' ? 'staff' : 'student');
+        if (d.exists) {
           setStep('PASSWORD');
         } else {
-          showToast(data.message || "Ushbu raqam tizimda mavjud emas.", "error");
+          showToast(d.message || "Ushbu raqam tizimda mavjud emas.", "error");
         }
       } else {
         // Assume email/admin
@@ -56,7 +60,11 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const endpoint = isPhone(loginValue) ? '/auth/student-login-password' : '/auth/login';
+      const endpoint = isPhone(loginValue)
+        ? phoneLoginKind === 'staff'
+          ? '/auth/staff-phone-login'
+          : '/auth/student-login-password'
+        : '/auth/login';
       const payload = isPhone(loginValue) ? { phone: loginValue, password } : { email: loginValue, password };
       
       const { data: responseData } = await api.post(endpoint, payload);

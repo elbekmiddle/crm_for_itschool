@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 
 const ExamLayout: React.FC = () => {
   return (
-    <div className="min-h-screen bg-white no-select">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] no-select">
       <Outlet />
     </div>
   );

@@ -37,7 +37,11 @@ export class BlogsService {
   }
 
   async findOne(slug: string) {
-    await this.db.query('UPDATE blogs SET views_count = views_count + 1 WHERE slug=$1', [slug]);
+    try {
+      await this.db.query('UPDATE blogs SET views_count = views_count + 1 WHERE slug=$1', [slug]);
+    } catch {
+      /* views_count ustuni bo‘lmasa */
+    }
     const b = await this.db.query('SELECT b.*, u.first_name as author_name FROM blogs b LEFT JOIN users u ON b.created_by=u.id WHERE b.slug=$1', [slug]);
     if (!b[0]) throw new NotFoundException('Blog topilmadi');
     return b[0];

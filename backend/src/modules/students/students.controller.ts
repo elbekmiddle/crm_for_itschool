@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
@@ -19,6 +19,9 @@ export class StudentsController {
   @Get('me')
   @ApiOperation({ summary: 'Get own profile', description: 'Permissions: STUDENT_READ' })
   getMe(@Request() req) {
+    if (req.user.role !== 'STUDENT') {
+      throw new ForbiddenException('Talaba profili uchun talaba akkaunti bilan kiring');
+    }
     return this.studentsService.findOne(req.user.id);
   }
 

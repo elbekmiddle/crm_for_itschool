@@ -23,6 +23,8 @@ export default function LoginPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
+  /** Asosiy kirish: talaba (exam API) yoki xodim (CRM ga yo‘naltiriladi) */
+  const [loginRole, setLoginRole] = useState<'student' | 'staff'>('student');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -61,7 +63,7 @@ export default function LoginPage() {
     if (!password) { setError("Parolni kiriting"); return; }
     setLoading(true);
     try {
-      await loginWithPassword(normalizedPhone, password);
+      await loginWithPassword(normalizedPhone, password, loginRole);
       navigate('/dashboard');
     } catch (err: any) {
       const msg = err.response?.data?.message || err.response?.data?.data?.message || err.message || '';
@@ -142,15 +144,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#08060d] overflow-hidden font-sans">
-      {/* ── Left: CRM login bilan bir xil nisbat va uslub (3/5, hero, gradient) ── */}
-      <div className="relative hidden min-h-screen w-full overflow-hidden bg-[#08060d] lg:flex lg:w-3/5">
+    <div className="min-h-screen flex bg-[#f4f3ec] overflow-hidden font-sans text-[#08060d]">
+      {/* ── Left: yorug‘ rejim — teacher CRM light palette bilan mos ── */}
+      <div className="relative hidden min-h-screen w-full overflow-hidden bg-[#f4f3ec] lg:flex lg:w-3/5">
         <div
           className="absolute inset-0 scale-105 bg-cover bg-center"
           style={{ backgroundImage: "url('/images/uzbek-hero.png')" }}
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#08060d]/88 via-[#1e1b4b]/80 to-[#4c1d95]/75" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#08060d] via-transparent to-[#08060d]/40" />
+        <div className="absolute inset-0 bg-gradient-to-br from-white/92 via-[#f5f0ff]/88 to-[#ece0ff]/90" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#f4f3ec] via-transparent to-white/50" />
         <div className="relative z-10 flex min-h-screen w-full flex-col justify-between p-12 xl:p-16">
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -161,7 +163,7 @@ export default function LoginPage() {
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[1.35rem] bg-white/95 p-3 ring-1 ring-white/25">
               <img src="/images/logo.png" alt="IT School" className="h-full w-full object-contain" />
             </div>
-            <span className="text-2xl font-black uppercase leading-none tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)] xl:text-3xl">
+            <span className="text-2xl font-black uppercase leading-none tracking-tight text-[#08060d] xl:text-3xl">
               IT SCHOOL
             </span>
           </motion.div>
@@ -173,17 +175,17 @@ export default function LoginPage() {
             className="mt-auto max-w-lg pt-12 xl:pt-20"
           >
             <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
-                <GraduationCap className="h-7 w-7 text-[#c084fc]" strokeWidth={2.2} />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-[#e5e4e7]">
+                <GraduationCap className="h-7 w-7 text-[#9329e6]" strokeWidth={2.2} />
               </div>
-              <span className="text-[11px] font-black uppercase tracking-[0.25em] text-[#e9d5ff]/90">
-                Onlayn imtihon
+              <span className="text-[11px] font-black uppercase tracking-[0.25em] text-[#661a9e]/90">
+                Nexus Engine · onlayn imtihon
               </span>
             </div>
-            <p className="text-lg font-bold leading-relaxed text-white/90 xl:text-xl">
+            <p className="text-lg font-bold leading-relaxed text-[#2d2640] xl:text-xl">
               CRM kabinetingiz bilan bir xil xavfsiz kirish: telefon, parol va Telegram tasdiqlash.
             </p>
-            <p className="mt-4 text-sm font-medium text-white/50">
+            <p className="mt-4 text-sm font-medium text-[#6b6375]">
               IT School · bilim va natijalar bir joyda
             </p>
           </motion.div>
@@ -191,9 +193,8 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right form panel ── */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-[#08060d] relative overflow-hidden">
-        {/* Mobile decorative elements */}
-        <div className="lg:hidden absolute top-0 right-0 w-64 h-64 bg-[#aa3bff]/10 rounded-full blur-[80px] -mr-32 -mt-32" />
+      <div className="flex-1 flex items-center justify-center p-8 bg-[#f4f3ec] relative overflow-hidden">
+        <div className="lg:hidden absolute top-0 right-0 w-64 h-64 bg-[#aa3bff]/15 rounded-full blur-[80px] -mr-32 -mt-32" />
         
         <div className="w-full max-w-lg relative z-10">
 
@@ -202,10 +203,10 @@ export default function LoginPage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white p-2.5 shadow-sm">
                <img src="/images/logo.png" alt="IT School" className="h-full w-full object-contain" />
             </div>
-            <span className="text-2xl font-black uppercase tracking-tight text-white">IT SCHOOL</span>
+            <span className="text-2xl font-black uppercase tracking-tight text-[#08060d]">IT SCHOOL</span>
           </div>
 
-          <div className="bg-[#16171d]/80 backdrop-blur-2xl rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] p-12 border border-[#2e303a]">
+          <div className="rounded-[3rem] border border-[#e5e4e7] bg-white/95 p-12 shadow-[0_24px_48px_-12px_rgba(80,40,120,0.12)] backdrop-blur-xl">
             {/* Step indicator */}
             <div className="mb-12">
               <div className="flex items-center gap-4">
@@ -214,25 +215,25 @@ export default function LoginPage() {
                     key={s} 
                     className={cn(
                       "h-1.5 rounded-full transition-all duration-500 flex-1",
-                      s === step ? "bg-[#aa3bff] shadow-[0_0_12px_#aa3bff]" : 
-                      (['main', 'code', 'set-password'] as Step[]).indexOf(step) > i ? "bg-emerald-500" : "bg-[#2e303a]"
+                      s === step ? "bg-[#aa3bff] shadow-[0_0_12px_rgba(170,59,255,0.35)]" : 
+                      (['main', 'code', 'set-password'] as Step[]).indexOf(step) > i ? "bg-emerald-500" : "bg-[#e5e4e7]"
                     )} 
                   />
                 ))}
               </div>
               <div className="flex justify-between items-center mt-10">
                  <div>
-                    <h2 className="text-4xl font-black text-white tracking-tight mb-2">{stepTitle[step]}</h2>
-                    <p className="text-[#9ca3af] font-medium text-sm">
+                    <h2 className="text-4xl font-black text-[#08060d] tracking-tight mb-2">{stepTitle[step]}</h2>
+                    <p className="text-[#6b6375] font-medium text-sm">
                       {step === 'main' && 'Nexus Engine onlayn. Ma\'lumotlarni kiriting.'}
                       {step === 'code' && 'Tasdiqlash kodi Telegram botga yuborildi.'}
                       {step === 'set-password' && 'Akkauntingiz uchun maxfiy parol kiriting.'}
                     </p>
                  </div>
-                 <div className="w-14 h-14 bg-[#aa3bff]/10 rounded-[1.5rem] flex items-center justify-center">
-                    {step === 'main' && <ShieldCheck className="w-7 h-7 text-[#aa3bff]" />}
-                    {step === 'code' && <Send className="w-7 h-7 text-[#aa3bff]" />}
-                    {step === 'set-password' && <Lock className="w-7 h-7 text-[#aa3bff]" />}
+                 <div className="w-14 h-14 bg-[#f5f0ff] rounded-[1.5rem] flex items-center justify-center ring-1 ring-[#ece0ff]">
+                    {step === 'main' && <ShieldCheck className="w-7 h-7 text-[#9329e6]" />}
+                    {step === 'code' && <Send className="w-7 h-7 text-[#9329e6]" />}
+                    {step === 'set-password' && <Lock className="w-7 h-7 text-[#9329e6]" />}
                  </div>
               </div>
             </div>
@@ -242,7 +243,7 @@ export default function LoginPage() {
               {error && (
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                  className="mb-8 flex items-start gap-4 bg-red-500/10 text-red-500 rounded-2xl p-5 text-sm border border-red-500/20 shadow-lg shadow-red-500/5 font-bold"
+                  className="mb-8 flex items-start gap-4 bg-red-50 text-red-600 rounded-2xl p-5 text-sm border border-red-100 font-bold"
                 >
                   <AlertCircle className="w-5 h-5 shrink-0" />
                   <span>{error}</span>
@@ -251,7 +252,7 @@ export default function LoginPage() {
               {info && !error && (
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                  className="mb-8 flex items-start gap-4 bg-emerald-500/10 text-emerald-500 rounded-2xl p-5 text-sm border border-emerald-500/20 shadow-lg shadow-emerald-500/5 font-bold"
+                  className="mb-8 flex items-start gap-4 bg-emerald-50 text-emerald-700 rounded-2xl p-5 text-sm border border-emerald-100 font-bold"
                 >
                   <CheckCircle2 className="w-5 h-5 shrink-0" />
                   <span>{info}</span>
@@ -262,6 +263,33 @@ export default function LoginPage() {
             {/* ══ STEP: main ══════════════════════════════════════════════════════ */}
             {step === 'main' && (
               <form onSubmit={handleMainLogin} className="space-y-6">
+                <div className="flex gap-2 rounded-2xl border border-[#e5e4e7] bg-[#faf9f6] p-1">
+                  <button
+                    type="button"
+                    onClick={() => { setLoginRole('student'); setError(''); }}
+                    className={cn(
+                      'flex-1 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-all',
+                      loginRole === 'student' ? 'bg-white text-[#9329e6] shadow-sm' : 'text-[#6b6375] hover:text-[#08060d]',
+                    )}
+                  >
+                    Talaba
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setLoginRole('staff'); setError(''); }}
+                    className={cn(
+                      'flex-1 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-all',
+                      loginRole === 'staff' ? 'bg-white text-[#9329e6] shadow-sm' : 'text-[#6b6375] hover:text-[#08060d]',
+                    )}
+                  >
+                    O‘qituvchi
+                  </button>
+                </div>
+                {loginRole === 'staff' && (
+                  <p className="text-xs font-medium text-[#6b6375] -mt-2 leading-relaxed">
+                    O‘qituvchi sifatida kirgach, asosiy CRM sahifasiga yo‘naltirilasiz.
+                  </p>
+                )}
                 <div>
                   <label className="block text-[10px] font-black text-[#6b6375] uppercase tracking-[0.3em] mb-3 ml-1">
                     Telefon Raqam
@@ -273,7 +301,7 @@ export default function LoginPage() {
                       value={phone}
                       onChange={e => { setPhone(e.target.value); setError(''); }}
                       placeholder="+998 90 123 45 67"
-                      className="w-full pl-14 pr-6 py-4 rounded-2xl border-2 border-[#2e303a] bg-[#1f2028] text-white placeholder-white/10 focus:outline-none focus:border-[#aa3bff] transition-all text-sm font-black shadow-inner"
+                      className="w-full pl-14 pr-6 py-4 rounded-2xl border-2 border-[#e5e4e7] bg-white text-[#08060d] placeholder:text-[#9ca3af] focus:outline-none focus:border-[#aa3bff] transition-all text-sm font-black shadow-inner"
                       required
                     />
                   </div>
@@ -290,11 +318,11 @@ export default function LoginPage() {
                       value={password}
                       onChange={e => { setPassword(e.target.value); setError(''); }}
                       placeholder="••••••••"
-                      className="w-full pl-14 pr-14 py-4 rounded-2xl border-2 border-[#2e303a] bg-[#1f2028] text-white placeholder-white/10 focus:outline-none focus:border-[#aa3bff] transition-all text-sm font-black shadow-inner"
+                      className="w-full pl-14 pr-14 py-4 rounded-2xl border-2 border-[#e5e4e7] bg-white text-[#08060d] placeholder:text-[#9ca3af] focus:outline-none focus:border-[#aa3bff] transition-all text-sm font-black shadow-inner"
                       required
                     />
                     <button type="button" onClick={() => setShowPwd(v => !v)}
-                      className="absolute right-5 top-1/2 -translate-y-1/2 text-[#6b6375] hover:text-white transition-colors">
+                      className="absolute right-5 top-1/2 -translate-y-1/2 text-[#6b6375] hover:text-[#08060d] transition-colors">
                       {showPwd ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
@@ -306,9 +334,9 @@ export default function LoginPage() {
                 </button>
 
                 {/* Reset Flow Toggle */}
-                <div className="pt-8 mt-4 border-t border-[#2e303a]">
-                   <button type="button" onClick={handleSendCode} disabled={loading}
-                     className="w-full flex items-center justify-center gap-3 text-[#aa3bff] font-black text-[10px] uppercase tracking-[0.2em] py-5 rounded-2xl border-2 border-[#aa3bff]/10 hover:bg-[#aa3bff]/5 transition-all">
+                <div className="pt-8 mt-4 border-t border-[#e5e4e7]">
+                   <button type="button" onClick={handleSendCode} disabled={loading || loginRole === 'staff'}
+                     className="w-full flex items-center justify-center gap-3 text-[#9329e6] font-black text-[10px] uppercase tracking-[0.2em] py-5 rounded-2xl border-2 border-[#ece0ff] bg-[#faf9ff] hover:bg-[#f5f0ff] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                      <Send className="w-4 h-4" />
                      Parolni unutdingizmi? (Telegram orqali)
                    </button>
@@ -319,13 +347,13 @@ export default function LoginPage() {
             {/* ══ STEP: code ══════════════════════════════════════════════════════ */}
             {step === 'code' && (
               <form onSubmit={handleVerifyCode} className="space-y-8">
-                <div className="flex items-center gap-4 bg-[#1f2028] rounded-2xl px-6 py-5 border-2 border-[#2e303a] shadow-inner">
-                  <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
-                     <Phone className="w-5 h-5 text-emerald-500" />
+                <div className="flex items-center gap-4 rounded-2xl border-2 border-[#e5e4e7] bg-white px-6 py-5 shadow-inner">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center ring-1 ring-emerald-100">
+                     <Phone className="w-5 h-5 text-emerald-600" />
                   </div>
-                  <span className="text-white text-lg font-black tracking-widest">{phone}</span>
+                  <span className="text-[#08060d] text-lg font-black tracking-widest">{phone}</span>
                   <button type="button" onClick={() => { setStep('main'); setCode(''); setError(''); }}
-                    className="ml-auto text-[#aa3bff] text-[10px] font-black uppercase tracking-widest hover:underline">
+                    className="ml-auto text-[#9329e6] text-[10px] font-black uppercase tracking-widest hover:underline">
                     Xato?
                   </button>
                 </div>
@@ -341,7 +369,7 @@ export default function LoginPage() {
                     value={code}
                     onChange={e => { setCode(e.target.value.replace(/\D/g, '')); setError(''); }}
                     placeholder="000 000"
-                    className="w-full py-6 rounded-[2rem] border-2 border-[#2e303a] bg-[#1f2028] text-white focus:outline-none focus:border-[#aa3bff] text-center text-5xl font-black tracking-[0.3em] shadow-inner placeholder-white/5"
+                    className="w-full py-6 rounded-[2rem] border-2 border-[#e5e4e7] bg-white text-[#08060d] focus:outline-none focus:border-[#aa3bff] text-center text-5xl font-black tracking-[0.3em] shadow-inner placeholder:text-[#e5e4e7]"
                     autoFocus
                   />
                   <p className="mt-6 text-center text-[10px] font-black uppercase leading-relaxed tracking-[0.15em] text-[#6b6375]">
@@ -355,7 +383,7 @@ export default function LoginPage() {
                 </button>
 
                 <button type="button" onClick={handleResend} disabled={resendTimer > 0 || loading}
-                  className="w-full flex items-center justify-center gap-3 text-[#6b6375] font-black text-[10px] uppercase tracking-widest hover:text-[#aa3bff] transition-colors py-2">
+                  className="w-full flex items-center justify-center gap-3 text-[#6b6375] font-black text-[10px] uppercase tracking-widest hover:text-[#9329e6] transition-colors py-2">
                   <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
                   {resendTimer > 0 ? `Qayta yuborish (${resendTimer}s)` : 'Kodni qayta yuborish'}
                 </button>
@@ -376,11 +404,11 @@ export default function LoginPage() {
                       value={newPassword}
                       onChange={e => { setNewPassword(e.target.value); setError(''); }}
                       placeholder="Kamida 6 ta belgi"
-                      className="w-full pl-14 pr-14 py-4 rounded-2xl border-2 border-[#2e303a] bg-[#1f2028] text-white focus:outline-none focus:border-[#aa3bff] transition-all text-sm font-black shadow-inner"
+                      className="w-full pl-14 pr-14 py-4 rounded-2xl border-2 border-[#e5e4e7] bg-white text-[#08060d] focus:outline-none focus:border-[#aa3bff] transition-all text-sm font-black shadow-inner"
                       autoFocus
                     />
                     <button type="button" onClick={() => setShowNewPwd(v => !v)}
-                      className="absolute right-5 top-1/2 -translate-y-1/2 text-[#6b6375] hover:text-white">
+                      className="absolute right-5 top-1/2 -translate-y-1/2 text-[#6b6375] hover:text-[#08060d]">
                       {showNewPwd ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
@@ -397,7 +425,7 @@ export default function LoginPage() {
                       value={confirmPassword}
                       onChange={e => { setConfirmPassword(e.target.value); setError(''); }}
                       placeholder="Parolni takrorlang"
-                      className="w-full pl-14 pr-14 py-4 rounded-2xl border-2 border-[#2e303a] bg-[#1f2028] text-white focus:outline-none focus:border-[#aa3bff] transition-all text-sm font-black shadow-inner"
+                      className="w-full pl-14 pr-14 py-4 rounded-2xl border-2 border-[#e5e4e7] bg-white text-[#08060d] focus:outline-none focus:border-[#aa3bff] transition-all text-sm font-black shadow-inner"
                     />
                   </div>
                   {newPassword && confirmPassword && (
@@ -415,7 +443,7 @@ export default function LoginPage() {
                 </div>
 
                 <button type="button" onClick={() => { setStep('code'); setError(''); }}
-                  className="w-full text-[#6b6375] font-black text-[10px] uppercase tracking-widest hover:text-white transition-colors mt-2">
+                  className="w-full text-[#6b6375] font-black text-[10px] uppercase tracking-widest hover:text-[#9329e6] transition-colors mt-2">
                   ← Orqaga (Kodni tahrirlash)
                 </button>
               </form>
@@ -424,8 +452,8 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-12 text-center">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#6b6375] opacity-40">
-              IT School · Exam Platform · Secure auth
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#6b6375]/70">
+              IT School · Exam Platform
             </p>
             <div className="flex justify-center gap-6 mt-4 opacity-20">
                <span className="w-1.5 h-1.5 bg-[#aa3bff] rounded-full" />

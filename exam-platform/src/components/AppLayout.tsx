@@ -6,10 +6,11 @@ import {
   LayoutDashboard, User, BookOpen,
   CalendarCheck, CreditCard, ClipboardList, LogOut,
   Menu, X, Bell, Moon, Sun, ChevronLeft, ChevronRight,
-  AlertTriangle, GraduationCap, ShieldCheck
+  AlertTriangle, GraduationCap
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useStudentStore } from '../store/useStudentStore';
+import { useExamStore } from '../store/useExamStore';
 import { getRealtimeSocket } from '../lib/realtimeSocket';
 import { cn } from '../lib/utils';
 import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
@@ -102,7 +103,7 @@ const LogoutModal: React.FC<{ isOpen: boolean; onConfirm: () => void; onCancel: 
 
 // ─── Main Layout ──────────────────────────────────────────────────────────────
 const AppLayout: React.FC = () => {
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAuthenticated } = useAuthStore();
   const { notifications, fetchNotifications, markNotificationRead, fetchCourse } = useStudentStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -115,10 +116,11 @@ const AppLayout: React.FC = () => {
   useModalOverlayEffects(showNotifications, { onEscape: () => setShowNotifications(false) });
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000);
+    const interval = setInterval(fetchNotifications, 120000);
     return () => { clearInterval(interval); };
-  }, [fetchNotifications]);
+  }, [fetchNotifications, isAuthenticated]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -131,6 +133,7 @@ const AppLayout: React.FC = () => {
         void fetchNotifications();
         void fetchCourse();
         void useStudentStore.getState().fetchStats();
+        void useExamStore.getState().fetchExams();
       }, 400);
     };
     const join = () => {
@@ -141,12 +144,14 @@ const AppLayout: React.FC = () => {
     s.on('dashboard_refresh', scheduleRefresh);
     s.on('exam_updated', scheduleRefresh);
     s.on('exam_approved', scheduleRefresh);
+    s.on('exam_published', scheduleRefresh);
     return () => {
       if (debounce) clearTimeout(debounce);
       s.off('connect', join);
       s.off('dashboard_refresh', scheduleRefresh);
       s.off('exam_updated', scheduleRefresh);
       s.off('exam_approved', scheduleRefresh);
+      s.off('exam_published', scheduleRefresh);
     };
   }, [user?.id, user?.role, fetchNotifications, fetchCourse]);
 
@@ -217,33 +222,6 @@ const AppLayout: React.FC = () => {
             {sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
           </button>
         </div>
-
-        {!sidebarCollapsed && user && (
-          <div className="mx-4 mb-2 flex items-center gap-3 rounded-2xl border border-[#e5e4e7]/80 bg-white/60 px-4 py-3 backdrop-blur-md dark:border-[#2e303a] dark:bg-[#1f2028]/50">
-            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-[#aa3bff] to-[#c084fc] text-center text-xs font-black leading-[3rem] text-white shadow-lg shadow-[#aa3bff]/20">
-              {user.image_url ? (
-                <img src={user.image_url} className="h-full w-full object-cover" alt="" />
-              ) : (
-                initials
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-black text-[#08060d] dark:text-white">
-                {user.first_name} {user.last_name}
-              </p>
-              <p className="truncate text-[10px] font-bold uppercase tracking-widest text-[#aa3bff]/80">Talaba</p>
-            </div>
-          </div>
-        )}
-
-        {/* User Card (Collapsed) */}
-        {sidebarCollapsed && (
-          <div className="p-4 flex flex-col items-center gap-4 border-b border-[#f4f3ec]/80 dark:border-[#2e303a] py-6">
-             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#aa3bff] to-[#c084fc] flex items-center justify-center text-white text-xs font-black shadow-lg shadow-[#aa3bff]/20 overflow-hidden">
-                {user?.image_url ? <img src={user.image_url} className="w-full h-full object-cover" alt="" /> : initials}
-             </div>
-          </div>
-        )}
 
         {/* Nav */}
         <nav className="flex-1 p-4 space-y-2 mt-2 overflow-y-auto no-scrollbar">
@@ -332,13 +310,6 @@ const AppLayout: React.FC = () => {
            </div>
 
            <div className="flex items-center gap-6">
-              <div className="hidden sm:flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-[#f4f3ec] dark:bg-[#1f2028] border border-[#e5e4e7] dark:border-[#2e303a] text-[10px] font-black text-[#6b6375] dark:text-[#9ca3af] uppercase tracking-widest shadow-inner">
-                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                 Secure Session
-              </div>
-              
-              <div className="h-10 w-[1px] bg-[#e5e4e7] dark:border-[#2e303a] hidden sm:block" />
-
               <button 
                 onClick={() => navigate('/profile')}
                 className="group flex items-center gap-4 p-1.5 rounded-[1.5rem] hover:bg-[#f4f3ec] dark:hover:bg-[#1f2028] transition-all"

@@ -147,6 +147,32 @@ export class SchemaBootstrapService implements OnModuleInit {
         `,
       },
       {
+        label: 'exams.time_limit (duration_minutes bilan sinxron)',
+        sql: `
+          ALTER TABLE exams ADD COLUMN IF NOT EXISTS time_limit INTEGER;
+          UPDATE exams SET time_limit = COALESCE(time_limit, duration_minutes, 60) WHERE time_limit IS NULL;
+        `,
+      },
+      {
+        label: 'exam_attempts deadline / finished / score',
+        sql: `
+          ALTER TABLE exam_attempts ADD COLUMN IF NOT EXISTS deadline_at TIMESTAMP;
+          ALTER TABLE exam_attempts ADD COLUMN IF NOT EXISTS finished_at TIMESTAMP;
+          ALTER TABLE exam_attempts ADD COLUMN IF NOT EXISTS score NUMERIC(5,2);
+        `,
+      },
+      {
+        label: 'exam_results.submitted_at',
+        sql: `
+          ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP;
+          UPDATE exam_results SET submitted_at = COALESCE(submitted_at, created_at) WHERE submitted_at IS NULL;
+        `,
+      },
+      {
+        label: 'payments.course_id',
+        sql: `ALTER TABLE payments ADD COLUMN IF NOT EXISTS course_id UUID REFERENCES courses(id) ON DELETE SET NULL`,
+      },
+      {
         label: 'blogs',
         sql: `
           CREATE TABLE IF NOT EXISTS blogs (

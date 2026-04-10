@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Param, Delete, UseGuards, Patch, Request }
 import { BlogsService } from './blogs.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CreateBlogPostDto, UpdateBlogPostDto } from './dto/blog-post.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -20,7 +21,7 @@ export class BlogsController {
   getBlog(@Param('slug') slug: string) { return this.blogsService.findOne(slug); }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Permissions('ANALYTICS_VIEW')
   @Post()
   @ApiOperation({ summary: 'Create a new blog post', description: 'Permissions: ANALYTICS_VIEW' })
@@ -29,7 +30,7 @@ export class BlogsController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Permissions('ANALYTICS_VIEW')
   @Patch(':id')
   @ApiOperation({ summary: 'Update a blog post', description: 'Permissions: ANALYTICS_VIEW' })
@@ -38,7 +39,7 @@ export class BlogsController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Permissions('ANALYTICS_VIEW')
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a blog post', description: 'Permissions: ANALYTICS_VIEW' })

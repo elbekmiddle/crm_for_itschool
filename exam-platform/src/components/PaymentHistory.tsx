@@ -1,6 +1,7 @@
 import React from 'react';
 import { Wallet, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { isPaymentPaid, isPaymentPartial } from '../lib/paymentStatus';
 import type { Payment } from '../types';
 
 interface PaymentHistoryProps {
@@ -15,10 +16,10 @@ const PaymentHistory: React.FC<PaymentHistoryProps> = ({
   maxItems,
 }) => {
   const totalPaid = payments
-    .filter((p) => p.status === 'PAID')
+    .filter((p) => isPaymentPaid(p.status))
     .reduce((sum, p) => sum + (p.amount || 0), 0);
 
-  const unpaidCount = payments.filter((p) => p.status === 'UNPAID').length;
+  const unpaidCount = payments.filter((p) => !isPaymentPaid(p.status)).length;
   const displayPayments = maxItems ? payments.slice(0, maxItems) : payments;
 
   return (
@@ -49,7 +50,7 @@ const PaymentHistory: React.FC<PaymentHistoryProps> = ({
         {displayPayments.map((payment, i) => (
           <div key={payment.id || i} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
             <div className="flex items-center gap-3">
-              {payment.status === 'PAID' ? (
+              {isPaymentPaid(payment.status) ? (
                 <CheckCircle2 className="w-4 h-4 text-green-500" />
               ) : (
                 <XCircle className="w-4 h-4 text-red-400" />
@@ -65,13 +66,13 @@ const PaymentHistory: React.FC<PaymentHistoryProps> = ({
             </div>
             <span className={cn(
               "status-pill text-[8px]",
-              payment.status === 'PAID'
+              isPaymentPaid(payment.status)
                 ? "bg-green-50 text-green-600 border-green-200"
-                : payment.status === 'PARTIAL'
+                : isPaymentPartial(payment.status)
                   ? "bg-amber-50 text-amber-600 border-amber-200"
                   : "bg-red-50 text-red-500 border-red-200"
             )}>
-              {payment.status === 'PAID' ? "To'langan" : payment.status === 'PARTIAL' ? "Qisman" : "Qarz"}
+              {isPaymentPaid(payment.status) ? "To'langan" : isPaymentPartial(payment.status) ? "Qisman" : "Qarz"}
             </span>
           </div>
         ))}

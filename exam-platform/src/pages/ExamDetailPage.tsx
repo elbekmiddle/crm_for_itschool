@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useExamStore } from '../store/useExamStore';
-import { Clock, HelpCircle, AlertTriangle, ShieldAlert, Play, Loader2, ArrowLeft, CheckCircle2, ChevronRight, XCircle, Sparkles } from 'lucide-react';
+import { Clock, HelpCircle, AlertTriangle, ShieldAlert, Play, Loader2, ArrowLeft, CheckCircle2, ChevronRight, XCircle, Sparkles, Ban } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { cn } from '../lib/utils';
 import api from '../lib/api';
 import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
 
@@ -23,7 +22,7 @@ const StatusModal: React.FC<{ msg: string; onClose: () => void }> = ({ msg, onCl
         <button
           type="button"
           onClick={onClose}
-          className="w-full py-4 bg-[var(--text-h)] text-[var(--bg)] rounded-2xl font-black text-sm transition-transform active:scale-95 uppercase tracking-widest"
+          className="cursor-pointer w-full py-4 bg-[var(--text-h)] text-[var(--bg)] rounded-2xl font-black text-sm transition-transform active:scale-95 uppercase tracking-widest"
         >
           Tushundim
         </button>
@@ -77,21 +76,35 @@ const ExamDetailPage: React.FC = () => {
   if (!exam) return (
     <div className="page-container text-center py-20">
       <p className="text-[var(--text)] font-black uppercase tracking-widest text-sm">Imtihon topilmadi</p>
-      <button onClick={() => navigate('/exams')} className="btn-secondary mt-6">Orqaga</button>
+      <button type="button" onClick={() => navigate('/exams')} className="cursor-pointer btn-secondary mt-6">Orqaga</button>
     </div>
   );
 
+  const durationMin = Number(exam.duration ?? exam.duration_minutes) || 0;
+  const qCount = Number(exam.questions_count ?? exam.questions?.length) || 0;
+
   const rules = [
-    { icon: Clock, text: `Davomiyligi: ${exam.duration || 0} daqiqa` },
-    { icon: HelpCircle, text: `${exam.questions_count || (exam.questions?.length) || 0} ta savol` },
-    { icon: ShieldAlert, text: 'Boshqa tabga o\'tish ogohlantirishga sabab bo\'ladi' },
-    { icon: AlertTriangle, text: 'Faqat 1 urinish. Topshirilgach qaytarib bo\'lmaydi' },
-    { icon: CheckCircle2, text: 'Vaqt tugaganda avtomatik topshiriladi' },
+    { icon: Clock, text: `Davomiyligi: ${durationMin} daqiqa` },
+    { icon: HelpCircle, text: `${qCount} ta savol` },
+    {
+      icon: ShieldAlert,
+      text: 'Boshqa tab yoki dasturga o‘tish har safar ogohlantirish: jami 3 imkoniyat. Har birida ogohlantirish ko‘rsatiladi.',
+    },
+    { icon: AlertTriangle, text: 'Faqat 1 marta topshirish mumkin. Topshirilgach qayta topshirib bo‘lmaydi.' },
+    { icon: CheckCircle2, text: 'Vaqt tugaganda javoblar avtomatik topshiriladi.' },
+    {
+      icon: Ban,
+      text: '3-chi ogohlantirishdan keyin qoida buzilgan hisoblanasiz: imtihon yakunlanadi va siz chetlashtirilasiz.',
+    },
+    {
+      icon: Sparkles,
+      text: 'Topshirilgach javoblar AI yordamida tekshiriladi, ball hisoblanadi; keyin natija va sharh (review) sahifalaridan ko‘rasiz.',
+    },
   ];
 
   return (
     <div className="page-container max-w-2xl mx-auto space-y-8 pb-32 lg:pb-12">
-      <button onClick={() => navigate('/exams')} className="flex items-center gap-2 text-sm font-black text-[var(--text)] hover:text-[var(--accent)] transition-all uppercase tracking-widest">
+      <button type="button" onClick={() => navigate('/exams')} className="cursor-pointer flex items-center gap-2 text-sm font-black text-[var(--text)] hover:text-[var(--accent)] transition-all uppercase tracking-widest">
         <ArrowLeft className="w-4 h-4" /> Orqaga
       </button>
 
@@ -107,8 +120,8 @@ const ExamDetailPage: React.FC = () => {
           </div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-4">{exam.title}</h1>
           <div className="flex items-center gap-6 text-white/70">
-            <span className="flex items-center gap-2 text-sm font-bold"><Clock className="w-4 h-4" />{exam.duration} daqiqa</span>
-            <span className="flex items-center gap-2 text-sm font-bold"><HelpCircle className="w-4 h-4" />{exam.questions_count} savol</span>
+            <span className="flex items-center gap-2 text-sm font-bold"><Clock className="w-4 h-4" />{durationMin} daqiqa</span>
+            <span className="flex items-center gap-2 text-sm font-bold"><HelpCircle className="w-4 h-4" />{qCount} savol</span>
           </div>
         </div>
       </motion.div>
@@ -128,8 +141,8 @@ const ExamDetailPage: React.FC = () => {
           </h2>
         </div>
         <div className="p-6 space-y-4">
-          {rules.map(({ icon: Icon, text }) => (
-            <div key={text} className="flex items-start gap-4 p-4 rounded-2xl row-hover transition-colors">
+          {rules.map(({ icon: Icon, text }, i) => (
+            <div key={i} className="flex items-start gap-4 p-4 rounded-2xl row-hover transition-colors">
               <div className="w-10 h-10 bg-[var(--bg-muted)] rounded-xl flex items-center justify-center shrink-0">
                 <Icon className="w-4 h-4 text-[var(--text)]" />
               </div>
@@ -144,17 +157,18 @@ const ExamDetailPage: React.FC = () => {
         <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center shrink-0">
           <AlertTriangle className="w-6 h-6 text-amber-500" />
         </div>
-        <p className="text-sm font-semibold text-[var(--text-h)] pt-2">
-          Imtihonni boshlagandan so'ng, imtihon sahifasini tark etish ogohlantirish sifatida hisoblanadi.
-          3 ta ogohlantirish — avtomatik topshirish.
+        <p className="text-sm font-semibold text-[var(--text-h)] pt-2 leading-relaxed">
+          Imtihon boshlangach boshqa tab/oynaga o‘tish yoki fokusni yo‘qotish har safar ogohlantirish beradi (jami 3 imkoniyat).
+          3-chi marta imtihon qoidalari buzilgan deb yopiladi va siz chetlashtirilasiz. Vaqt tugasa — avtomatik topshiriladi.
         </p>
       </div>
 
       {/* Start button */}
       {!showConfirm ? (
         <button
+          type="button"
           onClick={() => setShowConfirm(true)}
-          className="w-full py-5 bg-[var(--accent)] hover:brightness-110 text-white rounded-[2rem] font-black text-base flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-2xl shadow-[var(--accent)]/20 uppercase tracking-widest"
+          className="cursor-pointer w-full py-5 bg-[var(--accent)] hover:brightness-110 text-white rounded-[2rem] font-black text-base flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-2xl shadow-[var(--accent)]/20 uppercase tracking-widest"
         >
           <Play className="w-6 h-6" /> Imtihonni boshlash
         </button>
@@ -173,19 +187,21 @@ const ExamDetailPage: React.FC = () => {
             </div>
           </div>
           <p className="text-sm text-[var(--text)] font-medium leading-relaxed">
-            Imtihonni boshlagandan so'ng uni to'xtatib bo'lmaydi. Vaqt avtomatik hisoblanadi.
+            Boshlagach imtihonni bekor qilib bo‘lmaydi. Vaqt avtomatik hisoblanadi; javoblar AI va tizim orqali baholanadi.
           </p>
           <div className="flex gap-4">
             <button
+              type="button"
               onClick={() => setShowConfirm(false)}
-              className="flex-1 py-4 rounded-2xl border border-[var(--border)] text-[var(--text)] font-black text-sm hover:bg-[var(--hover-bg)] transition-colors uppercase tracking-widest"
+              className="cursor-pointer flex-1 py-4 rounded-2xl border border-[var(--border)] text-[var(--text)] font-black text-sm hover:bg-[var(--hover-bg)] transition-colors uppercase tracking-widest"
             >
               Bekor qilish
             </button>
             <button
+              type="button"
               onClick={handleStart}
               disabled={starting}
-              className="flex-1 py-4 rounded-2xl bg-[var(--accent)] text-white font-black text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-lg shadow-[var(--accent)]/20 uppercase tracking-widest"
+              className="cursor-pointer flex-1 py-4 rounded-2xl bg-[var(--accent)] text-white font-black text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-lg shadow-[var(--accent)]/20 uppercase tracking-widest disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {starting ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Boshlash <ChevronRight className="w-4 h-4" /></>}
             </button>

@@ -123,7 +123,14 @@ export class ExamsService {
       group_name = gr[0]?.name ?? null;
     }
 
-    return { ...exam[0], group_name, questions: normalized };
+    const row = exam[0];
+    return {
+      ...row,
+      group_name,
+      questions: normalized,
+      duration: row.duration_minutes ?? row.duration ?? 60,
+      questions_count: normalized.length,
+    };
   }
 
   async create(createExamDto: CreateExamDto, teacherId: string, role?: string) {
@@ -145,6 +152,9 @@ export class ExamsService {
       const one = await this.findOne(id);
       return one;
     }
+    const prevStatusRows = await this.dbService.query(`SELECT status FROM exams WHERE id = $1`, [id]);
+    const prevStatus = prevStatusRows[0]?.status as string | undefined;
+
     const fields = keys.map((key, i) => `${key} = $${i + 2}`).join(', ');
     const values = keys.map((k) => rest[k]);
     const result = await this.dbService.query(
@@ -156,6 +166,11 @@ export class ExamsService {
        this.socketsGateway.emitToAll('exam_approved', result[0]);
     }
     this.socketsGateway.emitDashboardRefresh({ source: 'exam', action: 'updated' });
+
+    if (rest.status === 'published' && prevStatus !== 'published' && result[0]) {
+      void this.notifyStudentsExamPublished(result[0]);
+    }
+
     return result[0];
   }
 
@@ -403,7 +418,8 @@ export class ExamsService {
   // --- Student Logic ---
 
   async getAvailableExams(studentId: string) {
-    const build = (deletedFilter: string, groupScoped: boolean) => {
+    try {
+      const build = (deletedFilter: string, groupScoped: boolean) => {
       const scope = groupScoped
         ? 'AND (e.group_id IS NULL OR e.group_id = gx.id)'
         : '';
@@ -416,11 +432,11 @@ export class ExamsService {
         (SELECT ea.status FROM exam_attempts ea
          WHERE ea.exam_id = e.id AND ea.student_id = $1
          ORDER BY ea.started_at DESC NULLS LAST LIMIT 1) as attempt_status,
-        (SELECT ea.score FROM exam_attempts ea
-         WHERE ea.exam_id = e.id AND ea.student_id = $1
-         ORDER BY ea.started_at DESC NULLS LAST LIMIT 1) as score,
+        (SELECT er.score FROM exam_results er
+         WHERE er.exam_id = e.id AND er.student_id = $1
+         ORDER BY er.created_at DESC NULLS LAST LIMIT 1) as score,
         CASE
-          WHEN (SELECT ea.status FROM exam_attempts ea WHERE ea.exam_id = e.id AND ea.student_id = $1 ORDER BY ea.started_at DESC NULLS LAST LIMIT 1) = 'submitted' THEN 'COMPLETED'
+          WHEN (SELECT ea.status FROM exam_attempts ea WHERE ea.exam_id = e.id AND ea.student_id = $1 ORDER BY ea.started_at DESC NULLS LAST LIMIT 1) IN ('submitted', 'graded') THEN 'COMPLETED'
           WHEN (SELECT ea.status FROM exam_attempts ea WHERE ea.exam_id = e.id AND ea.student_id = $1 ORDER BY ea.started_at DESC NULLS LAST LIMIT 1) = 'in_progress' THEN 'IN_PROGRESS'
           ELSE 'UPCOMING'
         END as status
@@ -435,20 +451,28 @@ export class ExamsService {
         ${scope}
       )
     `;
-    };
+      };
 
-    let lastErr: any;
-    for (const groupScoped of [true, false]) {
-      for (const deletedPart of ['AND e.deleted_at IS NULL', '']) {
-        try {
-          return await this.dbService.query(build(deletedPart, groupScoped), [studentId]);
-        } catch (e: any) {
-          lastErr = e;
-          if (e?.code !== '42703') throw e;
+      let lastErr: any;
+      for (const groupScoped of [true, false]) {
+        for (const deletedPart of ['AND e.deleted_at IS NULL', '']) {
+          try {
+            return await this.dbService.query(build(deletedPart, groupScoped), [studentId]);
+          } catch (e: any) {
+            lastErr = e;
+            if (e?.code !== '42703') throw e;
+          }
         }
       }
+      // Barcha urinishlar 42703 (ustun yo‘q) bilan yiqilgan bo‘lsa, 503 o‘rniga bo‘sh ro‘yxat
+      if (lastErr?.code === '42703' || lastErr?.code === '42P01') {
+        return [];
+      }
+      throw lastErr;
+    } catch (e: any) {
+      if (e?.code === '42P01' || e?.code === '42703') return [];
+      throw e;
     }
-    throw lastErr;
   }
 
   async startExamAttempt(examId: string, studentUserId: string) {
@@ -456,7 +480,7 @@ export class ExamsService {
     let exam: any[];
     try {
       exam = await this.dbService.query(
-        `SELECT e.id, e.time_limit FROM exams e
+        `SELECT e.id, COALESCE(e.time_limit, e.duration_minutes, 60) AS time_limit FROM exams e
          WHERE e.id = $1 AND e.status = 'published'
          AND EXISTS (
            SELECT 1 FROM groups gx
@@ -468,16 +492,31 @@ export class ExamsService {
       );
     } catch (e: any) {
       if (e?.code !== '42703') throw e;
-      exam = await this.dbService.query(
-        `SELECT e.id, e.time_limit FROM exams e
-         WHERE e.id = $1 AND e.status = 'published'
-         AND EXISTS (
-           SELECT 1 FROM groups gx
-           INNER JOIN group_students gs ON gs.group_id = gx.id AND gs.student_id = $2
-           WHERE gx.course_id = e.course_id
-         )`,
-        [examId, studentId],
-      );
+      try {
+        exam = await this.dbService.query(
+          `SELECT e.id, COALESCE(e.duration_minutes, 60) AS time_limit FROM exams e
+           WHERE e.id = $1 AND e.status = 'published'
+           AND EXISTS (
+             SELECT 1 FROM groups gx
+             INNER JOIN group_students gs ON gs.group_id = gx.id AND gs.student_id = $2
+             WHERE gx.course_id = e.course_id
+             AND (e.group_id IS NULL OR e.group_id = gx.id)
+           )`,
+          [examId, studentId],
+        );
+      } catch (e2: any) {
+        if (e2?.code !== '42703') throw e2;
+        exam = await this.dbService.query(
+          `SELECT e.id, COALESCE(e.duration_minutes, 60) AS time_limit FROM exams e
+           WHERE e.id = $1 AND e.status = 'published'
+           AND EXISTS (
+             SELECT 1 FROM groups gx
+             INNER JOIN group_students gs ON gs.group_id = gx.id AND gs.student_id = $2
+             WHERE gx.course_id = e.course_id
+           )`,
+          [examId, studentId],
+        );
+      }
     }
     if (!exam.length) {
       throw new NotFoundException(
@@ -809,7 +848,49 @@ export class ExamsService {
       FROM exam_results er
       JOIN exams e ON er.exam_id = e.id
       WHERE er.student_id = $1
-      ORDER BY er.submitted_at DESC
+      ORDER BY er.created_at DESC NULLS LAST
     `, [studentId]);
+  }
+
+  /** Guruh a'zolariga bildirishnoma + Socket (imtihon birinchi marta nashr qilinganda). */
+  private async notifyStudentsExamPublished(exam: Record<string, unknown>) {
+    const examId = exam?.id as string | undefined;
+    const title = String(exam?.title ?? 'Imtihon');
+    const groupId = exam?.group_id as string | undefined;
+    if (!examId || !groupId) return;
+
+    let rows: { student_id: string }[];
+    try {
+      rows = await this.dbService.query(
+        `SELECT student_id FROM group_students WHERE group_id = $1 AND (left_at IS NULL)`,
+        [groupId],
+      );
+    } catch (e: any) {
+      if (e?.code !== '42703') return;
+      rows = await this.dbService.query(`SELECT student_id FROM group_students WHERE group_id = $1`, [groupId]);
+    }
+
+    const msg = `${title} — imtihon e'lon qilindi. «Imtihonlar» bo'limidan topshirishingiz mumkin.`;
+    for (const r of rows) {
+      const sid = r.student_id;
+      await this.dbService
+        .query(`INSERT INTO notifications (student_id, title, message) VALUES ($1, $2, $3)`, [
+          sid,
+          'Yangi imtihon',
+          msg,
+        ])
+        .catch(() => {});
+      this.socketsGateway.emitToRoom(`user:${sid}`, 'exam_published', {
+        examId,
+        title,
+        message: msg,
+      });
+    }
+
+    this.socketsGateway.emitToAll('exam_published', {
+      examId,
+      title,
+      groupId,
+    });
   }
 }

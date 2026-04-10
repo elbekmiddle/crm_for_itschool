@@ -7,11 +7,10 @@ import AntiCheatModal from '../components/AntiCheatModal';
 import TimeUpModal from '../components/TimeUpModal';
 import SubmitConfirmModal from '../components/SubmitConfirmModal';
 import AlreadySubmittedModal from '../components/AlreadySubmittedModal';
-import QuestionCard from '../components/QuestionCard';
 import AnswerInput from '../components/AnswerInput';
 import FlagButton from '../components/FlagButton';
 import { AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, CheckCircle2, Loader2, Flag, AlertTriangle, Timer, Info } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, AlertTriangle, Info, ShieldAlert } from 'lucide-react';
 
 const ExamPage: React.FC = () => {
   const {
@@ -24,6 +23,7 @@ const ExamPage: React.FC = () => {
     isExamFinished,
     timeLeft,
     examId,
+    finishReason,
     setAnswer,
     nextQuestion,
     prevQuestion,
@@ -135,10 +135,23 @@ const ExamPage: React.FC = () => {
     setShowSubmitConfirm(false);
   }, [finishExam]);
 
+  if (isExamFinished && finishReason === 'cheating') {
+    return (
+      <div className="exam-platform-session min-h-screen flex flex-col items-center justify-center gap-4 bg-[var(--bg)] p-8 text-center">
+        <ShieldAlert className="w-16 h-16 text-red-500" />
+        <h2 className="text-2xl font-black text-[var(--text-h)] max-w-md">Imtihondan chetlashtirildingiz</h2>
+        <p className="text-sm text-[var(--text)] max-w-lg leading-relaxed">
+          3 marta ogohlantirishdan keyin boshqa tab yoki ekrandan chiqish qoidalarga zid deb topildi. Javoblaringiz yuborildi; AI baholash va natija keyingi sahifada.
+        </p>
+        <p className="text-xs text-[var(--text)] opacity-70">Siz natija sahifasiga yo‘naltirilmoqdasiz…</p>
+      </div>
+    );
+  }
+
   if (!questions || questions.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
-        <Loader2 className="w-10 h-10 text-primary-600 animate-spin" />
+      <div className="exam-platform-session min-h-screen flex flex-col items-center justify-center space-y-4 bg-[var(--bg)]">
+        <Loader2 className="w-10 h-10 text-[var(--accent)] animate-spin" />
         <p className="label-subtle">Savollar yuklanmoqda...</p>
       </div>
     );
@@ -154,24 +167,24 @@ const ExamPage: React.FC = () => {
   ).length;
 
   return (
-    <div className="flex bg-slate-50 dark:bg-slate-950 min-h-screen no-select overflow-hidden">
+    <div className="exam-platform-session flex bg-[var(--bg)] min-h-screen no-select overflow-hidden">
       <SidebarNavigator />
 
-      <div className="flex-1 flex flex-col h-screen relative">
+      <div className="flex-1 flex flex-col min-h-0 h-[100dvh] relative">
         {isBlurred && (
            <div className="on-screen-mask">
               <p className="animate-pulse">DIQQAT: EKRAN BLOKLANDI.<br/>DAVOM ETISH UCHUN TIZIMGA QAYTING.</p>
            </div>
         )}
 
-        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 z-20">
+        <header className="h-16 bg-[var(--bg-card)] border-b border-[var(--border)] px-6 flex items-center justify-between shrink-0 z-20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl flex items-center justify-center">
-              <Info className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            <div className="w-10 h-10 bg-[var(--accent-bg)] rounded-xl flex items-center justify-center border border-[var(--accent-border)]">
+              <Info className="w-5 h-5 text-[var(--accent)]" />
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Savol</p>
-              <p className="text-sm font-black text-slate-800 dark:text-white leading-none">
+              <p className="text-[10px] font-black text-[var(--text)] uppercase tracking-widest opacity-80">Savol</p>
+              <p className="text-sm font-black text-[var(--text-h)] leading-none">
                 {currentQuestionIndex + 1} / {questions.length}
               </p>
             </div>
@@ -180,26 +193,27 @@ const ExamPage: React.FC = () => {
           <div className="flex items-center gap-6">
             <ExamTimer />
             <button 
+              type="button"
               onClick={() => setShowSubmitConfirm(true)}
-              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm transition-all hover:scale-105 active:scale-95 shadow-lg shadow-indigo-600/20"
+              className="cursor-pointer px-6 py-2.5 bg-[var(--accent)] hover:brightness-110 text-white rounded-xl font-black text-sm transition-all hover:scale-105 active:scale-95 shadow-lg shadow-[var(--accent)]/25"
             >
               Topshirish
             </button>
           </div>
         </header>
 
-        <div className="h-1 bg-slate-100 dark:bg-slate-800 w-full shrink-0">
-          <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+        <div className="h-1 bg-[var(--divide)] w-full shrink-0">
+          <div className="h-full bg-[var(--accent)] transition-all duration-300" style={{ width: `${progress}%` }} />
         </div>
 
         <div className={`flex-1 overflow-y-auto no-scrollbar p-6 lg:p-10 transition-all duration-500 ${isBlurred ? 'cheat-blur' : ''}`}>
           <div className="max-w-4xl mx-auto space-y-8 animate-in slide-in-from-right-5 duration-300">
-            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none p-8 lg:p-12 relative">
-              <div className="absolute -top-3 left-8 px-4 py-1.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg">
+            <div className="bg-[var(--bg-card)] rounded-[2rem] border border-[var(--border)] shadow-[var(--shadow)] p-8 lg:p-12 relative">
+              <div className="absolute -top-3 left-8 px-4 py-1.5 bg-[var(--accent)] text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-md shadow-[var(--accent)]/30">
                 Savol #{currentQuestionIndex + 1}
               </div>
               <div className="flex justify-between items-start mb-8">
-                 <h2 className="text-xl lg:text-2xl font-bold text-slate-800 dark:text-white leading-tight">
+                 <h2 className="text-xl lg:text-2xl font-bold text-[var(--text-h)] leading-tight">
                     {currentQuestion.text}
                  </h2>
                  <FlagButton 
@@ -215,32 +229,34 @@ const ExamPage: React.FC = () => {
                 />
               </div>
             </div>
-            <div className="flex items-center gap-4 px-6 py-4 bg-amber-50 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-900/10 rounded-2xl">
+            <div className="flex items-center gap-4 px-6 py-4 bg-amber-500/5 border border-amber-500/15 rounded-2xl">
               <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-              <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 opacity-80">
-                Diqqat: Har bir tanlangan javob avtomatik saqlab boriladi. Internet uzilsa ham holatingiz saqlanib qoladi.
+              <p className="text-xs font-semibold text-[var(--text-h)] opacity-90 leading-relaxed">
+                Javoblar avtomatik saqlanadi. Boshqa tabga o‘tish 3 marta ogohlantirish bilan cheklanadi; 3-chisidan keyin imtihon yopiladi. Topshirilgach AI javoblarni tekshiradi, ball va sharh natija/review bo‘limida.
               </p>
             </div>
           </div>
         </div>
 
-        <footer className="h-20 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 z-20">
+        <footer className="h-20 bg-[var(--bg-card)] border-t border-[var(--border)] px-6 flex items-center justify-between shrink-0 z-20">
           <button 
+            type="button"
             onClick={prevQuestion}
             disabled={currentQuestionIndex === 0}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-0 transition-all font-mono"
+            className="cursor-pointer flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-[var(--text)] hover:text-[var(--text-h)] hover:bg-[var(--hover-bg)] disabled:opacity-0 disabled:pointer-events-none transition-all font-mono"
           >
             <ChevronLeft className="w-5 h-5" /> ORQAGA
           </button>
           <div className="flex items-center gap-2">
             {questions.map((_, idx) => (
-              <div key={idx} className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${idx === currentQuestionIndex ? 'w-6 bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'}`} />
+              <div key={idx} className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${idx === currentQuestionIndex ? 'w-6 bg-[var(--accent)]' : 'bg-[var(--divide)]'}`} />
             ))}
           </div>
           <button 
+            type="button"
             onClick={nextQuestion}
             disabled={currentQuestionIndex === questions.length - 1}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 disabled:opacity-0 transition-all font-mono"
+            className="cursor-pointer flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-[var(--accent)] hover:bg-[var(--accent-bg)] disabled:opacity-0 disabled:pointer-events-none transition-all font-mono"
           >
             KEYINGISI <ChevronRight className="w-5 h-5" />
           </button>

@@ -47,11 +47,25 @@ export class AnalyticsService {
   }
 
   async getStudentAnalytics(studentId: string) {
+    const cacheKey = `analytics:student:v2:${studentId}`;
+    try {
+      const cached = await this.redisService.get(cacheKey);
+      if (cached != null && cached !== '') {
+        const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
+        if (parsed && !parsed.error) return parsed;
+      }
+    } catch (e) {
+      this.logger.warn(`Redis get ${cacheKey}`, e);
+    }
+
     const data = await student_analytics_data(this.dbService, studentId);
     if (!data) return { error: 'Student not found' };
 
     const { student, presence, attendanceHistory, payments, exams } = data;
-    const totalPaid = payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    const totalPaid = payments.reduce(
+      (sum, p) => sum + (parseFloat(String((p as any).amount ?? 0)) || 0),
+      0,
+    );
 
     let ai_humor = null;
     const missedObj = presence.find(p => p.status === 'ABSENT');
@@ -90,15 +104,23 @@ export class AnalyticsService {
       }
     }
 
-    return {
+    const out = {
       personal_info: student,
       attendance_summary: presence,
       attendance_history: attendanceHistory,
       payments: payments,
       total_paid: totalPaid,
       exam_results: exams,
-      ai_humor
+      ai_humor,
     };
+
+    try {
+      await this.redisService.set(cacheKey, out, { ex: 60 });
+    } catch (e) {
+      this.logger.warn(`Redis set ${cacheKey}`, e);
+    }
+
+    return out;
   }
 
   async getTeacherDashboard(teacherId: string) {

@@ -67,10 +67,11 @@ const ExamListPage: React.FC = () => {
             const isActive = tab === id;
             return (
               <button
+                type="button"
                 key={id}
                 onClick={() => setTab(id)}
                 className={cn(
-                   "relative py-3 px-6 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all flex items-center gap-3",
+                   "cursor-pointer relative py-3 px-6 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all flex items-center gap-3",
                    isActive ? "bg-[#aa3bff] text-white shadow-xl shadow-[#aa3bff]/20" : "bg-slate-100 dark:bg-white/5 text-slate-500 hover:text-slate-700 dark:hover:text-white"
                 )}
               >
@@ -114,8 +115,9 @@ const ExamListPage: React.FC = () => {
                   transition={{ delay: idx * 0.05 }}
                 >
                   <button
+                    type="button"
                     onClick={() => navigate(isCompleted ? `/exams/${exam.id}/result` : `/exams/${exam.id}`)}
-                    className="bg-white dark:bg-[#16171d] rounded-[2.5rem] p-8 border border-slate-100 dark:border-[#2e303a] shadow-sm hover:shadow-2xl hover:scale-[1.02] hover:-translate-y-2 transition-all group w-full text-left flex flex-col justify-between h-full min-h-[320px] relative overflow-hidden"
+                    className="cursor-pointer bg-white dark:bg-[#16171d] rounded-[2.5rem] p-8 border border-slate-100 dark:border-[#2e303a] shadow-sm hover:shadow-2xl hover:scale-[1.02] hover:-translate-y-2 transition-all group w-full text-left flex flex-col justify-between h-full min-h-[320px] relative overflow-hidden"
                   >
                     {/* Decorative subtle gradient for cards */}
                     <div className={cn(

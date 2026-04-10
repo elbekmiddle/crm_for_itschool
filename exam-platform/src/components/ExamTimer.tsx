@@ -27,10 +27,10 @@ const ExamTimer: React.FC = () => {
       className={cn(
         "sticky top-0 z-50 flex items-center justify-between px-4 md:px-8 py-3 border-b transition-all duration-500",
         isCritical
-          ? "bg-red-50 border-red-200"
+          ? "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-900/40"
           : isLowTime
-            ? "bg-amber-50 border-amber-200"
-            : "bg-white/90 backdrop-blur-md border-slate-100"
+            ? "bg-amber-50 border-amber-200 dark:bg-amber-950/25 dark:border-amber-900/30"
+            : "bg-[var(--bg-card)]/95 backdrop-blur-md border-[var(--border)]"
       )}
     >
       <div className="flex items-center gap-3">
@@ -40,20 +40,20 @@ const ExamTimer: React.FC = () => {
             isCritical ? "bg-red-500" : isLowTime ? "bg-amber-500" : "bg-green-500"
           )}
         />
-        <span className="text-sm font-bold text-slate-500 uppercase tracking-wider hidden md:block">
+        <span className="text-sm font-bold text-[var(--text)] uppercase tracking-wider hidden md:block">
           {examTitle || "Imtihon"}
         </span>
-        <span className="text-sm font-bold text-slate-400 uppercase tracking-wider md:hidden">
+        <span className="text-sm font-bold text-[var(--text)] uppercase tracking-wider opacity-70 md:hidden">
           Imtihon
         </span>
       </div>
 
       <div className="flex items-center gap-3">
-        <Timer className={cn("w-5 h-5", isCritical ? "text-red-500" : isLowTime ? "text-amber-500" : "text-slate-400")} />
+        <Timer className={cn("w-5 h-5", isCritical ? "text-red-500" : isLowTime ? "text-amber-500" : "text-[var(--accent)]")} />
         <div
           className={cn(
             "text-2xl md:text-3xl font-mono font-black tabular-nums transition-colors",
-            isCritical ? "text-red-600 pulse-glow rounded-xl px-3 py-1" : isLowTime ? "text-amber-600" : "text-primary-700"
+            isCritical ? "text-red-600 pulse-glow rounded-xl px-3 py-1" : isLowTime ? "text-amber-600" : "text-[var(--text-h)]"
           )}
         >
           {formatTime(timeLeft)}

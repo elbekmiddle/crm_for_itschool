@@ -3,7 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../../infrastructure/redis/redis.service';
-import { permissionsForRole } from '../constants/role-permissions';
+import { normalizeRole, permissionsForRole } from '../constants/role-permissions';
 import { Request } from 'express';
 
 const cookieExtractor = (req: Request): string | null => {
@@ -43,12 +43,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
     }
     
-    const permissions = permissionsForRole(payload.role);
+    const role = normalizeRole(payload.role);
+    const permissions = permissionsForRole(role);
 
     return {
       id: payload.sub,
       email: payload.email,
-      role: payload.role,
+      role: role || payload.role,
       permissions,
       first_name: payload.first_name,
       last_name: payload.last_name,

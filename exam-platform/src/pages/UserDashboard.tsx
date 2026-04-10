@@ -9,6 +9,7 @@ import {
   CalendarCheck, BookOpen, GraduationCap, Zap, Award
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { isPaymentPaid } from '../lib/paymentStatus';
 
 const UserDashboard: React.FC = () => {
   const { exams, fetchExams, isLoading: examsLoading } = useExamStore();
@@ -29,7 +30,7 @@ const UserDashboard: React.FC = () => {
   const safeExams = Array.isArray(exams) ? exams : [];
   const upcomingExams = safeExams.filter((e: any) => e.status !== 'COMPLETED').slice(0, 3);
   const recentResults = safeExams.filter((e: any) => e.status === 'COMPLETED').slice(0, 3);
-  const unpaidPayments = payments.filter((p: any) => p.status === 'UNPAID' || !p.status);
+  const unpaidPayments = payments.filter((p: any) => !isPaymentPaid(p.status));
   const hasAlerts = (stats?.missed_lessons || 0) > 3 || unpaidPayments.length > 0;
 
   const statItems = [

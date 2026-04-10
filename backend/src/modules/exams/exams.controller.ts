@@ -117,13 +117,6 @@ export class ExamsController {
   }
 
   @Permissions('EXAM_PASS')
-  @Get(':id')
-  @ApiOperation({ summary: 'Get specific exam details', description: 'Permissions: EXAM_PASS' })
-  getExamDetails(@Param('id') id: string) {
-    return this.examsService.findOne(id);
-  }
-
-  @Permissions('EXAM_PASS')
   @Get('attempt/:attemptId/questions')
   @ApiOperation({ summary: 'Get questions for an attempt', description: 'Permissions: EXAM_PASS' })
   getAttemptQuestions(@Param('attemptId') attemptId: string) {
@@ -163,6 +156,14 @@ export class ExamsController {
   @ApiOperation({ summary: 'Check for an active ongoing attempt for an exam', description: 'Permissions: EXAM_PASS' })
   getActiveAttempt(@Param('id') examId: string, @Request() req) {
     return this.examsService.getActiveAttempt(examId, req.user.id);
+  }
+
+  /** `GET :id` oxirida — `attempt` va boshqa statik segmentlar bilan chalkashmasin */
+  @Permissions('EXAM_PASS')
+  @Get(':id')
+  @ApiOperation({ summary: 'Get specific exam details', description: 'Permissions: EXAM_PASS' })
+  getExamDetails(@Param('id') id: string) {
+    return this.examsService.findOne(id);
   }
 
   @Permissions('EXAM_MANAGE')

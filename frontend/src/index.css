@@ -455,10 +455,10 @@ html.light .modal-overlay {
     transform var(--ui-duration) var(--ui-ease);
 }
 .modal-content.modal-content--screen {
-  /* To‘liq viewport balandligi (overlay padding bilan mos): savollar modali uchun */
-  height: calc(100dvh - 1.5rem);
-  min-height: calc(100dvh - 1.5rem);
-  max-height: calc(100dvh - 1.5rem);
+  /* Savollar modali: markazda ko‘rinadigan balandlik (ichki scroll); kenglik — .modal_content_exam */
+  height: 60vh;
+  min-height: 0;
+  max-height: 60vh;
   display: flex;
   flex-direction: column;
 }

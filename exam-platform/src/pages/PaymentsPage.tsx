@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { Wallet, CheckCircle2, AlertTriangle, CreditCard, Loader2, Sparkles, TrendingDown, TrendingUp, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
+import { isPaymentPaid } from '../lib/paymentStatus';
 
 const PaymentsPage: React.FC = () => {
   const { payments, fetchPayments, isLoading } = useStudentStore();
@@ -11,8 +12,8 @@ const PaymentsPage: React.FC = () => {
 
   useEffect(() => { if (user?.id) fetchPayments(user.id); }, [user?.id]);
 
-  const paid = payments.filter((p: any) => p.status === 'PAID' || p.status === 'paid');
-  const unpaid = payments.filter((p: any) => p.status !== 'PAID' && p.status !== 'paid');
+  const paid = payments.filter((p: any) => isPaymentPaid(p.status));
+  const unpaid = payments.filter((p: any) => !isPaymentPaid(p.status));
   const totalPaid = paid.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
   const totalDebt = unpaid.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
 
@@ -100,7 +101,7 @@ const PaymentsPage: React.FC = () => {
             {payments.length > 0 ? (
               <div>
                 {payments.map((p: any, i: number) => {
-                  const isPaid = p.status === 'PAID' || p.status === 'paid';
+                  const isPaid = isPaymentPaid(p.status);
                   return (
                     <div key={p.id || i} className="flex items-center gap-5 p-6 border-b border-[var(--divide)] last:border-b-0 row-hover transition-colors">
                       <div className={cn(

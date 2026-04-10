@@ -16,15 +16,47 @@ import ExamPage from './pages/ExamPage';
 import ResultPage from './pages/ResultPage';
 import ReviewPage from './pages/ReviewPage';
 
+const StaffRedirect = () => {
+  const crm = import.meta.env.VITE_CRM_ORIGIN || 'http://localhost:5173';
+  const logout = useAuthStore((s) => s.logout);
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-[#f4f3ec] p-8 text-center font-sans">
+      <p className="text-xl font-black text-[#08060d] tracking-tight">O‘qituvchi / xodim</p>
+      <p className="text-[#6b6375] max-w-md text-sm font-medium leading-relaxed">
+        Talaba imtihon paneli o‘rniga asosiy CRM kabinetidan foydalaning (telefon bilan kirish endi u yerda ham ishlaydi).
+      </p>
+      <a
+        href={crm}
+        className="rounded-2xl bg-[#aa3bff] px-8 py-4 font-black text-white uppercase tracking-widest text-xs shadow-lg shadow-[#aa3bff]/25 hover:bg-[#9329e6] transition-colors"
+      >
+        CRM ga o‘tish
+      </a>
+      <button
+        type="button"
+        onClick={() => {
+          logout();
+          window.location.href = '/login';
+        }}
+        className="text-sm font-black text-red-500 hover:underline"
+      >
+        Chiqish
+      </button>
+    </div>
+  );
+};
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, user } = useAuthStore();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  
-  // RBAC: Only allow STUDENTS (or admins for testing)
+
+  if (user && (user.role === 'TEACHER' || user.role === 'MANAGER')) {
+    return <StaffRedirect />;
+  }
+
   if (user && user.role !== 'STUDENT' && user.role !== 'ADMIN') {
     return <div className="p-10 text-center font-bold text-red-500">Kirish taqiqlangan. Bu platforma faqat talabalar uchun.</div>;
   }
-  
+
   return <>{children}</>;
 };
 

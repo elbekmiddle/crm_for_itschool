@@ -12,10 +12,10 @@ const FlagButton: React.FC<FlagButtonProps> = ({ isFlagged, onToggle }) => {
     <button
       onClick={onToggle}
       className={cn(
-        "p-3 rounded-xl border-2 transition-all shrink-0",
+        "cursor-pointer p-3 rounded-xl border-2 transition-all shrink-0",
         isFlagged
-          ? "bg-amber-50 border-amber-300 text-amber-600 shadow-sm shadow-amber-100"
-          : "bg-white border-slate-200 text-slate-400 hover:border-amber-300 hover:text-amber-500"
+          ? "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400 shadow-sm"
+          : "bg-[var(--bg-card)] border-[var(--border)] text-[var(--text)] hover:border-amber-500/50 hover:text-amber-600"
       )}
       title={isFlagged ? "Belgini olib tashlash" : "Savolni belgilash"}
     >

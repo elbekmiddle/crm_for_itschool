@@ -44,12 +44,15 @@ const ReviewPage: React.FC = () => {
   return (
     <div className="page-container mx-auto space-y-6 pb-20 lg:pb-6 animate-in">
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate(`/exams/${id}/result`)} className="w-9 h-9 bg-white border border-slate-200 rounded-xl flex items-center justify-center hover:border-primary-300 transition-all">
+        <button type="button" onClick={() => navigate(`/exams/${id}/result`)} className="cursor-pointer w-9 h-9 bg-white dark:bg-[var(--bg-card)] border border-slate-200 dark:border-[var(--border)] rounded-xl flex items-center justify-center hover:border-primary-300 transition-all">
           <ArrowLeft className="w-4 h-4 text-slate-500" />
         </button>
         <div>
-          <h1 className="text-xl font-black text-slate-900">Javoblarni ko'rish</h1>
-          <p className="text-slate-400 text-xs mt-0.5">{correct} / {total} to'g'ri javob</p>
+          <h1 className="text-xl font-black text-slate-900 dark:text-white">Javoblarni ko&apos;rish</h1>
+          <p className="text-slate-400 text-xs mt-0.5">{correct} / {total} to&apos;g&apos;ri javob</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 leading-relaxed max-w-xl">
+            Ochiq va murakkab javoblar AI yordamida tekshirilgan bo&apos;lishi mumkin; yakuniy ball natija sahifasida ko&apos;rinadi.
+          </p>
         </div>
       </div>
 

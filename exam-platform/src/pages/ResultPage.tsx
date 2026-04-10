@@ -116,17 +116,23 @@ const ResultPage: React.FC = () => {
           </div>
         </div>
 
+        <p className="text-center text-[11px] text-[var(--text)] opacity-80 px-2 leading-relaxed">
+          Ball ochiq va matnli javoblar uchun AI baholash natijasiga asoslangan bo&apos;lishi mumkin.
+        </p>
+
         {/* Actions */}
         <div className="space-y-2">
           <button
+            type="button"
             onClick={() => navigate(`/exams/${id}/review`)}
-            className="btn-secondary w-full py-3.5 flex items-center justify-center gap-2"
+            className="cursor-pointer btn-secondary w-full py-3.5 flex items-center justify-center gap-2"
           >
-            <BookOpen className="w-4 h-4" /> Javoblarni ko'rish
+            <BookOpen className="w-4 h-4" /> Javoblarni ko&apos;rish
           </button>
           <button
+            type="button"
             onClick={() => navigate('/exams')}
-            className="btn-primary w-full py-3.5 flex items-center justify-center gap-2"
+            className="cursor-pointer btn-primary w-full py-3.5 flex items-center justify-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" /> Imtihonlarga qaytish
           </button>

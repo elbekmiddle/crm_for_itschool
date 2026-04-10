@@ -3,7 +3,7 @@ import { useStudentStore } from '../store/useStudentStore';
 import { useAuthStore } from '../store/useAuthStore';
 import {
   BookOpen, User, Loader2, TrendingUp,
-  Layers, CheckCircle2, Sparkles, Award, Zap, ChevronRight
+  Layers, CheckCircle2, Sparkles, Zap
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
@@ -220,24 +220,6 @@ const CoursePage: React.FC = () => {
                 </div>
               </div>
             )}
-
-            {/* Achievement / Tip Card */}
-            <div className="bg-[#aa3bff]/5 p-8 rounded-[2.5rem] border border-[#aa3bff]/10 group hover:bg-[#aa3bff]/10 transition-all">
-                <div className="flex items-start gap-5">
-                   <div className="w-12 h-12 bg-[#aa3bff] rounded-2xl flex items-center justify-center shadow-lg shadow-[#aa3bff]/30 shrink-0 transform group-hover:rotate-12 transition-transform">
-                      <Award className="w-6 h-6 text-white" />
-                   </div>
-                   <div className="space-y-2">
-                       <h4 className="text-slate-900 dark:text-white font-black text-sm uppercase tracking-tight">Oylik Maqsad</h4>
-                       <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold leading-relaxed">
-                         Keyingi darajaga o'tish uchun imtihonlardan 85% dan yuqori natija ko'rsatishingiz zarur.
-                       </p>
-                       <button className="flex items-center gap-2 text-[#aa3bff] font-black text-[10px] uppercase tracking-widest pt-2 group-hover:gap-3 transition-all">
-                          Portfolio Tekshirish <ChevronRight className="w-3 h-3" />
-                       </button>
-                   </div>
-                </div>
-            </div>
           </div>
         </div>
       ) : (

@@ -23,8 +23,8 @@ export const MultipleChoiceInput: React.FC<MultipleChoiceProps> = ({
         className={cn(
           "flex items-center p-5 border-2 rounded-2xl cursor-pointer transition-all active:scale-[0.99]",
           selectedId === opt.id
-            ? "border-primary-500 bg-primary-50/70 shadow-sm shadow-primary-100"
-            : "border-slate-100 hover:border-slate-300 bg-slate-50/50"
+            ? "border-[var(--accent)] bg-[var(--accent-bg)] shadow-sm"
+            : "border-[var(--border)] hover:border-[var(--accent-border)] bg-[var(--bg-card)]"
         )}
       >
         <input
@@ -38,15 +38,15 @@ export const MultipleChoiceInput: React.FC<MultipleChoiceProps> = ({
           className={cn(
             "w-5 h-5 rounded-full border-2 flex items-center justify-center mr-4 shrink-0 transition-colors",
             selectedId === opt.id
-              ? "border-primary-600 bg-primary-600"
-              : "border-slate-300 bg-white"
+              ? "border-[var(--accent)] bg-[var(--accent)]"
+              : "border-[var(--border)] bg-[var(--bg-card)]"
           )}
         >
           {selectedId === opt.id && <div className="w-2 h-2 rounded-full bg-white" />}
         </div>
         <span className={cn(
           "text-base font-medium",
-          selectedId === opt.id ? "text-primary-900" : "text-slate-700"
+          selectedId === opt.id ? "text-[var(--text-h)]" : "text-[var(--text)]"
         )}>
           {opt.text}
         </span>
@@ -84,7 +84,7 @@ export const MultiSelectInput: React.FC<MultiSelectProps> = ({
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+      <p className="text-[10px] font-black text-[var(--text)] uppercase tracking-widest mb-1 opacity-80">
         Maksimal {maxChoices} ta javob tanlang
       </p>
       {options.map((opt) => {
@@ -95,8 +95,8 @@ export const MultiSelectInput: React.FC<MultiSelectProps> = ({
             className={cn(
               "flex items-center p-5 border-2 rounded-2xl cursor-pointer transition-all active:scale-[0.99]",
               isSelected
-                ? "border-primary-500 bg-primary-50/70 shadow-sm shadow-primary-100"
-                : "border-slate-100 hover:border-slate-300 bg-slate-50/50"
+                ? "border-[var(--accent)] bg-[var(--accent-bg)] shadow-sm"
+                : "border-[var(--border)] hover:border-[var(--accent-border)] bg-[var(--bg-card)]"
             )}
           >
             <input
@@ -109,15 +109,15 @@ export const MultiSelectInput: React.FC<MultiSelectProps> = ({
               className={cn(
                 "w-6 h-6 rounded-lg border-2 flex items-center justify-center mr-4 shrink-0 transition-all",
                 isSelected
-                  ? "border-primary-600 bg-primary-600"
-                  : "border-slate-300 bg-white"
+                  ? "border-[var(--accent)] bg-[var(--accent)]"
+                  : "border-[var(--border)] bg-[var(--bg-card)]"
               )}
             >
               {isSelected && <div className="w-2.5 h-2.5 bg-white rounded-sm" />}
             </div>
             <span className={cn(
               "text-base font-medium",
-              isSelected ? "text-primary-900" : "text-slate-700"
+              isSelected ? "text-[var(--text-h)]" : "text-[var(--text)]"
             )}>
               {opt.text}
             </span>
@@ -141,7 +141,7 @@ export const TextAnswerInput: React.FC<TextInputProps> = ({
   onChange,
 }) => (
   <textarea
-    className="w-full min-h-[220px] p-6 text-base bg-white dark:bg-slate-900/50 border-2 border-slate-100 dark:border-slate-800 rounded-3xl outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all resize-none font-medium leading-relaxed dark:text-slate-200"
+    className="w-full min-h-[220px] p-6 text-base bg-[var(--bg-card)] border-2 border-[var(--border)] rounded-3xl outline-none focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-bg)] transition-all resize-none font-medium leading-relaxed text-[var(--text-h)] placeholder:text-[var(--text)]"
     placeholder="Javobingizni bu yerga batafsil yozing..."
     spellCheck={false}
     value={value}
@@ -190,7 +190,7 @@ export const CodeEditorInput: React.FC<TextInputProps> = ({
   };
 
   return (
-    <div className="relative rounded-[2.5rem] overflow-hidden border-2 border-slate-100 dark:border-slate-800 bg-slate-950 shadow-2xl flex flex-col">
+    <div className="relative rounded-[2.5rem] overflow-hidden border-2 border-[var(--border)] bg-[#0c0d12] shadow-2xl flex flex-col">
       <div className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between">
         <div className="flex gap-2">
           <div className="w-3 h-3 bg-red-400/80 rounded-full" />
@@ -201,14 +201,14 @@ export const CodeEditorInput: React.FC<TextInputProps> = ({
           <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">JavaScript Editor</span>
           <button 
             onClick={handleRun}
-            className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2"
+            className="px-4 py-1.5 bg-[var(--accent)] hover:brightness-110 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2"
           >
             <Play className="w-3 h-3 fill-current" /> Sinab ko'rish
           </button>
         </div>
       </div>
       <textarea
-        className="w-full min-h-[350px] p-8 text-sm font-mono bg-transparent text-indigo-300 outline-none transition-all resize-none leading-relaxed selection:bg-indigo-500/30"
+        className="w-full min-h-[350px] p-8 text-sm font-mono bg-transparent text-[#c4b5fd] outline-none transition-all resize-none leading-relaxed selection:bg-[var(--accent)]/30"
         placeholder="// Kodingizni bu yerga yozing..."
         spellCheck={false}
         value={value}

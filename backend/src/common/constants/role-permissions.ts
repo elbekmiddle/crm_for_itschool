@@ -1,3 +1,13 @@
+/** Eski token / DB qiymatlari: kichik harf, ko‘plik va hokazo */
+export function normalizeRole(role: string | undefined | null): string {
+  if (role == null) return '';
+  const r = String(role).trim();
+  if (!r) return '';
+  const u = r.toUpperCase();
+  if (u === 'STUDENTS') return 'STUDENT';
+  return u;
+}
+
 /** Server-side permission sets by role (JWT payload yangilangan bo‘lmasa ham strategiya shu ro‘yxatdan foydalanadi). */
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
   ADMIN: ['*'],
@@ -40,6 +50,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
 };
 
 export function permissionsForRole(role: string | undefined): string[] {
-  if (!role) return [];
-  return ROLE_PERMISSIONS[role] ?? [];
+  const nr = normalizeRole(role);
+  if (!nr) return [];
+  return ROLE_PERMISSIONS[nr] ?? [];
 }

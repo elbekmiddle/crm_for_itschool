@@ -139,8 +139,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       const { data } = await api.get(`/payments/student/${studentId}`);
       const pList = Array.isArray(data) ? data : (data.payments || []);
       set({ payments: pList, isLoading: false });
-    } catch {
-      set({ isLoading: false });
+    } catch (e) {
+      devLog('fetchPayments failed:', e);
+      set({ payments: [], isLoading: false });
     }
   },
 

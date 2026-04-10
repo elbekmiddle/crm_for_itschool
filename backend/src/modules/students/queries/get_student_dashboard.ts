@@ -125,15 +125,26 @@ export async function get_student_dashboard(dbService: DbService, studentId: str
   let exams: any[] = [];
   try {
     exams = await dbService.query(
-      `SELECT er.score, er.submitted_at, e.title as exam_title, e.id as exam_id
+      `SELECT er.score, COALESCE(er.submitted_at, er.created_at) AS submitted_at, e.title as exam_title, e.id as exam_id
        FROM exam_results er
        JOIN exams e ON er.exam_id = e.id
        WHERE er.student_id = $1
-       ORDER BY er.submitted_at DESC NULLS LAST`,
+       ORDER BY COALESCE(er.submitted_at, er.created_at) DESC NULLS LAST`,
       [studentId],
     );
   } catch {
-    exams = [];
+    try {
+      exams = await dbService.query(
+        `SELECT er.score, er.created_at AS submitted_at, e.title as exam_title, e.id as exam_id
+         FROM exam_results er
+         JOIN exams e ON er.exam_id = e.id
+         WHERE er.student_id = $1
+         ORDER BY er.created_at DESC NULLS LAST`,
+        [studentId],
+      );
+    } catch {
+      exams = [];
+    }
   }
 
   return {

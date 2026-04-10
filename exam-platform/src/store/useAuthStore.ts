@@ -21,7 +21,7 @@ interface AuthState {
   checkPhone: (phone: string) => Promise<{ is_verified: boolean; has_telegram: boolean }>;
   sendCode: (phone: string) => Promise<void>;
   verifyCode: (phone: string, code: string, password: string) => Promise<void>;
-  loginWithPassword: (phone: string, password: string) => Promise<void>;
+  loginWithPassword: (phone: string, password: string, kind?: 'student' | 'staff') => Promise<void>;
   login: (phone: string, firstName: string) => Promise<void>;
   logout: () => void;
   updateActivity: () => void;
@@ -119,11 +119,12 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      loginWithPassword: async (phone, password) => {
+      loginWithPassword: async (phone, password, kind = 'student') => {
         set({ isLoading: true });
-        console.log('[Auth] loginWithPassword — phone:', phone);
+        console.log('[Auth] loginWithPassword — phone:', phone, 'kind:', kind);
         try {
-          const { data } = await api.post('/auth/student-login-password', { phone, password });
+          const path = kind === 'staff' ? '/auth/staff-phone-login' : '/auth/student-login-password';
+          const { data } = await api.post(path, { phone, password });
           console.log('[Auth] loginWithPassword response:', data);
           const token = unwrapToken(data);
           if (!token) throw new Error('Server JWT tokenni qaytarmadi');

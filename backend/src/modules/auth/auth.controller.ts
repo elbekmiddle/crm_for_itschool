@@ -130,6 +130,20 @@ export class AuthController {
     };
   }
 
+  @Post('staff-phone-login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Xodim: telefon + parol (o‘qituvchi / menejer / admin)' })
+  async staffPhoneLogin(@Body() dto: StudentPasswordLoginDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.staffPhoneLogin(dto);
+    this.setCookies(res, { access_token: result.access_token, refresh_token: result.refresh_token });
+    return {
+      message: 'Muvaffaqiyatli tizimga kirdingiz',
+      user: result.user,
+      access_token: result.access_token,
+      refresh_token: result.refresh_token,
+    };
+  }
+
   /* ── TOKEN REFRESH / LOGOUT ── */
 
   @Post('refresh')
