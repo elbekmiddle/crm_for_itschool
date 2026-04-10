@@ -2,6 +2,41 @@ import React, { useState } from 'react';
 import { Play } from 'lucide-react';
 import { cn } from '../lib/utils';
 
+function normalizeOptionsList(raw: unknown): Array<{ id: string; text: string }> {
+  if (raw == null) return [];
+  let parsed: any = raw;
+  if (typeof raw === 'string') {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(parsed)) {
+    if (parsed && typeof parsed === 'object') {
+      return Object.entries(parsed).map(([id, text]) => ({
+        id: String(id),
+        text: String(text),
+      }));
+    }
+    return [];
+  }
+  return parsed.map((opt: any, i: number) => {
+    if (opt != null && typeof opt === 'object') {
+      return {
+        id: String(opt.id ?? opt.value ?? i + 1),
+        text: String(opt.text ?? opt.label ?? opt.value ?? ''),
+      };
+    }
+    return { id: String(i + 1), text: String(opt) };
+  });
+}
+
+const DEFAULT_TF: Array<{ id: string; text: string }> = [
+  { id: '1', text: "To'g'ri" },
+  { id: '2', text: "Noto'g'ri" },
+];
+
 // ── Multiple Choice Input ──
 interface MultipleChoiceProps {
   questionId: string;
@@ -240,30 +275,62 @@ const AnswerInput: React.FC<AnswerInputProps> = ({
   value,
   onChange,
 }) => {
-  if (question.type === 'multiple_choice') {
+  const rawType = String(question.type || 'text')
+    .toLowerCase()
+    .replace(/-/g, '_');
+  let qType = rawType;
+  if (qType === 'multi_select' || qType === 'multiple_select') {
+    qType = 'multi_select';
+  }
+
+  let options = normalizeOptionsList(question.options);
+
+  if (
+    ['boolean', 'tf', 'true_false', 'yes_no'].includes(qType) &&
+    options.length < 2
+  ) {
+    options = DEFAULT_TF;
+  }
+
+  if (
+    qType !== 'multi_select' &&
+    ['select', 'mcq', 'single_choice', 'radio', 'boolean', 'tf', 'true_false', 'yes_no'].includes(qType)
+  ) {
+    qType = 'multiple_choice';
+  }
+
+  const looksLikeSelection =
+    options.length >= 2 &&
+    !['code', 'multi_select'].includes(qType);
+
+  if (looksLikeSelection && ['text', 'short_answer', 'essay', 'open', 'long_text'].includes(qType)) {
+    qType = 'multiple_choice';
+  }
+
+  if (qType === 'multiple_choice') {
     return (
       <MultipleChoiceInput
         questionId={question.id}
-        options={question.options || []}
-        selectedId={value || null}
+        options={options}
+        selectedId={value != null && value !== '' ? String(value) : null}
         onSelect={(_, id) => onChange(id)}
       />
     );
   }
-  
-  if (question.type === 'multi_select') {
+
+  if (qType === 'multi_select' || qType === 'multiple_select') {
     return (
       <MultiSelectInput
         questionId={question.id}
-        options={question.options || []}
-        selectedIds={Array.isArray(value) ? value : []}
+        options={options}
+        selectedIds={Array.isArray(value) ? value.map(String) : []}
         maxChoices={question.max_choices || 3}
         onToggle={(_, ids) => onChange(ids)}
       />
     );
   }
 
-  if (question.type === 'code') {
+  if (qType === 'code') {
     return (
       <CodeEditorInput
         questionId={question.id}

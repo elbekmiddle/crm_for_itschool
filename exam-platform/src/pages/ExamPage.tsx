@@ -9,6 +9,7 @@ import SubmitConfirmModal from '../components/SubmitConfirmModal';
 import AlreadySubmittedModal from '../components/AlreadySubmittedModal';
 import AnswerInput from '../components/AnswerInput';
 import FlagButton from '../components/FlagButton';
+import { displayQuestionTextUz } from '../lib/questionText';
 import { AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Loader2, AlertTriangle, Info, ShieldAlert } from 'lucide-react';
 
@@ -207,18 +208,18 @@ const ExamPage: React.FC = () => {
         </div>
 
         <div className={`flex-1 overflow-y-auto no-scrollbar p-6 lg:p-10 transition-all duration-500 ${isBlurred ? 'cheat-blur' : ''}`}>
-          <div className="max-w-4xl mx-auto space-y-8 animate-in slide-in-from-right-5 duration-300">
+          <div className="w-full max-w-[min(96rem,calc(100vw-3rem))] mx-auto space-y-8 animate-in slide-in-from-right-5 duration-300 px-1">
             <div className="bg-[var(--bg-card)] rounded-[2rem] border border-[var(--border)] shadow-[var(--shadow)] p-8 lg:p-12 relative">
               <div className="absolute -top-3 left-8 px-4 py-1.5 bg-[var(--accent)] text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-md shadow-[var(--accent)]/30">
                 Savol #{currentQuestionIndex + 1}
               </div>
               <div className="flex justify-between items-start mb-8">
-                 <h2 className="text-xl lg:text-2xl font-bold text-[var(--text-h)] leading-tight">
-                    {currentQuestion.text}
+                 <h2 className="text-xl lg:text-2xl font-bold text-[var(--text-h)] leading-tight flex-1 pr-4">
+                    {displayQuestionTextUz(currentQuestion.text)}
                  </h2>
                  <FlagButton 
-                    active={isFlagged} 
-                    onClick={() => toggleFlag(currentQuestion.id)} 
+                    isFlagged={isFlagged} 
+                    onToggle={() => toggleFlag(currentQuestion.id)} 
                  />
               </div>
               <div className="space-y-4">

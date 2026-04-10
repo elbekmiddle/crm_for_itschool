@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Phone, Lock, Eye, EyeOff,
@@ -23,8 +23,6 @@ export default function LoginPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
-  /** Asosiy kirish: talaba (exam API) yoki xodim (CRM ga yo‘naltiriladi) */
-  const [loginRole, setLoginRole] = useState<'student' | 'staff'>('student');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -36,8 +34,11 @@ export default function LoginPage() {
   const [info, setInfo] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
 
+  const didRedirect = useRef(false);
   useEffect(() => {
-    if (isAuthenticated) navigate('/dashboard', { replace: true });
+    if (!isAuthenticated || didRedirect.current) return;
+    didRedirect.current = true;
+    navigate('/dashboard', { replace: true });
   }, [isAuthenticated, navigate]);
 
   // Resend countdown
@@ -63,7 +64,7 @@ export default function LoginPage() {
     if (!password) { setError("Parolni kiriting"); return; }
     setLoading(true);
     try {
-      await loginWithPassword(normalizedPhone, password, loginRole);
+      await loginWithPassword(normalizedPhone, password, 'student');
       navigate('/dashboard');
     } catch (err: any) {
       const msg = err.response?.data?.message || err.response?.data?.data?.message || err.message || '';
@@ -263,33 +264,9 @@ export default function LoginPage() {
             {/* ══ STEP: main ══════════════════════════════════════════════════════ */}
             {step === 'main' && (
               <form onSubmit={handleMainLogin} className="space-y-6">
-                <div className="flex gap-2 rounded-2xl border border-[#e5e4e7] bg-[#faf9f6] p-1">
-                  <button
-                    type="button"
-                    onClick={() => { setLoginRole('student'); setError(''); }}
-                    className={cn(
-                      'flex-1 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-all',
-                      loginRole === 'student' ? 'bg-white text-[#9329e6] shadow-sm' : 'text-[#6b6375] hover:text-[#08060d]',
-                    )}
-                  >
-                    Talaba
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setLoginRole('staff'); setError(''); }}
-                    className={cn(
-                      'flex-1 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-all',
-                      loginRole === 'staff' ? 'bg-white text-[#9329e6] shadow-sm' : 'text-[#6b6375] hover:text-[#08060d]',
-                    )}
-                  >
-                    O‘qituvchi
-                  </button>
-                </div>
-                {loginRole === 'staff' && (
-                  <p className="text-xs font-medium text-[#6b6375] -mt-2 leading-relaxed">
-                    O‘qituvchi sifatida kirgach, asosiy CRM sahifasiga yo‘naltirilasiz.
-                  </p>
-                )}
+                <p className="text-xs font-bold text-[#6b6375] -mt-1 leading-relaxed rounded-2xl border border-[#ece0ff] bg-[#faf9ff] px-4 py-3">
+                  Faqat <span className="text-[#9329e6]">talaba</span> akkaunti bilan kiring (CRM uchun alohida dastur).
+                </p>
                 <div>
                   <label className="block text-[10px] font-black text-[#6b6375] uppercase tracking-[0.3em] mb-3 ml-1">
                     Telefon Raqam
@@ -335,7 +312,7 @@ export default function LoginPage() {
 
                 {/* Reset Flow Toggle */}
                 <div className="pt-8 mt-4 border-t border-[#e5e4e7]">
-                   <button type="button" onClick={handleSendCode} disabled={loading || loginRole === 'staff'}
+                   <button type="button" onClick={handleSendCode} disabled={loading}
                      className="w-full flex items-center justify-center gap-3 text-[#9329e6] font-black text-[10px] uppercase tracking-[0.2em] py-5 rounded-2xl border-2 border-[#ece0ff] bg-[#faf9ff] hover:bg-[#f5f0ff] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                      <Send className="w-4 h-4" />
                      Parolni unutdingizmi? (Telegram orqali)

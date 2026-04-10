@@ -1,4 +1,11 @@
-import { Injectable, BadRequestException, ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { QueueService } from '../../infrastructure/queue/queue.service';
@@ -14,6 +21,8 @@ import { SocketsGateway } from '../sockets/sockets.gateway';
 import { AiService } from '../ai/ai.service';
 @Injectable()
 export class ExamsService {
+  private readonly logger = new Logger(ExamsService.name);
+
   constructor(
     private readonly dbService: DbService, 
     private readonly queueService: QueueService,
@@ -590,25 +599,92 @@ export class ExamsService {
       return v;
     };
 
-    return questions.map((q: any) => ({
-      ...q,
-      type: String(q.type || 'multiple_choice').toLowerCase().replace(/-/g, '_'),
-      options: parseJson(q.options, []),
-    }));
+    const normalizeOptions = (raw: any): Array<{ id: string; text: string }> => {
+      const p = parseJson(raw, []);
+      if (Array.isArray(p)) {
+        return p.map((opt: any, i: number) => {
+          if (opt != null && typeof opt === 'object') {
+            return {
+              id: String(opt.id ?? opt.value ?? i + 1),
+              text: String(opt.text ?? opt.label ?? opt.value ?? ''),
+            };
+          }
+          return { id: String(i + 1), text: String(opt) };
+        });
+      }
+      if (p && typeof p === 'object') {
+        return Object.entries(p).map(([id, text]) => ({
+          id: String(id),
+          text: String(text),
+        }));
+      }
+      return [];
+    };
+
+    return questions.map((q: any) => {
+      let t = String(q.type || 'multiple_choice')
+        .toLowerCase()
+        .replace(/-/g, '_');
+      if (['select', 'mcq', 'single_choice', 'radio'].includes(t)) t = 'multiple_choice';
+      if (['boolean', 'tf', 'true_false', 'yes_no'].includes(t)) t = 'true_false';
+      if (['multiple_select'].includes(t)) t = 'multi_select';
+
+      let options = normalizeOptions(q.options);
+
+      if (t === 'true_false' && options.length < 2) {
+        options = [
+          { id: '1', text: "To'g'ri" },
+          { id: '2', text: "Noto'g'ri" },
+        ];
+        t = 'multiple_choice';
+      }
+
+      if (options.length >= 2 && ['text', 'short_answer', 'essay', 'open'].includes(t)) {
+        t = 'multiple_choice';
+      }
+
+      return {
+        ...q,
+        type: t,
+        options,
+      };
+    });
   }
 
   async getAttemptAnswers(attemptId: string) {
-    const answers = await this.dbService.query(`
-      SELECT question_id, answer_payload
-      FROM attempt_answers
-      WHERE attempt_id = $1
-    `, [attemptId]);
+    const parseCell = (v: any) => {
+      if (v == null) return null;
+      if (typeof v === 'object') return v;
+      if (typeof v === 'string') {
+        try {
+          return JSON.parse(v);
+        } catch {
+          return v;
+        }
+      }
+      return v;
+    };
 
-    // Return as a simple mapping
-    return answers.reduce((acc, curr) => {
-      acc[curr.question_id] = JSON.parse(curr.answer_payload);
-      return acc;
-    }, {});
+    const sqlVariants = [
+      `SELECT question_id, answer AS ap FROM attempt_answers WHERE attempt_id = $1`,
+      `SELECT question_id, answer_payload AS ap FROM attempt_answers WHERE attempt_id = $1`,
+    ];
+
+    let lastErr: any;
+    for (const sql of sqlVariants) {
+      try {
+        const answers = await this.dbService.query(sql, [attemptId]);
+        return answers.reduce((acc: Record<string, any>, curr: any) => {
+          acc[curr.question_id] = parseCell(curr.ap);
+          return acc;
+        }, {});
+      } catch (e: any) {
+        lastErr = e;
+        if (e?.code !== '42703') throw e;
+      }
+    }
+    this.logger.warn(`getAttemptAnswers: ${lastErr?.message || 'fallback empty'}`);
+    return {};
   }
 
   async getActiveAttempt(examId: string, studentId: string) {
@@ -632,12 +708,32 @@ export class ExamsService {
       }
     }
 
-    return this.dbService.query(`
+    const payloadStr = JSON.stringify(payload ?? null);
+    const attempts = [
+      `
+      INSERT INTO attempt_answers (attempt_id, question_id, answer)
+      VALUES ($1, $2, $3::jsonb)
+      ON CONFLICT (attempt_id, question_id) DO UPDATE
+      SET answer = EXCLUDED.answer, answered_at = NOW()
+    `,
+      `
       INSERT INTO attempt_answers (attempt_id, question_id, answer_payload)
       VALUES ($1, $2, $3)
-      ON CONFLICT (attempt_id, question_id) DO UPDATE 
+      ON CONFLICT (attempt_id, question_id) DO UPDATE
       SET answer_payload = EXCLUDED.answer_payload, answered_at = NOW()
-    `, [attemptId, questionId, JSON.stringify(payload)]);
+    `,
+    ];
+
+    let last: any;
+    for (const sql of attempts) {
+      try {
+        return await this.dbService.query(sql, [attemptId, questionId, payloadStr]);
+      } catch (e: any) {
+        last = e;
+        if (e?.code !== '42703') throw e;
+      }
+    }
+    throw last;
   }
 
   async submitExamAttempt(attemptId: string) {
@@ -678,13 +774,17 @@ export class ExamsService {
        if (qType === 'select' || qType === 'mcq') qType = 'multiple_choice';
        if (qType === 'boolean' || qType === 'tf') qType = 'true_false';
 
-       const unwrapPayload = (raw: string | null) => {
+       const unwrapPayloadCell = (raw: any) => {
          if (raw == null || raw === '') return null;
-         try {
-           return JSON.parse(raw);
-         } catch {
-           return raw;
+         if (typeof raw === 'object') return raw;
+         if (typeof raw === 'string') {
+           try {
+             return JSON.parse(raw);
+           } catch {
+             return raw;
+           }
          }
+         return raw;
        };
        const unwrapCorrect = (v: any) => {
          if (v == null) return null;
@@ -700,7 +800,11 @@ export class ExamsService {
 
        const qCorrectRaw = unwrapCorrect(question[0].correct_answer);
        const qText = String(question[0].text || '');
-       const uPayload = unwrapPayload(ans.answer_payload);
+       const rawAns =
+         ans.answer_payload != null && ans.answer_payload !== ''
+           ? ans.answer_payload
+           : ans.answer;
+       const uPayload = unwrapPayloadCell(rawAns);
        const refStr =
          typeof qCorrectRaw === 'string' || typeof qCorrectRaw === 'number'
            ? String(qCorrectRaw)
@@ -710,7 +814,9 @@ export class ExamsService {
 
        // Enhanced AI evaluation
        if (qType === 'multiple_choice' || qType === 'true_false') {
-         isCorrect = numEq(uPayload, qCorrectRaw);
+         isCorrect =
+           numEq(uPayload, qCorrectRaw) ||
+           String(uPayload ?? '') === String(qCorrectRaw ?? '');
        } else if (qType === 'multi_select' || qType === 'multiple_select') {
          const pArr = (Array.isArray(uPayload) ? uPayload : []).map((x) => Number(x)).sort((a, b) => a - b);
          const cArr = (Array.isArray(qCorrectRaw) ? qCorrectRaw : []).map((x) => Number(x)).sort((a, b) => a - b);
@@ -757,10 +863,23 @@ export class ExamsService {
        }
 
        if (isCorrect) correctCount++;
-       
-       await this.dbService.query(`
-         UPDATE attempt_answers SET is_correct = $1, earned_points = $2 WHERE id = $3
-       `, [isCorrect, points || (isCorrect ? 10 : 0), ans.id]);
+
+       const pts = points || (isCorrect ? 10 : 0);
+       try {
+         await this.dbService.query(
+           `UPDATE attempt_answers SET is_correct = $1, points_earned = $2 WHERE id = $3`,
+           [isCorrect, pts, ans.id],
+         );
+       } catch (e: any) {
+         if (e?.code === '42703') {
+           await this.dbService.query(
+             `UPDATE attempt_answers SET is_correct = $1, earned_points = $2 WHERE id = $3`,
+             [isCorrect, pts, ans.id],
+           );
+         } else {
+           throw e;
+         }
+       }
     }
 
     const finalScore = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
@@ -771,12 +890,55 @@ export class ExamsService {
       WHERE id = $2 RETURNING *
     `, [finalScore, attemptId]);
 
-    // Update the legacy exam_results table for CRM compatibility
-    await this.dbService.query(`
-       INSERT INTO exam_results (exam_id, student_id, score, submitted_at)
-       VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (exam_id, student_id) DO UPDATE SET score = EXCLUDED.score
-    `, [exam_id, student_id, finalScore]);
+    const incorrectCount = Math.max(0, totalCount - correctCount);
+    const passed = finalScore >= 50;
+    const attTimes = await this.dbService.query(
+      `SELECT started_at, finished_at FROM exam_attempts WHERE id = $1`,
+      [attemptId],
+    );
+    let timeTakenRow = 0;
+    if (attTimes[0]?.started_at && attTimes[0]?.finished_at) {
+      timeTakenRow = Math.floor(
+        (new Date(attTimes[0].finished_at).getTime() -
+          new Date(attTimes[0].started_at).getTime()) /
+          1000,
+      );
+    }
+
+    try {
+      const updated = await this.dbService.query(
+        `UPDATE exam_results SET score = $3::numeric, correct_count = $4, incorrect_count = $5, total_questions = $6, time_taken = $7, updated_at = NOW()
+         WHERE exam_id = $1 AND student_id = $2 RETURNING id`,
+        [
+          exam_id,
+          student_id,
+          finalScore,
+          correctCount,
+          incorrectCount,
+          totalCount,
+          timeTakenRow,
+        ],
+      );
+      if (!updated.length) {
+        await this.dbService.query(
+          `INSERT INTO exam_results (id, attempt_id, exam_id, student_id, score, passed, correct_count, incorrect_count, total_questions, time_taken)
+           VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [
+            attemptId,
+            exam_id,
+            student_id,
+            finalScore,
+            passed,
+            correctCount,
+            incorrectCount,
+            totalCount,
+            timeTakenRow,
+          ],
+        );
+      }
+    } catch (e: any) {
+      this.logger.warn(`exam_results sync skipped: ${e?.message || e}`);
+    }
 
     // Send Telegram Notification
     try {

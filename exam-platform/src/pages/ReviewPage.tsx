@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useExamStore } from '../store/useExamStore';
 import { ArrowLeft, CheckCircle2, XCircle, Loader2, BookOpen } from 'lucide-react';
 import api from '../lib/api';
+import { displayQuestionTextUz } from '../lib/questionText';
 
 const ReviewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -78,7 +79,9 @@ const ReviewPage: React.FC = () => {
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-start gap-2">
                     <span className="text-[10px] font-black text-slate-400 uppercase mt-0.5 shrink-0">#{i + 1}</span>
-                    <p className="text-sm font-semibold text-slate-800 leading-relaxed">{q.text || q.question}</p>
+                    <p className="text-sm font-semibold text-slate-800 leading-relaxed">
+                      {displayQuestionTextUz(q.text || q.question)}
+                    </p>
                   </div>
                   {isCorrect === true && <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />}
                   {isCorrect === false && <XCircle className="w-5 h-5 text-red-400 shrink-0" />}
@@ -89,9 +92,15 @@ const ReviewPage: React.FC = () => {
                   <div className="space-y-2">
                     {q.options.map((opt: any, oi: number) => {
                       const optVal = typeof opt === 'object' ? opt.text || opt.value : opt;
-                      const optId = typeof opt === 'object' ? opt.id || opt.value : opt;
-                      const isStudentAnswer = q.student_answer === optId || q.student_answer === oi;
-                      const isCorrectOpt = q.correct_answer === optId || q.correct_answer === oi;
+                      const optId = typeof opt === 'object' ? opt.id ?? opt.value : opt;
+                      const sa = q.student_answer;
+                      const ca = q.correct_answer;
+                      const isStudentAnswer =
+                        String(sa ?? '') === String(optId ?? '') ||
+                        String(sa ?? '') === String(oi + 1);
+                      const isCorrectOpt =
+                        String(ca ?? '') === String(optId ?? '') ||
+                        String(ca ?? '') === String(oi + 1);
                       return (
                         <div key={oi} className={`p-4 rounded-2xl text-sm font-bold border-2 transition-all flex items-center justify-between ${
                           isCorrectOpt 

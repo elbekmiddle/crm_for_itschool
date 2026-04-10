@@ -46,7 +46,7 @@ const ResultPage: React.FC = () => {
       <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[var(--accent)]/10 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[100px] translate-x-1/2 translate-y-1/2 pointer-events-none" />
 
-      <div className="w-full max-w-sm animate-in space-y-5 relative z-10 px-4">
+      <div className="w-full max-w-2xl animate-in space-y-5 relative z-10 px-4">
 
         {/* Score card */}
         <div className={`bg-gradient-to-br ${color} rounded-[2rem] p-10 text-white text-center relative overflow-hidden shadow-2xl`}>
