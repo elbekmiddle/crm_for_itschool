@@ -1,27 +1,37 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useExamStore } from '../store/useExamStore';
 import { Clock, HelpCircle, AlertTriangle, ShieldAlert, Play, Loader2, ArrowLeft, CheckCircle2, ChevronRight, XCircle, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 import api from '../lib/api';
+import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
 
 // ─── Simple Status Modal ──────────────────────────────────────────────────────
-const StatusModal: React.FC<{ msg: string; onClose: () => void }> = ({ msg, onClose }) => (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-    <div className="absolute inset-0 bg-[#08060d]/60 backdrop-blur-md" onClick={onClose} />
-    <div className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl p-8 w-full max-w-sm text-center border border-[var(--border)]">
-      <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-        <XCircle className="w-8 h-8 text-red-500" />
+const StatusModal: React.FC<{ msg: string; onClose: () => void }> = ({ msg, onClose }) => {
+  useModalOverlayEffects(true, { onEscape: onClose });
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[#08060d]/60 backdrop-blur-md" onClick={onClose} aria-hidden />
+      <div className="relative bg-[var(--bg-card)] rounded-[2.5rem] shadow-2xl p-8 w-full max-w-sm text-center border border-[var(--border)]">
+        <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+          <XCircle className="w-8 h-8 text-red-500" />
+        </div>
+        <h3 className="font-black text-[var(--text-h)] text-xl mb-2">Xatolik</h3>
+        <p className="text-sm text-[var(--text)] mb-8 font-medium">{msg}</p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full py-4 bg-[var(--text-h)] text-[var(--bg)] rounded-2xl font-black text-sm transition-transform active:scale-95 uppercase tracking-widest"
+        >
+          Tushundim
+        </button>
       </div>
-      <h3 className="font-black text-[var(--text-h)] text-xl mb-2">Xatolik</h3>
-      <p className="text-sm text-[var(--text)] mb-8 font-medium">{msg}</p>
-      <button onClick={onClose} className="w-full py-4 bg-[var(--text-h)] text-[var(--bg)] rounded-2xl font-black text-sm transition-transform active:scale-95 uppercase tracking-widest">
-        Tushundim
-      </button>
-    </div>
-  </div>
-);
+    </div>,
+    document.body
+  );
+};
 
 const ExamDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();

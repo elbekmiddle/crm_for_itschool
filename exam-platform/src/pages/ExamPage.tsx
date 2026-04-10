@@ -249,7 +249,7 @@ const ExamPage: React.FC = () => {
 
       <AnimatePresence>
         {showAntiCheat && <AntiCheatModal isOpen={showAntiCheat} violations={violations} onClose={() => setShowAntiCheat(false)} />}
-        {showTimeUp && <TimeUpModal isOpen={showTimeUp} onConfirm={handleAutoSubmit} />}
+        {showTimeUp && <TimeUpModal isOpen={showTimeUp} onAutoSubmit={handleAutoSubmit} />}
         {showSubmitConfirm && (
           <SubmitConfirmModal 
             isOpen={showSubmitConfirm} 
@@ -259,7 +259,9 @@ const ExamPage: React.FC = () => {
             onCancel={() => setShowSubmitConfirm(false)} 
           />
         )}
-        {showAlreadySubmitted && <AlreadySubmittedModal isOpen={showAlreadySubmitted} onClose={() => navigate(`/exams/${examId}/result`)} />}
+        {showAlreadySubmitted && (
+          <AlreadySubmittedModal isOpen={showAlreadySubmitted} onGoHome={() => navigate(`/exams/${examId}/result`)} />
+        )}
       </AnimatePresence>
     </div>
   );

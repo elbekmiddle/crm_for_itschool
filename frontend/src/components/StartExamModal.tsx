@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, ShieldAlert, CheckSquare, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
 
 interface Props {
   isOpen: boolean;
@@ -13,6 +15,7 @@ interface Props {
 export default function StartExamModal({ isOpen, onClose, examId, examTitle }: Props) {
   const [agreed, setAgreed] = useState(false);
   const navigate = useNavigate();
+  useModalOverlayEffects(isOpen, { onEscape: onClose });
 
   const handleStart = () => {
     if (agreed) {
@@ -20,7 +23,7 @@ export default function StartExamModal({ isOpen, onClose, examId, examTitle }: P
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -29,9 +32,9 @@ export default function StartExamModal({ isOpen, onClose, examId, examTitle }: P
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200]"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[10000]"
           />
-          <div className="fixed inset-0 flex items-center justify-center p-6 z-[201] pointer-events-none">
+          <div className="fixed inset-0 flex items-center justify-center p-6 z-[10001] pointer-events-none">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -109,6 +112,7 @@ export default function StartExamModal({ isOpen, onClose, examId, examTitle }: P
           </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

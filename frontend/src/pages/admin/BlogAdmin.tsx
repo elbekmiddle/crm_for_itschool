@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../../lib/api';
 import { useConfirm } from '../../context/ConfirmContext';
 import { 
@@ -470,8 +471,9 @@ const BlogAdminPage: React.FC = () => {
       )}
 
       {/* Create/Edit Modal (Full Screen) */}
-      {modal && (
-        <div className="fixed inset-0 z-[100] m-0 flex min-h-[100dvh] flex-col p-0">
+      {modal &&
+        createPortal(
+        <div className="fixed inset-0 z-[10000] m-0 flex min-h-[100dvh] flex-col p-0">
           <button
             type="button"
             aria-label="Yopish fon"
@@ -507,7 +509,7 @@ const BlogAdminPage: React.FC = () => {
                     type="button"
                     disabled={saveBusy}
                     onClick={handleSave}
-                    className="flex items-center gap-2 rounded-xl bg-[#aa3bff] px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#aa3bff]/20 transition-all hover:bg-[#9329e6] active:scale-[0.98] disabled:opacity-60"
+                    className="flex items-center gap-2 rounded-xl bg-[#aa3bff] px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#aa3bff]/20 transition-all hover:bg-[#9329e6] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {saveBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     {saveBusy ? 'Saqlanmoqda…' : 'Saqlash'}
@@ -555,7 +557,8 @@ const BlogAdminPage: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

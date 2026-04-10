@@ -10,6 +10,7 @@ import {
 import { useConfirm } from '../context/ConfirmContext';
 import { toast } from 'react-hot-toast';
 import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const statusMap: Record<string, { label: string; cls: string }> = {
   draft: { label: 'DRAFT', cls: 'pill-draft' },
@@ -749,16 +750,27 @@ const ExamsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Review questions (AI / manual) */}
-      {modal === 'review' && targetExam && (
-        <div
-          className="modal-overlay"
-          onClick={() => !reviewLoading && setModal(null)}
-        >
-          <div
-            className="modal-content flex max-h-[90vh] max-w-2xl flex-col overflow-hidden p-6 animate-in-scale"
-            onClick={(e) => e.stopPropagation()}
+      {/* Review questions (AI / manual) — to‘liq balandlik, yopilish animatsiyasi */}
+      <AnimatePresence mode="wait">
+        {modal === 'review' && targetExam && (
+          <motion.div
+            key="exam-review"
+            className="modal-overlay"
+            role="presentation"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => !reviewLoading && setModal(null)}
           >
+            <motion.div
+              className="modal-content modal-content--screen flex min-h-0 max-w-2xl flex-col overflow-hidden p-6 sm:p-7"
+              initial={{ opacity: 0, scale: 0.96, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98, y: 10 }}
+              transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="mb-4 flex shrink-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="text-lg font-black text-slate-800 dark:text-slate-100">
@@ -945,9 +957,10 @@ const ExamsPage: React.FC = () => {
                 </>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Results Modal */}
       {modal === 'results' && (

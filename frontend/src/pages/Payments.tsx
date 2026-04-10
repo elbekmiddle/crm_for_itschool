@@ -9,6 +9,7 @@ import {
 import { useToast } from '../context/ToastContext';
 import MiniGrowthChart from '../components/charts/MiniGrowthChart';
 import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
+import { SlidingTabIndicator } from '../components/ui/SlidingTabIndicator';
 import { paymentMethodLabel } from '../lib/paymentLabels';
 
 const PaymentsPage: React.FC = () => {
@@ -196,17 +197,29 @@ const PaymentsPage: React.FC = () => {
       </div>
 
       {/* Tabs + Table */}
-      <div className="card overflow-hidden">
-        <div className="flex items-center gap-4 px-4 py-3 border-b border-slate-50">
-          <button onClick={() => { setTab('all'); setPage(1); }} className={cn("text-sm font-bold pb-1 border-b-2 transition-all", tab === 'all' ? "text-primary-600 border-primary-600" : "text-slate-400 border-transparent")}>
-            Barcha to'lovlar
-          </button>
-          <button onClick={() => { setTab('debt'); setPage(1); }} className={cn("text-sm font-bold pb-1 border-b-2 transition-all flex items-center gap-1.5", tab === 'debt' ? "text-primary-600 border-primary-600" : "text-slate-400 border-transparent")}>
-            Qarzdor talabalar
-            <span className="w-5 h-5 bg-red-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center">
-              {debtors?.length ?? 0}
-            </span>
-          </button>
+      <div className="card overflow-hidden rounded-2xl border border-slate-100 dark:border-[var(--border)]">
+        <div className="px-2 pt-1">
+          <SlidingTabIndicator
+            activeId={tab}
+            onChange={(id) => {
+              setTab(id as 'all' | 'debt');
+              setPage(1);
+            }}
+            tabs={[
+              { id: 'all', label: "Barcha to'lovlar" },
+              {
+                id: 'debt',
+                label: (
+                  <span className="inline-flex items-center gap-1.5">
+                    Qarzdor talabalar
+                    <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
+                      {debtors?.length ?? 0}
+                    </span>
+                  </span>
+                ),
+              },
+            ]}
+          />
         </div>
         {isLoading ? (
           <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary-500" /></div>

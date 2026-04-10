@@ -106,6 +106,27 @@ interface AdminState {
   logout: () => void;
 }
 
+/** API xatolikda ham KPI kartochkalari ishlashi uchun minimal stats */
+const FALLBACK_DASHBOARD_STATS: Record<string, unknown> = {
+  totalStudents: 0,
+  totalCourses: 0,
+  totalGroups: 0,
+  totalRevenue: 0,
+  pendingPayments: 0,
+  pendingAmount: 0,
+  frozenAccounts: 0,
+  topCourses: [],
+  attendanceAvg: 0,
+  growthTrend: [],
+  growthTrendWeek: [],
+  growthTrendYearly: [],
+  revenueMonthOverMonthPct: 0,
+  debtorStudentCount: 0,
+  overdue60DayStudentCount: 0,
+  topStudents: [],
+  collectionRate: 100,
+};
+
 export const useAdminStore = create<AdminState>((set, get) => ({
   user: JSON.parse(localStorage.getItem('user') || 'null'),
   isInitialized: false,
@@ -140,8 +161,15 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     set({ isLoading: true });
     try {
       const { data } = await api.get('/analytics/dashboard');
-      set({ stats: data, isLoading: false });
-    } catch (e: any) { set({ error: e.message, isLoading: false }); }
+      set({ stats: data, isLoading: false, error: null });
+    } catch (e: any) {
+      const prev = get().stats;
+      set({
+        stats: prev ?? (FALLBACK_DASHBOARD_STATS as AdminState['stats']),
+        isLoading: false,
+        error: e?.message ?? 'fetch_stats_failed',
+      });
+    }
   },
 
   fetchTeacherDashboard: async () => {

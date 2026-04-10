@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
@@ -295,76 +296,99 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
         )}
       </div>
 
-      {/* Modal */}
-      {modal && (
-        <div className="modal-overlay" onClick={() => setModal(null)}>
-          <div className="modal-content p-6 animate-in-scale" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-black">{modal === 'create' ? 'Yangi foydalanuvchi' : 'Tahrirlash'}</h2>
-              <button onClick={() => setModal(null)} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="input-label">Ism</label><input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className="input" /></div>
-                <div><label className="input-label">Familiya</label><input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className="input" /></div>
+      {/* Modal — body ga portal: to‘liq ekran markazi, layout scroll dan mustaqil */}
+      {modal &&
+        createPortal(
+          <div className="modal-overlay" onClick={() => setModal(null)}>
+            <div className="modal-content p-6 animate-in-scale my-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-black">{modal === 'create' ? 'Yangi foydalanuvchi' : 'Tahrirlash'}</h2>
+                <button type="button" onClick={() => setModal(null)} className="p-2 rounded-lg hover:bg-slate-100">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <div><label className="input-label">Email</label><input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="input" /></div>
-              <div><label className="input-label">Telefon</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input" /></div>
-              <div><label className="input-label">Parol {modal === 'edit' && '(bo\'sh qoldiring — o\'zgarmaydi)'}</label><input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input" /></div>
-              <div>
-                <label className="input-label">Rol</label>
-                <select
-                  value={form.role}
-                  onChange={(e) => setForm({ ...form, role: e.target.value })}
-                  className="select transition-[border-color] duration-200"
-                >
-                  <option value="TEACHER">Teacher</option>
-                  <option value="MANAGER">Manager</option>
-                  <option value="ADMIN">Admin</option>
-                </select>
-              </div>
-              {form.role === 'TEACHER' && (
-                <div>
-                  <label className="input-label">Kurslar (maks. {MAX_TEACHER_COURSES})</label>
-                  <p className="text-[11px] text-slate-400 mb-2">O'qituvchiga biriktiriladigan kurslar</p>
-                  <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 dark:border-[var(--border)] bg-[var(--bg-card)] p-3 space-y-2">
-                    {courses.length === 0 ? (
-                      <p className="text-xs text-slate-400">Kurslar yuklanmoqda...</p>
-                    ) : (
-                      courses.map((c: any) => {
-                        const checked = form.course_ids.includes(c.id);
-                        const atLimit = form.course_ids.length >= MAX_TEACHER_COURSES && !checked;
-                        return (
-                          <label
-                            key={c.id}
-                            className={cn(
-                              'flex items-center gap-3 text-sm cursor-pointer rounded-lg px-2 py-1.5 transition-colors duration-200',
-                              atLimit ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50 dark:hover:bg-[var(--hover-bg)]',
-                            )}
-                          >
-                            <input
-                              type="checkbox"
-                              className="rounded border-slate-300"
-                              checked={checked}
-                              disabled={atLimit}
-                              onChange={() => toggleCourse(c.id)}
-                            />
-                            <span className="truncate text-slate-700 dark:text-[var(--text)]">{c.name}</span>
-                          </label>
-                        );
-                      })
-                    )}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="input-label">Ism</label>
+                    <input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className="input" />
+                  </div>
+                  <div>
+                    <label className="input-label">Familiya</label>
+                    <input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className="input" />
                   </div>
                 </div>
-              )}
+                <div>
+                  <label className="input-label">Email</label>
+                  <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="input" />
+                </div>
+                <div>
+                  <label className="input-label">Telefon</label>
+                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input" />
+                </div>
+                <div>
+                  <label className="input-label">Parol {modal === 'edit' && "(bo'sh qoldiring — o'zgarmaydi)"}</label>
+                  <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input" />
+                </div>
+                <div>
+                  <label className="input-label">Rol</label>
+                  <select
+                    value={form.role}
+                    onChange={(e) => setForm({ ...form, role: e.target.value })}
+                    className="select transition-[border-color] duration-200"
+                  >
+                    <option value="TEACHER">Teacher</option>
+                    <option value="MANAGER">Manager</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                </div>
+                {form.role === 'TEACHER' && (
+                  <div>
+                    <label className="input-label">Kurslar (maks. {MAX_TEACHER_COURSES})</label>
+                    <p className="text-[11px] text-slate-400 mb-2">O'qituvchiga biriktiriladigan kurslar</p>
+                    <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 dark:border-[var(--border)] bg-[var(--bg-card)] p-3 space-y-2">
+                      {courses.length === 0 ? (
+                        <p className="text-xs text-slate-400">Kurslar yuklanmoqda...</p>
+                      ) : (
+                        courses.map((c: any) => {
+                          const checked = form.course_ids.includes(c.id);
+                          const atLimit = form.course_ids.length >= MAX_TEACHER_COURSES && !checked;
+                          return (
+                            <label
+                              key={c.id}
+                              className={cn(
+                                'flex items-center gap-3 text-sm cursor-pointer rounded-lg px-2 py-1.5 transition-colors duration-200',
+                                atLimit ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50 dark:hover:bg-[var(--hover-bg)]',
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                className="rounded border-slate-300"
+                                checked={checked}
+                                disabled={atLimit}
+                                onChange={() => toggleCourse(c.id)}
+                              />
+                              <span className="truncate text-slate-700 dark:text-[var(--text)]">{c.name}</span>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" onClick={() => setModal(null)} className="btn-secondary">
+                  Bekor qilish
+                </button>
+                <button type="button" onClick={handleSave} className="btn-primary">
+                  {modal === 'create' ? 'Yaratish' : 'Saqlash'}
+                </button>
+              </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setModal(null)} className="btn-secondary">Bekor qilish</button>
-              <button onClick={handleSave} className="btn-primary">{modal === 'create' ? 'Yaratish' : 'Saqlash'}</button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

@@ -25,7 +25,7 @@ const roleLabels: Record<string, string> = {
 
 const AdminLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 1024);
-  const [dark, setDark] = useState(localStorage.getItem('theme') === 'dark');
+  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark');
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAdminStore();
@@ -40,8 +40,14 @@ const AdminLayout: React.FC = () => {
     const newDark = !dark;
     setDark(newDark);
     localStorage.setItem('theme', newDark ? 'dark' : 'light');
-    if (newDark) document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
+    const root = document.documentElement;
+    if (newDark) {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    } else {
+      root.classList.remove('dark');
+      root.classList.add('light');
+    }
   };
 
   const navItems = [
@@ -70,8 +76,14 @@ const AdminLayout: React.FC = () => {
   };
 
   useEffect(() => {
-    if (dark) document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
+    const root = document.documentElement;
+    if (dark) {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    } else {
+      root.classList.remove('dark');
+      root.classList.add('light');
+    }
   }, [dark]);
 
   useEffect(() => {
@@ -83,7 +95,7 @@ const AdminLayout: React.FC = () => {
   }, []);
 
   return (
-    <div className={cn("min-h-screen transition-colors duration-500", dark ? "dark" : "")}>
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] transition-colors duration-500">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 

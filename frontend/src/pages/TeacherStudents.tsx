@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAdminStore } from '../store/useAdminStore';
 import { useToast } from '../context/ToastContext';
 import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
+import { formatTelegramLabel, telegramOpenHref } from '../lib/telegramDisplay';
 import { GraduationCap, Loader2, Phone, Plus, X } from 'lucide-react';
 
 const TeacherStudentsPage: React.FC = () => {
@@ -27,15 +28,6 @@ const TeacherStudentsPage: React.FC = () => {
     fetchStudents(1, 400, true);
     fetchCourses();
   }, [fetchStudents, fetchCourses]);
-
-  useEffect(() => {
-    if (!modal) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [modal]);
 
   const myCourseOptions = useMemo(() => {
     const uid = user?.id ? String(user.id) : '';
@@ -150,7 +142,7 @@ const TeacherStudentsPage: React.FC = () => {
       {modal &&
         createPortal(
           <div
-            className="fixed inset-0 z-[220] flex items-center justify-center bg-black/50 p-4 py-8 backdrop-blur-sm"
+            className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4 py-8 backdrop-blur-md"
             role="presentation"
             onClick={() => setModal(false)}
           >
@@ -249,6 +241,8 @@ const TeacherStudentsPage: React.FC = () => {
                   const paid = Boolean(s.paid_this_month);
                   const initials = `${(s.first_name || '?')[0] ?? ''}${(s.last_name || '?')[0] ?? ''}`.toUpperCase();
                   const tg = Boolean(s.telegram_chat_id);
+                  const tgLine = formatTelegramLabel(s);
+                  const tgHref = telegramOpenHref(s);
                   return (
                     <tr
                       key={s.id}
@@ -268,20 +262,30 @@ const TeacherStudentsPage: React.FC = () => {
                           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#c084fc]/35 to-[#aa3bff]/25 text-[11px] font-black text-[#5b21b6] dark:from-[#c084fc]/30 dark:to-[#7c3aed]/20 dark:text-[#e9d5ff]">
                             {initials}
                           </div>
-                          {tg && (
-                            <span
-                              className="absolute -right-0.5 -top-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-[var(--bg-card)] bg-[#229ED9] shadow-sm"
-                              title="Telegram ulangan"
+                          {tg && tgHref && (
+                            <a
+                              href={tgHref}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="absolute -right-0.5 -top-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-[var(--bg-card)] bg-[#229ED9] shadow-sm hover:brightness-110 transition-[filter] z-[2]"
+                              title={tgLine ? `Telegram: ${tgLine}` : 'Telegramda ochish'}
+                              aria-label={tgLine ? `Telegram: ${tgLine}` : 'Telegramda ochish'}
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <svg className="h-2.5 w-2.5 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                                 <path d="M9.04 15.3l-.38 5.35c.54 0 .77-.23 1.05-.51l2.52-2.43 5.22 3.83c.96.53 1.65.25 1.91-.88l3.42-16.04c.38-1.76-.64-2.45-1.82-2.02L1.5 10.22c-1.73.68-1.71 1.65-.3 2.08l5.34 1.66 12.4-7.82c.59-.36 1.13-.17.69.23" />
                               </svg>
-                            </span>
+                            </a>
                           )}
                         </div>
                       </td>
                       <td className="px-4 py-3 font-bold text-slate-800 dark:text-[var(--text-h)]">
-                        {s.first_name} {s.last_name}
+                        <span className="block">{s.first_name} {s.last_name}</span>
+                        {tgLine && (
+                          <span className="mt-1 inline-block rounded-lg border border-slate-200/80 bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-500 dark:border-[var(--border)] dark:bg-[var(--bg-muted)] dark:text-slate-400">
+                            Telegram: {tgLine}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-slate-600 dark:text-[var(--text)]">
                         {s.parent_name?.trim() ? s.parent_name : '—'}

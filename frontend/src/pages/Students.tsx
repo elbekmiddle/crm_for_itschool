@@ -11,6 +11,7 @@ import api from '../lib/api';
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
 import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
+import { formatTelegramLabel, telegramOpenHref } from '../lib/telegramDisplay';
 
 const statusPill = (s: string) => {
   const m: Record<string, string> = {
@@ -238,20 +239,36 @@ const StudentsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {paginated.map((s: any) => (
+                {paginated.map((s: any) => {
+                  const tgLine = formatTelegramLabel(s);
+                  const tgHref = telegramOpenHref(s);
+                  return (
                   <tr key={s.id}>
                     <td>
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 bg-primary-100 rounded-lg flex items-center justify-center text-xs font-black text-primary-600 relative">
                           {s.first_name?.[0]}{s.last_name?.[0]}
-                          {s.telegram_chat_id && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#0088cc] rounded-full flex items-center justify-center border-2 border-white shadow-sm" title={`Telegram: @${s.telegram_username || s.telegram_chat_id}`}>
+                          {s.telegram_chat_id && tgHref && (
+                            <a
+                              href={tgHref}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="absolute -top-1 -right-1 w-4 h-4 bg-[#0088cc] rounded-full flex items-center justify-center border-2 border-white shadow-sm hover:brightness-110 transition-[filter]"
+                              title={tgLine ? `Telegram: ${tgLine}` : 'Telegramda ochish'}
+                              aria-label={tgLine ? `Telegram: ${tgLine}` : 'Telegramda ochish'}
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <Send className="w-2 h-2 text-white fill-current" />
-                            </div>
+                            </a>
                           )}
                         </div>
                         <div>
                           <p className="font-bold text-slate-800 dark:text-[var(--text-h)]">{s.first_name} {s.last_name}</p>
+                          {tgLine && (
+                            <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                              Telegram: {tgLine}
+                            </p>
+                          )}
                           {s.parent_name ? (
                             <p className="text-[11px] text-slate-500 dark:text-[var(--text)]">{s.parent_name}</p>
                           ) : null}
@@ -296,7 +313,8 @@ const StudentsPage: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {paginated.length === 0 && (
                   <tr><td colSpan={7} className="text-center py-12 text-slate-400">Talabalar topilmadi</td></tr>
                 )}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -11,6 +12,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useStudentStore } from '../store/useStudentStore';
 import { getRealtimeSocket } from '../lib/realtimeSocket';
 import { cn } from '../lib/utils';
+import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
 const Logo = "/Images/Logo.png";
 
 // ─── Nav items ───────────────────────────────────────────────────────────────
@@ -55,16 +57,17 @@ function useDarkMode() {
 }
 
 // ─── Logout Confirm Modal ─────────────────────────────────────────────────────
-const LogoutModal: React.FC<{ onConfirm: () => void; onCancel: () => void }> = ({ onConfirm, onCancel }) => {
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onCancel]);
+const LogoutModal: React.FC<{ isOpen: boolean; onConfirm: () => void; onCancel: () => void }> = ({
+  isOpen,
+  onConfirm,
+  onCancel,
+}) => {
+  useModalOverlayEffects(isOpen, { onEscape: onCancel });
+  if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[#08060d]/40 backdrop-blur-md" onClick={onCancel} />
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[#08060d]/40 backdrop-blur-md" onClick={onCancel} aria-hidden />
       <div className="relative bg-white dark:bg-[#1f2028] rounded-[2.5rem] shadow-2xl border border-[#e5e4e7] dark:border-[#2e303a] w-full max-w-sm p-8 animate-in zoom-in-95 duration-300">
         <div className="flex items-center justify-center w-16 h-16 bg-red-50 dark:bg-red-950/20 rounded-2xl mx-auto mb-6">
           <AlertTriangle className="w-8 h-8 text-red-500" />
@@ -84,6 +87,7 @@ const LogoutModal: React.FC<{ onConfirm: () => void; onCancel: () => void }> = (
             Ha, chiqish
           </button>
           <button
+            type="button"
             onClick={onCancel}
             className="w-full py-4 rounded-2xl border-2 border-[#e5e4e7] dark:border-[#2e303a] text-[#6b6375] dark:text-[#9ca3af] font-black text-sm hover:bg-[#f4f3ec] dark:hover:bg-[#16171d] transition-all active:scale-95 uppercase tracking-widest"
           >
@@ -91,7 +95,8 @@ const LogoutModal: React.FC<{ onConfirm: () => void; onCancel: () => void }> = (
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -106,6 +111,8 @@ const AppLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  useModalOverlayEffects(showNotifications, { onEscape: () => setShowNotifications(false) });
 
   useEffect(() => {
     fetchNotifications();
@@ -439,9 +446,14 @@ const AppLayout: React.FC = () => {
       </nav>
 
       {/* Notifications Modal */}
-      {showNotifications && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#08060d]/60 backdrop-blur-md" onClick={() => setShowNotifications(false)} />
+      {showNotifications &&
+        createPortal(
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-[#08060d]/60 backdrop-blur-md"
+              onClick={() => setShowNotifications(false)}
+              aria-hidden
+            />
           <div className="relative w-full max-w-xl bg-white dark:bg-[#1f2028] border border-[#e5e4e7] dark:border-[#2e303a] rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="p-8 bg-gradient-to-br from-[#aa3bff] to-[#9329e6] flex items-center justify-between text-white">
               <div className="flex items-center gap-4">
@@ -496,15 +508,15 @@ const AppLayout: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body
+        )}
 
-      {showLogoutModal && (
-        <LogoutModal
-          onConfirm={confirmLogout}
-          onCancel={() => setShowLogoutModal(false)}
-        />
-      )}
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutModal(false)}
+      />
 
     </div>
   );

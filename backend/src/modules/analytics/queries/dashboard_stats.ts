@@ -35,23 +35,38 @@ export async function dashboard_stats(dbService: DbService) {
   }
 }
 
+/**
+ * Parallel Promise.all bilan bir vaqtda juda ko‘p ulanish ochilishi (pool_size)
+ * Session mode / max clients xatosiga olib keladi — so‘rovlarni ketma-ket bajaramiz.
+ */
 async function computeDashboardStats(dbService: DbService) {
-  const [
-    students, courses, groups, revenue, pendingPayments, 
-    topCourses, attendance, growth, topStudents, 
-    frozenAccounts, pendingAmount,
-    growthYearly,
-    revenueMom,
-    debtorStudents,
-    overdue60d,
-    growthWeek,
-  ] = await Promise.all([
-    dbService.querySafe(`SELECT COUNT(*) FROM students WHERE deleted_at IS NULL`, [], [{ count: '0' }]),
-    dbService.querySafe(`SELECT COUNT(*) FROM courses WHERE deleted_at IS NULL`, [], [{ count: '0' }]),
-    dbService.querySafe(`SELECT COUNT(*) FROM groups WHERE deleted_at IS NULL`, [], [{ count: '0' }]),
-    dbService.querySafe(`SELECT SUM(amount) as total FROM payments`, [], [{ total: '0' }]),
-    dbService.querySafe(`SELECT COUNT(*) FROM payments WHERE status = 'pending'`, [], [{ count: '0' }]),
-    dbService.querySafe(`
+  const students = await dbService.querySafe(
+    `SELECT COUNT(*) FROM students WHERE deleted_at IS NULL`,
+    [],
+    [{ count: '0' }],
+  );
+  const courses = await dbService.querySafe(
+    `SELECT COUNT(*) FROM courses WHERE deleted_at IS NULL`,
+    [],
+    [{ count: '0' }],
+  );
+  const groups = await dbService.querySafe(
+    `SELECT COUNT(*) FROM groups WHERE deleted_at IS NULL`,
+    [],
+    [{ count: '0' }],
+  );
+  const revenue = await dbService.querySafe(
+    `SELECT SUM(amount) as total FROM payments`,
+    [],
+    [{ total: '0' }],
+  );
+  const pendingPayments = await dbService.querySafe(
+    `SELECT COUNT(*) FROM payments WHERE status = 'pending'`,
+    [],
+    [{ count: '0' }],
+  );
+  const topCourses = await dbService.querySafe(
+    `
       SELECT c.name, COUNT(sc.student_id) as student_count
       FROM courses c
       LEFT JOIN student_courses sc ON c.id = sc.course_id AND sc.status = 'active'
@@ -59,14 +74,21 @@ async function computeDashboardStats(dbService: DbService) {
       GROUP BY c.id, c.name
       ORDER BY student_count DESC
       LIMIT 5
-    `, [], []),
-    dbService.querySafe(`
+    `,
+    [],
+    [],
+  );
+  const attendance = await dbService.querySafe(
+    `
       SELECT ROUND(AVG(CASE WHEN status = 'PRESENT' THEN 100 ELSE 0 END), 1) as avg
       FROM attendance
       WHERE lesson_date > NOW() - INTERVAL '30 days'
-    `, [], [{ avg: '0' }]),
-    // Growth Trend (last 6 months)
-    dbService.querySafe(`
+    `,
+    [],
+    [{ avg: '0' }],
+  );
+  const growth = await dbService.querySafe(
+    `
       SELECT 
         TRIM(TO_CHAR(date_trunc('month', created_at), 'Mon')) as month,
         COUNT(*) as count
@@ -74,9 +96,12 @@ async function computeDashboardStats(dbService: DbService) {
       WHERE created_at > NOW() - INTERVAL '6 months'
       GROUP BY date_trunc('month', created_at)
       ORDER BY date_trunc('month', created_at)
-    `, [], []),
-    // Top Students
-    dbService.querySafe(`
+    `,
+    [],
+    [],
+  );
+  const topStudents = await dbService.querySafe(
+    `
       SELECT 
         s.id, s.first_name, s.last_name,
         COALESCE(s.email, u.email) as email,
@@ -89,34 +114,44 @@ async function computeDashboardStats(dbService: DbService) {
       GROUP BY s.id, s.first_name, s.last_name, s.email, u.email
       ORDER BY avg_score DESC, attendance_pct DESC
       LIMIT 10
-    `, [], []),
-    // Extra metrics for Payments page
-    dbService.querySafe(`SELECT COUNT(*) FROM students WHERE status = 'frozen' AND deleted_at IS NULL`, [], [{ count: '0' }]),
-    dbService.querySafe(`SELECT SUM(amount) as total FROM payments WHERE status = 'pending'`, [], [{ total: '0' }]),
-    dbService.querySafe(
-      `
+    `,
+    [],
+    [],
+  );
+  const frozenAccounts = await dbService.querySafe(
+    `SELECT COUNT(*) FROM students WHERE status = 'frozen' AND deleted_at IS NULL`,
+    [],
+    [{ count: '0' }],
+  );
+  const pendingAmount = await dbService.querySafe(
+    `SELECT SUM(amount) as total FROM payments WHERE status = 'pending'`,
+    [],
+    [{ total: '0' }],
+  );
+  const growthYearly = await dbService.querySafe(
+    `
       SELECT TRIM(TO_CHAR(date_trunc('year', created_at), 'YYYY')) AS year, COUNT(*)::text AS count
       FROM students
       WHERE created_at > NOW() - INTERVAL '5 years'
       GROUP BY date_trunc('year', created_at)
       ORDER BY date_trunc('year', created_at)
-      `,
-      [],
-      [],
-    ),
-    dbService.querySafe(
-      `
+    `,
+    [],
+    [],
+  );
+  const revenueMom = await dbService.querySafe(
+    `
       SELECT
         COALESCE(SUM(CASE WHEN paid_at >= date_trunc('month', CURRENT_TIMESTAMP) THEN amount ELSE 0 END), 0) AS cur_m,
         COALESCE(SUM(CASE WHEN paid_at >= date_trunc('month', CURRENT_TIMESTAMP - INTERVAL '1 month')
           AND paid_at < date_trunc('month', CURRENT_TIMESTAMP) THEN amount ELSE 0 END), 0) AS prev_m
       FROM payments
-      `,
-      [],
-      [{ cur_m: '0', prev_m: '0' }],
-    ),
-    dbService.querySafe(
-      `
+    `,
+    [],
+    [{ cur_m: '0', prev_m: '0' }],
+  );
+  const debtorStudents = await dbService.querySafe(
+    `
       WITH last_pay AS (
         SELECT student_id, MAX(paid_at) AS last_paid FROM payments GROUP BY student_id
       )
@@ -124,12 +159,12 @@ async function computeDashboardStats(dbService: DbService) {
       LEFT JOIN last_pay lp ON lp.student_id = s.id
       WHERE s.deleted_at IS NULL
         AND (lp.last_paid IS NULL OR lp.last_paid < NOW() - INTERVAL '60 days')
-      `,
-      [],
-      [{ c: '0' }],
-    ),
-    dbService.querySafe(
-      `
+    `,
+    [],
+    [{ c: '0' }],
+  );
+  const overdue60d = await dbService.querySafe(
+    `
       WITH last_pay AS (
         SELECT student_id, MAX(paid_at) AS last_paid FROM payments GROUP BY student_id
       )
@@ -137,12 +172,12 @@ async function computeDashboardStats(dbService: DbService) {
       JOIN last_pay lp ON lp.student_id = s.id
       WHERE s.deleted_at IS NULL
         AND lp.last_paid < NOW() - INTERVAL '60 days'
-      `,
-      [],
-      [{ c: '0' }],
-    ),
-    dbService.querySafe(
-      `
+    `,
+    [],
+    [{ c: '0' }],
+  );
+  const growthWeek = await dbService.querySafe(
+    `
       SELECT
         TRIM(TO_CHAR(d::date, 'DD.MM')) AS month,
         COUNT(s.id)::text AS count
@@ -156,11 +191,10 @@ async function computeDashboardStats(dbService: DbService) {
         AND s.created_at::date = d::date
       GROUP BY d
       ORDER BY d
-      `,
-      [],
-      [],
-    ),
-  ]);
+    `,
+    [],
+    [],
+  );
 
   const totalRev = Number(revenue?.[0]?.total) || 0;
   const pendingRevAmount = Number(pendingAmount?.[0]?.total) || 0;
@@ -194,6 +228,6 @@ async function computeDashboardStats(dbService: DbService) {
     debtorStudentCount: parseInt(debtorStudents?.[0]?.c ?? '0', 10),
     overdue60DayStudentCount: parseInt(overdue60d?.[0]?.c ?? '0', 10),
     topStudents: topStudents,
-    collectionRate: collectionRate
+    collectionRate: collectionRate,
   };
 }

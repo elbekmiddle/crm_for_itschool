@@ -72,6 +72,7 @@ export class SchemaBootstrapService implements OnModuleInit {
           ALTER TABLE students ADD COLUMN IF NOT EXISTS status TEXT;
           ALTER TABLE students ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;
           ALTER TABLE students ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+          ALTER TABLE students ADD COLUMN IF NOT EXISTS telegram_username TEXT;
         `,
       },
       {

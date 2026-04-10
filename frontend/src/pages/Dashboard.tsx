@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatUzbekDayMonthYear } from '../lib/uzbekDate';
+import { SlidingTabIndicator } from '../components/ui/SlidingTabIndicator';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 
@@ -67,17 +68,18 @@ const Dashboard: React.FC = () => {
   const [studentAnalytics, setStudentAnalytics] = useState<any>(null);
 
   useEffect(() => {
-    if (user?.role === 'ADMIN') {
+    if (!user?.role) return;
+    if (user.role === 'ADMIN') {
       fetchStats();
       fetchCourses();
       fetchGroups();
-    } else if (user?.role === 'MANAGER') {
+    } else if (user.role === 'MANAGER') {
       fetchStats();
-    } else if (user?.role === 'TEACHER') {
+    } else if (user.role === 'TEACHER') {
       fetchTeacherDashboard().then(setTeacherData);
       fetchGroups();
     }
-  }, [user?.role]);
+  }, [user?.role, user?.id, fetchStats, fetchCourses, fetchGroups, fetchTeacherDashboard]);
 
   useEffect(() => {
     if (user?.role !== 'STUDENT') return;
@@ -462,13 +464,16 @@ const Dashboard: React.FC = () => {
           </h1>
           <p className="text-sm text-slate-400 mt-0.5">Raqamli sinf xonangiz haqida umumiy ma'lumot.</p>
         </div>
-        <div className="flex bg-slate-100 rounded-xl p-1">
-          <button onClick={() => setView('daily')} className={cn("px-4 py-2 rounded-lg text-xs font-bold transition-all", view === 'daily' ? "bg-white shadow-sm text-slate-700" : "text-slate-400")}>
-            Kunlik
-          </button>
-          <button onClick={() => setView('monthly')} className={cn("px-4 py-2 rounded-lg text-xs font-bold transition-all", view === 'monthly' ? "bg-white shadow-sm text-slate-700" : "text-slate-400")}>
-            Oylik
-          </button>
+        <div className="min-w-[200px] rounded-xl border border-slate-100 bg-white px-1 dark:border-[var(--border)] dark:bg-[var(--bg-card)]">
+          <SlidingTabIndicator
+            activeId={view}
+            onChange={(id) => setView(id as 'daily' | 'monthly')}
+            tabs={[
+              { id: 'daily', label: 'Kunlik' },
+              { id: 'monthly', label: 'Oylik' },
+            ]}
+            className="border-0"
+          />
         </div>
       </div>
 

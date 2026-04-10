@@ -45,7 +45,7 @@ export async function all_students(
     .replace(/\bAND id IN\b/, 'AND s.id IN');
 
   const selectCols = compact
-    ? `s.id, s.first_name, s.last_name, s.phone, s.parent_name, s.status, s.telegram_chat_id`
+    ? `s.id, s.first_name, s.last_name, s.phone, s.parent_name, s.status, s.telegram_chat_id, s.telegram_username`
     : `s.*`;
 
   const dataSql = `

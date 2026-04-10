@@ -3,7 +3,7 @@ import { DbService } from '../../../infrastructure/database/db.service';
 function teacherClause(user?: { id: string; role: string }): { sql: string; params: any[] } {
   if (user?.role === 'TEACHER' && user?.id) {
     return {
-      sql: ' AND (c.teacher_id = $1 OR c.teacher_id IS NULL)',
+      sql: ' AND c.teacher_id = $1',
       params: [user.id],
     };
   }

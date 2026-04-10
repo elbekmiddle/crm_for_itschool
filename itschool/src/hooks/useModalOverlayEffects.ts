@@ -1,19 +1,13 @@
 import { useEffect, useRef } from 'react';
 
 type Options = {
-  /** Default: true */
   lockBody?: boolean;
-  /** Called on Escape (use for “can’t close while saving” by no-op inside). */
   onEscape?: () => void;
 };
 
 let bodyLockCount = 0;
 let savedScrollY = 0;
 
-/**
- * Full-viewport overlays: ref-counted body scroll lock (fixed + restore scroll) + optional Escape.
- * Safe when both a page and a nested modal hook run while the same dialog is open.
- */
 export function useModalOverlayEffects(open: boolean, options?: Options) {
   const lockBody = options?.lockBody !== false;
   const onEscape = options?.onEscape;

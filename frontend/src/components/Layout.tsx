@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
-import { Search, Bell, Menu, X, GraduationCap, Moon, Sun } from 'lucide-react';
+import { Bell, Menu, X, GraduationCap, Moon, Sun } from 'lucide-react';
 import { useAdminStore } from '../store/useAdminStore';
 import { useNotifications } from '../hooks/useNotifications';
 import { useSocketEvents } from '../hooks/useSocketEvents';
@@ -76,14 +76,6 @@ const Layout: React.FC = () => {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text)]/35 pointer-events-none z-[1]" />
-              <input
-                type="text"
-                placeholder="Qidirish... (⌘K)"
-                className="input search-input w-full py-2.5 pr-4"
-              />
-            </div>
           </div>
 
           <div className="flex items-center gap-2 relative">

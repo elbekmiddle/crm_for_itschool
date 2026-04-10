@@ -24,32 +24,12 @@ import { LINE_ACCENT, primaryGrowthDataset, standardLineChartOptions } from '../
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 const AdminDashboard: React.FC = () => {
-  const { user, stats, fetchStats, isLoading } = useAdminStore();
+  const { stats, fetchStats, isLoading } = useAdminStore();
   const [growthPeriod, setGrowthPeriod] = useState<'week' | 'month' | 'year'>('month');
 
   useEffect(() => {
     fetchStats();
-  }, []);
-
-  if (isLoading && !stats) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-4">
-           <div className="w-16 h-16 bg-[#aa3bff]/10 rounded-2xl flex items-center justify-center">
-             <Loader2 className="w-8 h-8 animate-spin text-[#aa3bff]" />
-           </div>
-           <p className="text-[10px] font-black text-[#aa3bff] uppercase tracking-widest animate-pulse">Analitika yuklanmoqda...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const primaryStats = [
-    { label: 'Jami O\'quvchilar', value: Number(stats?.totalStudents || 0), icon: GraduationCap, color: 'text-[#aa3bff]', bg: 'bg-[#aa3bff]/10', trend: '+12.5%', isUp: true },
-    { label: 'Faol Guruhlar', value: Number(stats?.totalGroups || 0), icon: Calendar, color: 'text-indigo-600', bg: 'bg-indigo-50', trend: '+2.4%', isUp: true },
-    { label: 'Yangi Lidlar', value: Number(stats?.pendingPayments || 0), icon: MessageSquare, color: 'text-amber-600', bg: 'bg-amber-50', trend: '+18.2%', isUp: true },
-    { label: 'Oylik Mavjudlik', value: `${Number(stats?.attendanceAvg || 0)}%`, icon: UserCheck, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '-1.2%', isUp: false },
-  ];
+  }, [fetchStats]);
 
   const { growthLabels, growthCounts, growthSubtitle } = useMemo(() => {
     if (growthPeriod === 'week') {
@@ -82,49 +62,111 @@ const AdminDashboard: React.FC = () => {
     };
   }, [growthPeriod, stats]);
 
-  const chartData = {
-    labels: growthLabels,
-    datasets: [
-      primaryGrowthDataset("Yangi o'quvchilar", growthCounts, {
-        borderColor: LINE_ACCENT,
-        borderWidth: 3,
-        tension: 0.45,
-      }),
-    ],
-  };
+  const chartData = useMemo(
+    () => ({
+      labels: growthLabels,
+      datasets: [
+        primaryGrowthDataset("Yangi o'quvchilar", growthCounts, {
+          borderColor: LINE_ACCENT,
+          borderWidth: 3,
+          tension: 0.45,
+        }),
+      ],
+    }),
+    [growthLabels, growthCounts],
+  );
 
-  const baseChartOpts = standardLineChartOptions();
-  const chartOptions = {
-    ...baseChartOpts,
-    plugins: {
-      ...baseChartOpts.plugins,
-      tooltip: {
-        ...baseChartOpts.plugins.tooltip,
-        backgroundColor: '#08060d',
-        padding: 16,
-        titleFont: { size: 14, weight: 'bold' as const, family: 'Outfit' },
-        bodyFont: { size: 13, family: 'Inter' },
-        cornerRadius: 16,
-        usePointStyle: true,
+  const chartOptions = useMemo(() => {
+    const baseChartOpts = standardLineChartOptions();
+    const nums = growthCounts.map((n: number) => Number(n) || 0);
+    const suggestedMax = nums.length ? Math.max(4, ...nums, 1) : 4;
+    return {
+      ...baseChartOpts,
+      plugins: {
+        ...baseChartOpts.plugins,
+        tooltip: {
+          ...baseChartOpts.plugins.tooltip,
+          backgroundColor: '#08060d',
+          padding: 16,
+          titleFont: { size: 14, weight: 'bold' as const, family: 'Outfit' },
+          bodyFont: { size: 13, family: 'Inter' },
+          cornerRadius: 16,
+          usePointStyle: true,
+        },
       },
-    },
-    scales: {
-      ...baseChartOpts.scales,
-      y: {
-        ...(baseChartOpts.scales as { y: Record<string, unknown> }).y,
-        suggestedMax: Math.max(4, ...growthCounts.map((n: number) => Number(n) || 0), 1),
-        grid: { color: 'rgba(0, 0, 0, 0.02)', drawBorder: false },
-        ticks: { color: '#6b6375', font: { size: 11, weight: 'bold' as const } },
+      scales: {
+        ...baseChartOpts.scales,
+        y: {
+          ...(baseChartOpts.scales as { y: Record<string, unknown> }).y,
+          suggestedMax,
+          grid: { color: 'rgba(0, 0, 0, 0.02)', drawBorder: false },
+          ticks: { color: '#6b6375', font: { size: 11, weight: 'bold' as const } },
+        },
+        x: {
+          ...(baseChartOpts.scales as { x: Record<string, unknown> }).x,
+          ticks: { color: '#6b6375', font: { size: 11, weight: 'bold' as const } },
+        },
       },
-      x: {
-        ...(baseChartOpts.scales as { x: Record<string, unknown> }).x,
-        ticks: { color: '#6b6375', font: { size: 11, weight: 'bold' as const } },
+    };
+  }, [growthCounts]);
+
+  const primaryStats = useMemo(
+    () => [
+      {
+        label: "Jami O'quvchilar",
+        value: Number(stats?.totalStudents || 0),
+        icon: GraduationCap,
+        color: 'text-[#aa3bff]',
+        bg: 'bg-[#aa3bff]/10',
+        trend: '+12.5%',
+        isUp: true,
       },
-    },
-  };
+      {
+        label: 'Faol Guruhlar',
+        value: Number(stats?.totalGroups || 0),
+        icon: Calendar,
+        color: 'text-indigo-600',
+        bg: 'bg-indigo-50',
+        trend: '+2.4%',
+        isUp: true,
+      },
+      {
+        label: 'Yangi Lidlar',
+        value: Number(stats?.pendingPayments || 0),
+        icon: MessageSquare,
+        color: 'text-amber-600',
+        bg: 'bg-amber-50',
+        trend: '+18.2%',
+        isUp: true,
+      },
+      {
+        label: 'Oylik Mavjudlik',
+        value: `${Number(stats?.attendanceAvg || 0)}%`,
+        icon: UserCheck,
+        color: 'text-emerald-600',
+        bg: 'bg-emerald-50',
+        trend: '-1.2%',
+        isUp: false,
+      },
+    ],
+    [stats],
+  );
+
+  if (isLoading && !stats) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#aa3bff]/10">
+            <Loader2 className="h-8 w-8 animate-spin text-[#aa3bff]" />
+          </div>
+          <p className="animate-pulse text-[10px] font-black uppercase tracking-widest text-[#aa3bff]">Analitika yuklanmoqda...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8 animate-in pb-12">
+    <div className="page-container space-y-8 animate-in pb-12">
       {/* Welcome Banner */}
       <div className="bg-gradient-to-br from-[#aa3bff] via-[#9329e6] to-[#08060d] rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl shadow-[#aa3bff]/20">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-48 -mt-48" />
