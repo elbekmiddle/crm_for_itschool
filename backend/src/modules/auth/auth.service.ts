@@ -383,4 +383,29 @@ export class AuthService {
        return { success: true, message: 'Telegram bot ulanmagan. Administratorga xabar yuborildi!' };
     }
   }
+
+  /** Joriy parolni tekshirib, yangi parolni saqlash (faqat `users` jadvali — admin/manager/teacher). */
+  async changeStaffPassword(userId: string, currentPassword: string, newPassword: string) {
+    const rows = await this.dbService.query(
+      `SELECT id, password FROM users WHERE id = $1`,
+      [userId],
+    );
+    if (!rows?.length) {
+      throw new NotFoundException('Foydalanuvchi topilmadi');
+    }
+    const row = rows[0] as { password?: string };
+    if (!row.password) {
+      throw new BadRequestException('Parol hali o‘rnatilmagan — administrator bilan bog‘laning');
+    }
+    const ok = await bcrypt.compare(currentPassword, row.password).catch(() => false);
+    if (!ok) {
+      throw new UnauthorizedException('Joriy parol noto‘g‘ri');
+    }
+    if (newPassword.length < 6) {
+      throw new BadRequestException('Yangi parol kamida 6 belgi bo‘lishi kerak');
+    }
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.dbService.query(`UPDATE users SET password = $1 WHERE id = $2`, [hashed, userId]);
+    return { success: true, message: 'Parol yangilandi' };
+  }
 }

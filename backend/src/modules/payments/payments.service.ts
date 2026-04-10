@@ -85,7 +85,12 @@ export class PaymentsService implements OnModuleInit {
     return list_debtor_students(this.dbService);
   }
 
-  async updatePayment(id: string, data: { amount?: number; paid_at?: string; description?: string | null }) {
+  async updatePayment(id: string, data: {
+    amount?: number;
+    paid_at?: string;
+    description?: string | null;
+    student_id?: string;
+  }) {
     const keys: string[] = [];
     const vals: unknown[] = [];
     let i = 1;
@@ -100,6 +105,10 @@ export class PaymentsService implements OnModuleInit {
     if (data.description !== undefined) {
       keys.push(`description = $${i++}`);
       vals.push(data.description);
+    }
+    if (data.student_id !== undefined && data.student_id !== null && data.student_id !== '') {
+      keys.push(`student_id = $${i++}::uuid`);
+      vals.push(data.student_id);
     }
     if (!keys.length) {
       throw new BadRequestException("Yangilanadigan maydon yo'q");

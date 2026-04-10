@@ -292,7 +292,17 @@ h1, h2, h3, h4 {
   overflow-y: auto;
   border: 1px solid var(--border);
 }
-
+.modal_content_exam{
+  width: 100%;
+  max-width: 1400px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+  background-color: var(--bg-card);
+  padding: 1.5rem;
+}
 /* ── Nav link ── */
 .nav-link {
   display: flex;

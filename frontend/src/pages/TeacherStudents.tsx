@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAdminStore } from '../store/useAdminStore';
 import { useToast } from '../context/ToastContext';
 import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
-import { formatTelegramLabel, telegramOpenHref } from '../lib/telegramDisplay';
+import { formatTelegramLabel, openTelegramChat } from '../lib/telegramDisplay';
 import { GraduationCap, Loader2, Phone, Plus, X } from 'lucide-react';
 
 const TeacherStudentsPage: React.FC = () => {
@@ -242,7 +242,6 @@ const TeacherStudentsPage: React.FC = () => {
                   const initials = `${(s.first_name || '?')[0] ?? ''}${(s.last_name || '?')[0] ?? ''}`.toUpperCase();
                   const tg = Boolean(s.telegram_chat_id);
                   const tgLine = formatTelegramLabel(s);
-                  const tgHref = telegramOpenHref(s);
                   return (
                     <tr
                       key={s.id}
@@ -262,20 +261,22 @@ const TeacherStudentsPage: React.FC = () => {
                           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#c084fc]/35 to-[#aa3bff]/25 text-[11px] font-black text-[#5b21b6] dark:from-[#c084fc]/30 dark:to-[#7c3aed]/20 dark:text-[#e9d5ff]">
                             {initials}
                           </div>
-                          {tg && tgHref && (
-                            <a
-                              href={tgHref}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="absolute -right-0.5 -top-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-[var(--bg-card)] bg-[#229ED9] shadow-sm hover:brightness-110 transition-[filter] z-[2]"
+                          {tg && (
+                            <button
+                              type="button"
+                              className="absolute -right-0.5 -top-0.5 z-[4] flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-[var(--bg-card)] bg-[#229ED9] shadow-sm transition-[filter] hover:brightness-110"
                               title={tgLine ? `Telegram: ${tgLine}` : 'Telegramda ochish'}
                               aria-label={tgLine ? `Telegram: ${tgLine}` : 'Telegramda ochish'}
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                openTelegramChat(s);
+                              }}
                             >
                               <svg className="h-2.5 w-2.5 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                                 <path d="M9.04 15.3l-.38 5.35c.54 0 .77-.23 1.05-.51l2.52-2.43 5.22 3.83c.96.53 1.65.25 1.91-.88l3.42-16.04c.38-1.76-.64-2.45-1.82-2.02L1.5 10.22c-1.73.68-1.71 1.65-.3 2.08l5.34 1.66 12.4-7.82c.59-.36 1.13-.17.69.23" />
                               </svg>
-                            </a>
+                            </button>
                           )}
                         </div>
                       </td>

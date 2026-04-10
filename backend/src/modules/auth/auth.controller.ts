@@ -1,4 +1,17 @@
-import { Controller, Post, Get, Body, HttpCode, HttpStatus, Request, UseGuards, Res, Req, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Request,
+  UseGuards,
+  Res,
+  Req,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Response, Request as ExpressRequest } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -9,6 +22,7 @@ import { CheckCodeDto } from './dto/check-code.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
 import { StudentPasswordLoginDto } from './dto/student-password-login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
@@ -162,6 +176,18 @@ export class AuthController {
   @ApiOperation({ summary: 'Joriy foydalanuvchi ma\'lumotlarini olish' })
   async getMe(@Request() req) {
     return this.authService.getProfileForRequest(req.user);
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Joriy parol bilan yangi parolni o‘rnatish (staff)' })
+  async changePassword(@Request() req: any, @Body() dto: ChangePasswordDto) {
+    if (req.user?.role === 'STUDENT') {
+      throw new BadRequestException('Talaba parolini boshqa endpoint orqali yangilang');
+    }
+    return this.authService.changeStaffPassword(req.user.id, dto.current_password, dto.new_password);
   }
 
   /* ── HELPER: Set HTTPOnly Secure Cookies ── */

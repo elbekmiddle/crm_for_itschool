@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdminStore } from '../store/useAdminStore';
@@ -6,7 +6,7 @@ import { cn } from '../lib/utils';
 import { formatPersonName, formatInitials } from '../lib/displayName';
 import MiniGrowthChart from '../components/charts/MiniGrowthChart';
 import { resolveMediaUrl } from '../lib/mediaUrl';
-import { Plus, Loader2, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Loader2, Pencil, Trash2, X, Search } from 'lucide-react';
 
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
@@ -44,6 +44,7 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
   const { showToast } = useToast();
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
+  const [userSearch, setUserSearch] = useState('');
   const [form, setForm] = useState({
     first_name: '',
     last_name: '',
@@ -72,6 +73,17 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
     if (suspendRowsSyncRef.current) return;
     setRows(filteredUsers);
   }, [filteredUsers]);
+
+  const tableRows = useMemo(() => {
+    const q = userSearch.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((u: any) => {
+      const blob = `${u.first_name || ''} ${u.last_name || ''} ${u.email || ''} ${u.phone || ''} ${u.role || ''}`
+        .toLowerCase()
+        .trim();
+      return blob.includes(q);
+    });
+  }, [rows, userSearch]);
 
   const openCreate = () => {
     setForm({
@@ -227,9 +239,19 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
       </div>
 
       {/* Users Table */}
-      <div className="card overflow-hidden mt-6">
-        <div className="p-4 border-b border-slate-50">
-          <h2 className="section-title">Foydalanuvchilar ro'yxati</h2>
+      <div className="card overflow-hidden mt-6 border border-slate-100 dark:border-[var(--border)]">
+        <div className="flex flex-col gap-3 border-b border-slate-100 p-4 dark:border-[var(--border)] sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="section-title shrink-0">Foydalanuvchilar ro&apos;yxati</h2>
+          <div className="relative min-w-0 flex-1 isolate sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 z-[2] h-4 w-4 -translate-y-1/2 text-slate-400 opacity-90" />
+            <input
+              type="search"
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              placeholder="Ism, email, telefon, rol..."
+              className="input search-input w-full text-sm"
+            />
+          </div>
         </div>
         {isLoading ? (
           <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary-500" /></div>
@@ -241,7 +263,7 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
               </thead>
               <tbody>
                 <AnimatePresence mode="popLayout" onExitComplete={onDeleteExitComplete}>
-                  {rows.map((u: any) => (
+                  {tableRows.map((u: any) => (
                     <motion.tr
                       key={u.id}
                       layout
@@ -290,6 +312,13 @@ const UsersPage: React.FC<{ roleFilter?: string }> = ({ roleFilter }) => {
                     </motion.tr>
                   ))}
                 </AnimatePresence>
+                {!isLoading && tableRows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-slate-400">
+                      {userSearch.trim() ? 'Qidiruv bo‘yicha natija yo‘q' : 'Foydalanuvchilar yo‘q'}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

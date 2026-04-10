@@ -4,14 +4,14 @@ import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
 import {
   Plus, Download, Search, Loader2,
-  Pencil, Trash2, X, UserPlus, ChevronLeft, ChevronRight, Send, Eye
+  Pencil, Trash2, X, UserPlus, ChevronLeft, ChevronRight, Send, Eye, Wallet,
 } from 'lucide-react';
 
 import api from '../lib/api';
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
 import { useModalOverlayEffects } from '../hooks/useModalOverlayEffects';
-import { formatTelegramLabel, telegramOpenHref } from '../lib/telegramDisplay';
+import { formatTelegramLabel, openTelegramChat } from '../lib/telegramDisplay';
 
 const statusPill = (s: string) => {
   const m: Record<string, string> = {
@@ -157,6 +157,14 @@ const StudentsPage: React.FC = () => {
     else navigate('/student/profile');
   };
 
+  const goQuickPayment = (studentId: string) => {
+    if (user?.role === 'ADMIN') {
+      navigate('/admin/payments', { state: { focusStudentId: studentId } });
+    } else if (user?.role === 'MANAGER') {
+      navigate('/manager/payments', { state: { focusStudentId: studentId } });
+    }
+  };
+
   const handleDelete = async (id: string) => {
     const ok = await confirm({
       title: "O'chirishni tasdiqlaysizmi?",
@@ -197,7 +205,7 @@ const StudentsPage: React.FC = () => {
       {/* Search & Filter */}
       <div className="card mb-4 flex flex-col gap-4 p-4 md:flex-row md:items-center">
         <div className="relative min-w-0 flex-1 isolate">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 z-[2] h-4 w-4 -translate-y-1/2 text-slate-400 opacity-80" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 z-[2] h-4 w-4 -translate-y-1/2 text-[var(--text)]/40" />
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -241,25 +249,26 @@ const StudentsPage: React.FC = () => {
               <tbody>
                 {paginated.map((s: any) => {
                   const tgLine = formatTelegramLabel(s);
-                  const tgHref = telegramOpenHref(s);
                   return (
                   <tr key={s.id}>
                     <td>
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 bg-primary-100 rounded-lg flex items-center justify-center text-xs font-black text-primary-600 relative">
                           {s.first_name?.[0]}{s.last_name?.[0]}
-                          {s.telegram_chat_id && tgHref && (
-                            <a
-                              href={tgHref}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="absolute -top-1 -right-1 w-4 h-4 bg-[#0088cc] rounded-full flex items-center justify-center border-2 border-white shadow-sm hover:brightness-110 transition-[filter]"
+                          {s.telegram_chat_id && (
+                            <button
+                              type="button"
+                              className="absolute -top-1 -right-1 z-[3] flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-[#0088cc] shadow-sm transition-[filter] hover:brightness-110"
                               title={tgLine ? `Telegram: ${tgLine}` : 'Telegramda ochish'}
                               aria-label={tgLine ? `Telegram: ${tgLine}` : 'Telegramda ochish'}
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                openTelegramChat(s);
+                              }}
                             >
                               <Send className="w-2 h-2 text-white fill-current" />
-                            </a>
+                            </button>
                           )}
                         </div>
                         <div>
@@ -298,6 +307,16 @@ const StudentsPage: React.FC = () => {
                     <td><span className={cn("status-pill", statusPill(s.status))}>{s.status || 'active'}</span></td>
                     <td>
                       <div className="flex items-center justify-end gap-1">
+                        {(user?.role === 'MANAGER' || user?.role === 'ADMIN') && !s.paid_this_month && (
+                          <button
+                            type="button"
+                            onClick={() => goQuickPayment(s.id)}
+                            className="p-2 rounded-lg text-primary-600 transition-colors duration-200 hover:bg-primary-500/15 dark:text-primary-400 dark:hover:bg-primary-500/15"
+                            title="To'lov qilish"
+                          >
+                            <Wallet className="w-4 h-4" />
+                          </button>
+                        )}
                         <button type="button" onClick={() => openStudentProfile(s.id)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[var(--hover-bg)] text-slate-500 dark:text-[var(--text)] transition-colors duration-200" title="Ko'rish">
                           <Eye className="w-4 h-4" />
                         </button>

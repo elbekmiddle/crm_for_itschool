@@ -42,7 +42,7 @@ const ReviewPage: React.FC = () => {
   const total = reviewData.length;
 
   return (
-    <div className="page-container max-w-2xl mx-auto space-y-6 pb-20 lg:pb-6 animate-in">
+    <div className="page-container mx-auto space-y-6 pb-20 lg:pb-6 animate-in">
       <div className="flex items-center gap-3">
         <button onClick={() => navigate(`/exams/${id}/result`)} className="w-9 h-9 bg-white border border-slate-200 rounded-xl flex items-center justify-center hover:border-primary-300 transition-all">
           <ArrowLeft className="w-4 h-4 text-slate-500" />

@@ -87,6 +87,11 @@ const AdminLayout: React.FC = () => {
   }, [dark]);
 
   useEffect(() => {
+    document.documentElement.classList.add('admin-light-scope');
+    return () => document.documentElement.classList.remove('admin-light-scope');
+  }, []);
+
+  useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (!notifRef.current?.contains(e.target as Node)) setNotifOpen(false);
     };

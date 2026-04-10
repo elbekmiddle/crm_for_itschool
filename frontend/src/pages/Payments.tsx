@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
 import {
   Plus, Loader2, X,
-  TrendingUp, Snowflake, ChevronLeft, ChevronRight
+  TrendingUp, Snowflake, ChevronLeft, ChevronRight, Search,
 } from 'lucide-react';
 
 import { useToast } from '../context/ToastContext';
@@ -28,10 +29,14 @@ const PaymentsPage: React.FC = () => {
     isLoading,
   } = useAdminStore();
   const { showToast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [modal, setModal] = useState(false);
   const [editRow, setEditRow] = useState<any | null>(null);
-  const [editForm, setEditForm] = useState({ amount: '', paid_at: '', description: '' });
+  const [editForm, setEditForm] = useState({ amount: '', paid_at: '', description: '', student_id: '' });
   const [form, setForm] = useState({ student_id: '', amount: '', payment_method: 'cash', description: '' });
+  const [payStudentQ, setPayStudentQ] = useState('');
+  const [editPayStudentQ, setEditPayStudentQ] = useState('');
   const [tab, setTab] = useState<'all' | 'debt'>('all');
   const [page, setPage] = useState(1);
   const [chartPeriod, setChartPeriod] = useState<'month' | 'year'>('month');
@@ -52,6 +57,15 @@ const PaymentsPage: React.FC = () => {
     fetchStats();
   }, []);
 
+  useEffect(() => {
+    const id = (location.state as { focusStudentId?: string } | null)?.focusStudentId;
+    if (!id) return;
+    setModal(true);
+    setForm((f) => ({ ...f, student_id: id }));
+    setPayStudentQ('');
+    navigate('.', { replace: true, state: {} });
+  }, [location.state, navigate]);
+
   const totalRevenue = stats?.totalRevenue || payments.reduce((a: number, p: any) => a + (Number(p.amount) || 0), 0);
   const chartTrend =
     chartPeriod === 'year'
@@ -66,6 +80,43 @@ const PaymentsPage: React.FC = () => {
   const paginated = tab === 'all' ? list.slice((page - 1) * perPage, page * perPage) : [];
   const canEditPayment = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
+  const studentsForCreate = useMemo(() => {
+    const q = payStudentQ.trim().toLowerCase();
+    if (!q) return students;
+    return students.filter((s: any) =>
+      `${s.first_name || ''} ${s.last_name || ''} ${s.phone || ''}`.toLowerCase().includes(q),
+    );
+  }, [students, payStudentQ]);
+
+  const studentsForEdit = useMemo(() => {
+    const q = editPayStudentQ.trim().toLowerCase();
+    if (!q) return students;
+    return students.filter((s: any) =>
+      `${s.first_name || ''} ${s.last_name || ''} ${s.phone || ''}`.toLowerCase().includes(q),
+    );
+  }, [students, editPayStudentQ]);
+
+  /** Qidiruvda bitta natija qolsa — talaba avtomatik tanlanadi */
+  useEffect(() => {
+    if (!modal) return;
+    const q = payStudentQ.trim();
+    if (!q) return;
+    const list = studentsForCreate;
+    if (list.length !== 1) return;
+    const sid = String(list[0].id);
+    setForm((prev) => (prev.student_id === sid ? prev : { ...prev, student_id: sid }));
+  }, [modal, payStudentQ, studentsForCreate]);
+
+  useEffect(() => {
+    if (!editRow || !canEditPayment) return;
+    const q = editPayStudentQ.trim();
+    if (!q) return;
+    const list = studentsForEdit;
+    if (list.length !== 1) return;
+    const sid = String(list[0].id);
+    setEditForm((prev) => (prev.student_id === sid ? prev : { ...prev, student_id: sid }));
+  }, [editRow, canEditPayment, editPayStudentQ, studentsForEdit]);
+
   const handleCreate = async () => {
     if (paymentBusy) return;
     setPaymentBusy(true);
@@ -73,6 +124,7 @@ const PaymentsPage: React.FC = () => {
       await createPayment({ ...form, amount: Number(form.amount) });
       showToast("To'lov muvaffaqiyatli qo'shildi", 'success');
       setModal(false);
+      setPayStudentQ('');
       setForm({ student_id: '', amount: '', payment_method: 'cash', description: '' });
     } catch (e: any) {
       const msg = e?.response?.data?.message || "To'lov saqlanmadi";
@@ -84,11 +136,13 @@ const PaymentsPage: React.FC = () => {
 
   const openEdit = (p: any) => {
     setEditRow(p);
+    setEditPayStudentQ('');
     const d = p.paid_at || p.created_at;
     setEditForm({
       amount: String(p.amount ?? ''),
       paid_at: d ? new Date(d).toISOString().slice(0, 16) : '',
       description: p.description ?? '',
+      student_id: String(p.student_id || ''),
     });
   };
 
@@ -99,6 +153,7 @@ const PaymentsPage: React.FC = () => {
         amount: Number(editForm.amount),
         paid_at: editForm.paid_at ? new Date(editForm.paid_at).toISOString() : undefined,
         description: editForm.description || null,
+        ...(editForm.student_id ? { student_id: editForm.student_id } : {}),
       });
       showToast("To'lov yangilandi", 'success');
       setEditRow(null);
@@ -114,7 +169,14 @@ const PaymentsPage: React.FC = () => {
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">Moliyaviy Monitoring</h1>
           <p className="text-sm text-slate-400 mt-0.5">To'lovlar va qarzlarni kuzating.</p>
         </div>
-        <button onClick={() => setModal(true)} className="btn-primary flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setPayStudentQ('');
+            setModal(true);
+          }}
+          className="btn-primary flex items-center gap-2"
+        >
           <Plus className="w-4 h-4" /> To'lov qo'shish
         </button>
       </div>
@@ -364,22 +426,49 @@ const PaymentsPage: React.FC = () => {
       {/* Create Modal */}
       {modal && (
         <div className="modal-overlay" onClick={() => setModal(false)}>
-          <div className="modal-content p-6 animate-in-scale" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal-content p-6 animate-in-scale border-[var(--border)] bg-[var(--bg-card)] text-[var(--text)]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-black">Yangi to'lov</h2>
-              <button onClick={() => setModal(false)} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
+              <h2 className="text-lg font-black text-[var(--text-h)]">Yangi to&apos;lov</h2>
+              <button
+                type="button"
+                onClick={() => setModal(false)}
+                className="rounded-lg p-2 text-[var(--text)] transition-colors hover:bg-[var(--hover-bg)]"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
             <div className="space-y-4">
               <div>
                 <label className="input-label">Talaba</label>
+                <div className="relative mb-2 isolate">
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 z-[2] h-4 w-4 -translate-y-1/2 text-[var(--text)]/45" />
+                  <input
+                    type="search"
+                    value={payStudentQ}
+                    onChange={(e) => setPayStudentQ(e.target.value)}
+                    placeholder="Ism yoki telefon bo‘yicha qidirish..."
+                    className="input search-input w-full text-sm"
+                  />
+                </div>
                 <select
                   value={form.student_id}
                   onChange={(e) => setForm({ ...form, student_id: e.target.value })}
                   className="select w-full bg-[var(--bg-card)] text-[var(--text-h)] border-[var(--border)]"
                 >
                   <option value="">Talabani tanlang</option>
-                  {students.map((s: any) => <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>)}
+                  {studentsForCreate.map((s: any) => (
+                    <option key={s.id} value={s.id}>
+                      {s.first_name} {s.last_name}
+                      {s.phone ? ` · ${s.phone}` : ''}
+                    </option>
+                  ))}
                 </select>
+                {payStudentQ.trim() && studentsForCreate.length === 0 && (
+                  <p className="mt-1 text-xs text-amber-600">Talaba topilmadi</p>
+                )}
               </div>
               <div>
                 <label className="input-label">Summa (so'm)</label>
@@ -421,14 +510,49 @@ const PaymentsPage: React.FC = () => {
 
       {editRow && (
         <div className="modal-overlay" onClick={() => setEditRow(null)}>
-          <div className="modal-content p-6 animate-in-scale max-w-md" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal-content max-w-lg border-[var(--border)] bg-[var(--bg-card)] p-6 text-[var(--text)] animate-in-scale"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-black">To'lovni tahrirlash</h2>
-              <button type="button" onClick={() => setEditRow(null)} className="p-2 rounded-lg hover:bg-slate-100">
-                <X className="w-4 h-4" />
+              <h2 className="text-lg font-black text-[var(--text-h)]">To&apos;lovni tahrirlash</h2>
+              <button
+                type="button"
+                onClick={() => setEditRow(null)}
+                className="rounded-lg p-2 text-[var(--text)] transition-colors hover:bg-[var(--hover-bg)]"
+              >
+                <X className="h-4 w-4" />
               </button>
             </div>
             <div className="space-y-4">
+              {canEditPayment && (
+                <div>
+                  <label className="input-label">Talaba</label>
+                  <div className="relative mb-2 isolate">
+                    <Search className="pointer-events-none absolute left-3.5 top-1/2 z-[2] h-4 w-4 -translate-y-1/2 text-[var(--text)]/45" />
+                    <input
+                      type="search"
+                      value={editPayStudentQ}
+                      onChange={(e) => setEditPayStudentQ(e.target.value)}
+                      placeholder="Ism yoki telefon bo‘yicha qidirish..."
+                      className="input search-input w-full text-sm"
+                    />
+                  </div>
+                  <select
+                    value={editForm.student_id}
+                    onChange={(e) => setEditForm({ ...editForm, student_id: e.target.value })}
+                    className="select w-full bg-[var(--bg-card)] text-[var(--text-h)] border-[var(--border)]"
+                  >
+                    <option value="">Talabani tanlang</option>
+                    {studentsForEdit.map((s: any) => (
+                      <option key={s.id} value={s.id}>
+                        {s.first_name} {s.last_name}
+                        {s.phone ? ` · ${s.phone}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="input-label">Summa</label>
                 <input

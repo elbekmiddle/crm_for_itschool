@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
-import {
-  User, Lock, Bell, Palette, Save, Eye, EyeOff,
-  Loader2
-} from 'lucide-react';
+import { User, Lock, Palette, Save, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useToast } from '../context/ToastContext';
+import api from '../lib/api';
 
 const SettingsPage: React.FC = () => {
   const { user, uploadUserPhoto, updateUser } = useAdminStore();
   const { showToast } = useToast();
-  const [tab, setTab] = useState<'general' | 'security' | 'notifications'>('general');
+  const [tab, setTab] = useState<'general' | 'security'>('general');
   const [form, setForm] = useState({
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
@@ -21,12 +19,37 @@ const SettingsPage: React.FC = () => {
   const [showPw, setShowPw] = useState(false);
   const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
   const [saving, setSaving] = useState(false);
+  const [pwSaving, setPwSaving] = useState(false);
 
   const tabs = [
     { id: 'general' as const, label: 'Umumiy', icon: User },
     { id: 'security' as const, label: 'Xavfsizlik', icon: Lock },
-    { id: 'notifications' as const, label: 'Bildirishnomalar', icon: Bell },
   ];
+
+  const handlePasswordSave = async () => {
+    if (pwForm.newPw !== pwForm.confirm) {
+      showToast('Yangi parollar mos kelmaydi', 'error');
+      return;
+    }
+    if (pwForm.newPw.length < 6) {
+      showToast('Yangi parol kamida 6 belgi bo‘lishi kerak', 'error');
+      return;
+    }
+    setPwSaving(true);
+    try {
+      await api.post('/auth/change-password', {
+        current_password: pwForm.current,
+        new_password: pwForm.newPw,
+      });
+      setPwForm({ current: '', newPw: '', confirm: '' });
+      showToast('Parol muvaffaqiyatli yangilandi', 'success');
+    } catch (e: any) {
+      const msg = e?.response?.data?.message;
+      showToast(typeof msg === 'string' ? msg : 'Parolni yangilab bo‘lmadi', 'error');
+    } finally {
+      setPwSaving(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!user?.id) return;
@@ -169,45 +192,29 @@ const SettingsPage: React.FC = () => {
                       <label className="input-label">Qayta kiriting</label>
                       <input type="password" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} className="input" />
                     </div>
-                    <button className="btn-primary w-full">Parolni yangilash</button>
+                    <button
+                      type="button"
+                      disabled={pwSaving || !pwForm.current || !pwForm.newPw}
+                      onClick={() => void handlePasswordSave()}
+                      className="btn-primary inline-flex w-full items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {pwSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                      Parolni yangilash
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {tab === 'notifications' && (
-            <div className="card p-6">
-              <h2 className="section-title mb-5">Bildirishnoma Sozlamalari</h2>
-              <div className="space-y-4">
-                {[
-                  { label: 'Yangi talaba qo\'shilganda', desc: 'Email + dashboard bildirishnomasi', on: true },
-                  { label: 'To\'lov kelganda', desc: 'Real-time moliyaviy bildirishnoma', on: true },
-                  { label: 'Imtihon natijalari', desc: 'Natijalar tahlili bilan', on: false },
-                  { label: 'Davomat ogohlantirishlari', desc: '60% dan past davomat haqida', on: true },
-                  { label: 'Telegram bot ogohlantirishlari', desc: 'Bot orqali xabarlar', on: true },
-                ].map((n, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-slate-100">
-                    <div>
-                      <p className="font-bold text-sm text-slate-700">{n.label}</p>
-                      <p className="text-xs text-slate-400">{n.desc}</p>
-                    </div>
-                    <div className={cn("w-12 h-7 rounded-full flex items-center p-1 cursor-pointer transition-all", n.on ? "bg-primary-500" : "bg-slate-200")}>
-                      <div className={cn("w-5 h-5 bg-white rounded-full shadow-sm transition-transform", n.on && "translate-x-5")} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {tab === 'general' && (
+            <div className="flex justify-end">
+              <button type="button" onClick={handleSave} className="btn-primary flex items-center gap-2 cursor-pointer">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? 'Saqlanmoqda...' : 'O\'zgarishlarni saqlash'}
+              </button>
             </div>
           )}
-
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <button type="button" onClick={handleSave} className="btn-primary flex items-center gap-2 cursor-pointer">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {saving ? 'Saqlanmoqda...' : 'O\'zgarishlarni saqlash'}
-            </button>
-          </div>
         </div>
       </div>
     </div>

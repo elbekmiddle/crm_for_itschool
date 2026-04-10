@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { 
-  Users, UserCheck, GraduationCap, TrendingUp, 
-  ArrowUpRight, ArrowDownRight, Activity, Calendar,
-  PieChart, DollarSign, Target, MessageSquare, Loader2,
-  Sparkles, Zap, Award
+import {
+  UserCheck, GraduationCap, TrendingUp,
+  ArrowUpRight, ArrowDownRight, Calendar,
+  PieChart, MessageSquare, Loader2,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAdminStore } from '../../store/useAdminStore';
@@ -167,36 +166,6 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="page-container space-y-8 animate-in pb-12">
-      {/* Welcome Banner */}
-      <div className="bg-gradient-to-br from-[#aa3bff] via-[#9329e6] to-[#08060d] rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl shadow-[#aa3bff]/20">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-48 -mt-48" />
-        <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-white/5 rounded-full blur-[80px] -mb-32" />
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center text-center lg:text-left">
-          <div>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 mb-6">
-               <Sparkles className="w-4 h-4 text-amber-400" />
-               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/90">Academy Analytics Engine · v4.2</span>
-            </div>
-            <h1 className="text-5xl font-black mb-6 leading-[1.1] tracking-tighter">Barcha tizimlar <br/> <span className="text-[#c084fc] drop-shadow-sm">mo'tadil</span> ishlamoqda.</h1>
-            <p className="text-[#ece0ff] text-xl font-medium leading-relaxed opacity-90 max-w-xl">
-               Bugun <span className="font-black text-white underline decoration-[#c084fc] decoration-4 underline-offset-4">{stats?.totalStudents || 0} ta yangi talaba</span> qo'shildi va umumiy <span className="font-black text-white decoration-emerald-400">{(stats?.totalRevenue || 0).toLocaleString()} UZS</span> tushum qayd etildi.
-            </p>
-          </div>
-          <div className="hidden lg:grid grid-cols-2 gap-4">
-             <div className="bg-white/5 backdrop-blur-sm p-6 rounded-3xl border border-white/10 transform hover:scale-105 transition-all duration-500">
-                <Zap className="w-10 h-10 text-amber-400 mb-4" />
-                <p className="text-sm font-black opacity-60 uppercase tracking-widest mb-1">Server Power</p>
-                <p className="text-3xl font-black tabular-nums tracking-tighter text-white">99.8%</p>
-             </div>
-             <div className="bg-white/5 backdrop-blur-sm p-6 rounded-3xl border border-white/10 transform hover:scale-105 transition-all duration-500 delay-100">
-                <Award className="w-10 h-10 text-emerald-400 mb-4" />
-                <p className="text-sm font-black opacity-60 uppercase tracking-widest mb-1">Growth Rate</p>
-                <p className="text-3xl font-black tabular-nums tracking-tighter text-white">+24.5%</p>
-             </div>
-          </div>
-        </div>
-      </div>
-
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {primaryStats.map(({ label, value, icon: Icon, color, bg, trend, isUp }) => (
@@ -207,7 +176,7 @@ const AdminDashboard: React.FC = () => {
             </div>
             <p className="text-[11px] font-black text-[#6b6375] dark:text-[#9ca3af] uppercase tracking-[0.2em] mb-2">{label}</p>
             <div className="flex items-end justify-between">
-              <h2 className="text-4xl font-black text-[#08060d] dark:text-white tabular-nums leading-none tracking-tighter">{value}</h2>
+              <h2 className="text-4xl font-black text-slate-800 dark:text-white tabular-nums leading-none tracking-tighter">{value}</h2>
               <div className={cn(
                 "flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-xl shadow-inner",
                 isUp ? "bg-emerald-100/50 text-emerald-600" : "bg-red-100/50 text-red-600"
@@ -229,7 +198,7 @@ const AdminDashboard: React.FC = () => {
                    <TrendingUp className="w-7 h-7" />
                 </div>
                 <div>
-                   <h3 className="text-2xl font-black text-[#08060d] dark:text-white tracking-tight mb-1">O'sish Tendentsiyasi</h3>
+                   <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight mb-1">O'sish Tendentsiyasi</h3>
                    <p className="text-xs text-[#6b6375] dark:text-[#9ca3af] font-bold uppercase tracking-widest opacity-60">
                      Yangi ro&apos;yxatga olishlar · {growthSubtitle}
                    </p>
@@ -265,7 +234,7 @@ const AdminDashboard: React.FC = () => {
         {/* Top Courses */}
         <div className="card p-10 space-y-8 bg-[#f4f3ec]/30 dark:bg-[#1f2028]/30 backdrop-blur-md border border-[#e5e4e7] dark:border-[#2e303a]">
            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-black text-[#08060d] dark:text-white tracking-tight">Ommabop kurslar</h3>
+              <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Ommabop kurslar</h3>
               <button className="text-[10px] font-black text-[#aa3bff] uppercase tracking-widest hover:scale-105 transition-all">Barchasi</button>
            </div>
            <div className="space-y-5">
@@ -276,7 +245,7 @@ const AdminDashboard: React.FC = () => {
                           {i + 1}
                        </div>
                        <div>
-                          <p className="text-base font-black text-[#08060d] dark:text-[#f3f4f6] tracking-tight">{course.name}</p>
+                          <p className="text-base font-black text-slate-800 dark:text-slate-100 tracking-tight">{course.name}</p>
                           <p className="text-[10px] text-[#6b6375] dark:text-[#9ca3af] font-black uppercase tracking-widest mt-1">{course.student_count} ta faol talaba</p>
                        </div>
                     </div>
@@ -295,7 +264,7 @@ const AdminDashboard: React.FC = () => {
       {/* Leaderboard Table (Top Students) */}
       <div className="card p-10 bg-white dark:bg-[#1f2028] shadow-2xl border-[#e5e4e7] dark:border-[#2e303a]">
          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-6">
-            <h3 className="text-2xl font-black text-[#08060d] dark:text-white tracking-tight">Akademik Leaderboard</h3>
+            <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Akademik Leaderboard</h3>
             <div className="flex items-center gap-6">
                <div className="flex items-center gap-2.5">
                   <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
@@ -331,12 +300,12 @@ const AdminDashboard: React.FC = () => {
                                  {i < 3 ? ['🥇', '🥈', '🥉'][i] : s.first_name?.[0]}
                               </div>
                               <div>
-                                 <p className="text-base font-black text-[#08060d] dark:text-[#f3f4f6] tracking-tight">{s.first_name} {s.last_name}</p>
+                                 <p className="text-base font-black text-slate-800 dark:text-slate-100 tracking-tight">{s.first_name} {s.last_name}</p>
                                  <p className="text-[10px] text-[#6b6375] font-black uppercase tracking-widest mt-1 opacity-60">{s.email || 'CONTACT NOT SHARED'}</p>
                               </div>
                            </div>
                         </td>
-                        <td className="py-6 font-black text-[#08060d] dark:text-white tabular-nums text-lg">{s.avg_score}%</td>
+                        <td className="py-6 font-black text-slate-800 dark:text-white tabular-nums text-lg">{s.avg_score}%</td>
                         <td className="py-6 font-black text-[#6b6375] dark:text-[#9ca3af] tabular-nums">{s.attendance_pct}%</td>
                         <td className="py-6">
                            <span className={cn(

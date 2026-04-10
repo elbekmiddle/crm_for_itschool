@@ -17,8 +17,8 @@ import { Line } from 'react-chartjs-2';
 import { LINE_PRIMARY, primaryGrowthDataset, standardLineChartOptions } from '../lib/chartLineTheme';
 import {
   Users, BookOpen, UserCheck, Wallet,
-  TrendingUp, Sparkles, ChevronRight,
-  Loader2, LineChart, Calendar
+  TrendingUp, Sparkles, ChevronRight, ChevronLeft,
+  Loader2, LineChart, Calendar,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatUzbekDayMonthYear } from '../lib/uzbekDate';
@@ -48,7 +48,14 @@ const StatCard: React.FC<{
       {danger && <span className="stat-badge bg-red-100 text-red-500">Action Required ❗</span>}
     </div>
     <p className="label-subtle">{label}</p>
-    <p className={cn("text-3xl font-black tracking-tight", danger ? "text-red-600" : "text-slate-800")}>{value}</p>
+    <p
+      className={cn(
+        'text-3xl font-black tracking-tight',
+        danger ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-[var(--text-h)]',
+      )}
+    >
+      {value}
+    </p>
   </div>
 );
 
@@ -60,10 +67,24 @@ const courseEngagementPct = (course: any) => {
 };
 
 const Dashboard: React.FC = () => {
-  const { user, stats, courses, groups, fetchStats, fetchCourses, fetchGroups, fetchTeacherDashboard, isLoading } = useAdminStore();
+  const {
+    user,
+    stats,
+    courses,
+    groups,
+    students,
+    fetchStats,
+    fetchCourses,
+    fetchGroups,
+    fetchTeacherDashboard,
+    fetchStudents,
+    isLoading,
+  } = useAdminStore();
   const { exams: studentExams, fetchExams } = useStudentStore();
   const navigate = useNavigate();
   const [view, setView] = useState<'daily' | 'monthly'>('daily');
+  const [managerStudPage, setManagerStudPage] = useState(1);
+  const managerPerPage = 10;
   const [teacherData, setTeacherData] = useState<any>(null);
   const [studentAnalytics, setStudentAnalytics] = useState<any>(null);
 
@@ -75,11 +96,12 @@ const Dashboard: React.FC = () => {
       fetchGroups();
     } else if (user.role === 'MANAGER') {
       fetchStats();
+      fetchStudents();
     } else if (user.role === 'TEACHER') {
       fetchTeacherDashboard().then(setTeacherData);
       fetchGroups();
     }
-  }, [user?.role, user?.id, fetchStats, fetchCourses, fetchGroups, fetchTeacherDashboard]);
+  }, [user?.role, user?.id, fetchStats, fetchCourses, fetchGroups, fetchTeacherDashboard, fetchStudents]);
 
   useEffect(() => {
     if (user?.role !== 'STUDENT') return;
@@ -453,6 +475,14 @@ const Dashboard: React.FC = () => {
     );
   }
   const isManager = user?.role === 'MANAGER';
+  const managerStudTotalPages =
+    isManager && students?.length
+      ? Math.max(1, Math.ceil(students.length / managerPerPage))
+      : 1;
+  const managerStudSlice =
+    isManager && Array.isArray(students)
+      ? students.slice((managerStudPage - 1) * managerPerPage, managerStudPage * managerPerPage)
+      : [];
 
   return (
     <div className="page-container animate-in">
@@ -515,6 +545,104 @@ const Dashboard: React.FC = () => {
           danger
         />
       </div>
+
+      {isManager && (
+        <div className="card mb-8 overflow-hidden border border-slate-100 dark:border-[var(--border)]">
+          <div className="border-b border-slate-100 px-6 py-4 dark:border-[var(--border)]">
+            <h2 className="section-title">Talabalar</h2>
+            <p className="mt-1 text-xs text-slate-400">
+              {students?.length ?? 0} ta ro‘yxatdan · sahifada {managerPerPage} tadan
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Talaba</th>
+                  <th>Telefon</th>
+                  <th>Kurs</th>
+                  <th>Guruh</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {managerStudSlice.map((s: any) => (
+                  <tr
+                    key={s.id}
+                    role="button"
+                    tabIndex={0}
+                    className="cursor-pointer"
+                    onClick={() => navigate(`/manager/students/${s.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        navigate(`/manager/students/${s.id}`);
+                      }
+                    }}
+                  >
+                    <td className="font-bold text-slate-800 dark:text-[var(--text-h)]">
+                      {s.first_name} {s.last_name}
+                    </td>
+                    <td className="font-mono text-xs text-slate-600 dark:text-[var(--text)]">{s.phone || '—'}</td>
+                    <td>{s.course_name?.trim() ? s.course_name : '—'}</td>
+                    <td>{s.group_name?.trim() ? s.group_name : '—'}</td>
+                    <td>
+                      <span className="status-pill pill-active">{s.status || 'active'}</span>
+                    </td>
+                  </tr>
+                ))}
+                {(!students || students.length === 0) && (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-slate-400">
+                      Talabalar yo‘q
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {managerStudTotalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 dark:border-[var(--border)]">
+              <span className="text-xs text-slate-400">
+                {students?.length ?? 0} ta natija · {managerStudPage} / {managerStudTotalPages}
+              </span>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  disabled={managerStudPage === 1}
+                  onClick={() => setManagerStudPage((p) => Math.max(1, p - 1))}
+                  className="btn-pagination"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                {Array.from({ length: Math.min(managerStudTotalPages, 5) }, (_, i) => i + 1).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setManagerStudPage(n)}
+                    className={cn(
+                      'h-8 w-8 rounded-lg text-xs font-bold',
+                      managerStudPage === n
+                        ? 'bg-primary-600 text-white'
+                        : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-[var(--hover-bg)]',
+                    )}
+                  >
+                    {n}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  disabled={managerStudPage === managerStudTotalPages}
+                  onClick={() => setManagerStudPage((p) => Math.min(managerStudTotalPages, p + 1))}
+                  className="btn-pagination"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column */}

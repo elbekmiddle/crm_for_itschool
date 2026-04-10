@@ -755,7 +755,7 @@ const ExamsPage: React.FC = () => {
         {modal === 'review' && targetExam && (
           <motion.div
             key="exam-review"
-            className="modal-overlay"
+            className="modal-overlay w-full max-w-full"
             role="presentation"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -764,7 +764,7 @@ const ExamsPage: React.FC = () => {
             onClick={() => !reviewLoading && setModal(null)}
           >
             <motion.div
-              className="modal-content modal-content--screen flex min-h-0 max-w-2xl flex-col overflow-hidden p-6 sm:p-7"
+              className="modal-content modal_content_exam modal-content--screen flex min-h-0 flex-col overflow-hidden p-6 sm:p-7"
               initial={{ opacity: 0, scale: 0.96, y: 14 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: 10 }}
@@ -810,7 +810,9 @@ const ExamsPage: React.FC = () => {
                   {(!reviewData.questions || reviewData.questions.length === 0) && (
                     <p className="py-12 text-center text-slate-400">Hozircha savollar yo&apos;q</p>
                   )}
-                  {reviewData.questions?.map((q: any, idx: number) => {
+                  {(reviewData.questions?.length ?? 0) > 0 && (
+                  <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                  {reviewData.questions!.map((q: any, idx: number) => {
                     const opts = Array.isArray(q.options) ? q.options : [];
                     let ca = q.correct_answer;
                     if (typeof ca === 'string' && /^\d+$/.test(ca)) ca = parseInt(ca, 10);
@@ -954,6 +956,8 @@ const ExamsPage: React.FC = () => {
                       </div>
                     );
                   })}
+                  </div>
+                  )}
                 </>
               )}
             </div>

@@ -69,6 +69,25 @@ html.light {
     rgba(15, 23, 42, 0.06) 0 10px 15px -3px, rgba(15, 23, 42, 0.04) 0 4px 6px -2px;
 }
 
+/* Admin CRM — yorug‘ rejim: binafsha / lavender, qora matn emas (sidebar aktiv tugma uslubi) */
+html.light.admin-light-scope {
+  --text: #64748b;
+  --text-h: #5b21b6;
+  --bg: #faf5ff;
+  --bg-card: #ffffff;
+  --bg-muted: #f5f3ff;
+  --border: #e9d5ff;
+  --code-bg: #faf5ff;
+  --accent: #9333ea;
+  --accent-bg: rgba(147, 51, 234, 0.14);
+  --accent-border: rgba(147, 51, 234, 0.4);
+  --social-bg: rgba(196, 181, 253, 0.22);
+  --hover-bg: #ede9fe;
+  --divide: #ddd6fe;
+  --shadow:
+    rgba(91, 33, 182, 0.07) 0 10px 15px -3px, rgba(91, 33, 182, 0.05) 0 4px 6px -2px;
+}
+
 @theme {
   --color-primary-50:  #f5f0ff;
   --color-primary-100: #ece0ff;
@@ -290,9 +309,9 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 0 0 4px var(--accent-bg);
 }
 
-/* Qidiruv: ikonka va placeholder bir-biriga qolmasin */
+/* Qidiruv: ikonka va matn bir-biriga yopishmasin (ikon chapda ~14px) */
 .input.search-input {
-  padding-left: 2.85rem;
+  padding-left: 3rem;
 }
 
 .input-label {
@@ -436,10 +455,24 @@ html.light .modal-overlay {
     transform var(--ui-duration) var(--ui-ease);
 }
 .modal-content.modal-content--screen {
+  /* To‘liq viewport balandligi (overlay padding bilan mos): savollar modali uchun */
+  height: calc(100dvh - 1.5rem);
+  min-height: calc(100dvh - 1.5rem);
   max-height: calc(100dvh - 1.5rem);
-  min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* Savollar — tekshirish: .modal-content dagi 36rem max-width ni bekor qiladi (2-class > 1-class) */
+.modal-content.modal_content_exam {
+  width: min(60vw, 1400px);
+  max-width: min(60vw, 1400px);
+}
+@media (max-width: 767.98px) {
+  .modal-content.modal_content_exam {
+    width: calc(100vw - 1.5rem);
+    max-width: calc(100vw - 1.5rem);
+  }
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }

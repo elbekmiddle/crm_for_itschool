@@ -27,3 +27,21 @@ export function telegramOpenHref(student: {
   }
   return `tg://user?id=${encodeURIComponent(String(student.telegram_chat_id))}`;
 }
+
+type TelegramStudent = {
+  telegram_chat_id?: string | null;
+  telegram_username?: string | null;
+};
+
+/**
+ * Telegramni ochish: https:// — yangi tabda; tg:// — joriy oynada (yangi tabda emas — brauzer Google qidiruviga otmaydi).
+ */
+export function openTelegramChat(student: TelegramStudent): void {
+  const href = telegramOpenHref(student);
+  if (!href) return;
+  if (href.startsWith('https://') || href.startsWith('http://')) {
+    window.open(href, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  window.location.assign(href);
+}

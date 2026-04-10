@@ -188,7 +188,7 @@ export default function TeacherExamReview() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 pt-24">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="mx-auto max-w-[min(100%,80rem)] space-y-6">
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
           <div className="flex-1 w-full">
             <input
@@ -223,7 +223,7 @@ export default function TeacherExamReview() {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <AnimatePresence>
             {questions.map((q, qIdx) => (
               <motion.div

@@ -45,7 +45,10 @@ export class PaymentsController {
   @Permissions('PAYMENT_UPDATE')
   @Patch(':id')
   @ApiOperation({ summary: "To'lov yozuvini tahrirlash", description: 'Permissions: PAYMENT_UPDATE' })
-  update(@Param('id') id: string, @Body() body: { amount?: number; paid_at?: string; description?: string | null }) {
+  update(
+    @Param('id') id: string,
+    @Body() body: { amount?: number; paid_at?: string; description?: string | null; student_id?: string },
+  ) {
     return this.paymentsService.updatePayment(id, body);
   }
 
