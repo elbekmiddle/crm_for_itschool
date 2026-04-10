@@ -2,9 +2,6 @@ import { create } from 'zustand';
 import api from '../lib/api';
 import type { Student, CourseInfo, AttendanceRecord, AttendanceStats, Payment, StudentStats, Notification } from '../types';
 
-const isDev = import.meta.env.DEV;
-const devLog = (...args: any[]) => { if (isDev) console.log('[StudentStore]', ...args); };
-
 interface StudentState {
   profile: Student | null;
   course: CourseInfo | null;
@@ -87,7 +84,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     if (!attendance.length) set({ isLoading: true });
     try {
       const { data } = await api.get(`/students/${studentId}/attendance`);
-      devLog('fetchAttendance raw:', data);
       // New backend returns { records, stats }
       if (data && data.records) {
         set({
@@ -110,8 +106,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           },
         });
       }
-    } catch (e1) {
-      devLog('fetchAttendance /students/:id/attendance failed, trying analytics:', e1);
+    } catch {
       try {
         const { data } = await api.get(`/analytics/student/${studentId}`);
         set({
@@ -123,8 +118,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             attendance_percentage: data.attendance_percentage || 0,
           },
         });
-      } catch (e2) {
-        devLog('fetchAttendance failed:', e2);
+      } catch {
         set({ attendance: [], attendanceStats: { total_lessons: 0, present_count: 0, absent_count: 0, attendance_percentage: 0 } });
       }
     } finally {
@@ -139,8 +133,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       const { data } = await api.get(`/payments/student/${studentId}`);
       const pList = Array.isArray(data) ? data : (data.payments || []);
       set({ payments: pList, isLoading: false });
-    } catch (e) {
-      devLog('fetchPayments failed:', e);
+    } catch {
       set({ payments: [], isLoading: false });
     }
   },

@@ -19,6 +19,42 @@ import * as dayjs from 'dayjs';
 import { TelegramService } from '../../infrastructure/notifications/telegram.service';
 import { SocketsGateway } from '../sockets/sockets.gateway';
 import { AiService } from '../ai/ai.service';
+
+/**
+ * CRM (TeacherExamReview) MCQ/TF uchun to‘g‘ri javob — variantning 0-based indeksi (0,1,2…).
+ * Imtihon platformasi esa AnswerInput orqali variant id sifatida 1-based ("1","2",…) yuboradi.
+ * Shuning uchun `correct===1` bilan talaba `"2"` mos kelishi kerak, `"1"` emas.
+ */
+function matchMcqOrTfStudentToCorrect(studentPayload: unknown, correctRaw: unknown): boolean {
+  const uStr = String(studentPayload ?? '').trim();
+  const cStr = String(correctRaw ?? '').trim();
+  if (uStr !== '' && cStr !== '' && uStr === cStr) return true;
+
+  const uNum = Number(uStr);
+  const cNum = Number(correctRaw);
+  if (!Number.isFinite(cNum) || !Number.isInteger(cNum) || cNum < 0 || cNum > 40) {
+    return false;
+  }
+  /** CRM 0-based indeks → kutiladigan talaba id raqami */
+  if (Number.isFinite(uNum) && uNum === cNum + 1) return true;
+  return false;
+}
+
+function matchMultiSelectIndices(studentPayload: unknown, correctRaw: unknown): boolean {
+  const uArr = Array.isArray(studentPayload) ? studentPayload : [];
+  const cArr = Array.isArray(correctRaw) ? correctRaw : [];
+  if (!cArr.length) return false;
+  const uNums = uArr.map((x) => Number(x)).filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
+  /** CRM 0-based indekslar ro‘yxati → 1-based id lar */
+  const cNums = cArr
+    .map((x) => Number(x))
+    .filter((n) => Number.isFinite(n) && Number.isInteger(n) && n >= 0)
+    .map((idx) => idx + 1)
+    .sort((a, b) => a - b);
+  if (cNums.length !== uNums.length) return false;
+  return cNums.every((v, i) => v === uNums[i]);
+}
+
 @Injectable()
 export class ExamsService {
   private readonly logger = new Logger(ExamsService.name);
@@ -582,31 +618,33 @@ export class ExamsService {
     const attempt = await this.dbService.query(`SELECT exam_id FROM exam_attempts WHERE id = $1`, [attemptId]);
     if (!attempt.length) throw new NotFoundException('Attempt not found.');
 
-    /** Tartibni imtihon savollari bilan moslashtiramiz (random tartib to‘g‘ri javob bilan chalkashmasin). */
-    let questions: any[];
-    try {
-      questions = await this.dbService.query(
-        `
+    /** Tartibni imtihon savollari bilan moslashtiramiz. Eski sxemalarda `exam_questions.created_at` / `question_order` bo‘lmasligi mumkin. */
+    const questionSelect = `
       SELECT q.id, q.text, q.options, q.level, q.type
       FROM questions q
       JOIN exam_questions eq ON eq.question_id = q.id
-      WHERE eq.exam_id = $1
-      ORDER BY COALESCE(eq.question_order, 2147483647), eq.created_at ASC NULLS LAST, q.id
-    `,
-        [attempt[0].exam_id],
-      );
-    } catch (e: any) {
-      if (e?.code !== '42703') throw e;
-      questions = await this.dbService.query(
-        `
-      SELECT q.id, q.text, q.options, q.level, q.type
-      FROM questions q
-      JOIN exam_questions eq ON eq.question_id = q.id
-      WHERE eq.exam_id = $1
-      ORDER BY eq.created_at ASC NULLS LAST, q.id
-    `,
-        [attempt[0].exam_id],
-      );
+      WHERE eq.exam_id = $1`;
+    /** Avval `created_at` siz — ko‘p sxemalarda `exam_questions.created_at` ustuni yo‘q (42703). */
+    const orderVariants = [
+      ` ORDER BY COALESCE(eq.question_order, 2147483647), q.id`,
+      ` ORDER BY COALESCE(eq.question_order, 2147483647), eq.created_at ASC NULLS LAST, q.id`,
+      ` ORDER BY eq.created_at ASC NULLS LAST, q.id`,
+      ` ORDER BY q.id`,
+    ];
+    let questions: any[] | undefined;
+    let lastErr: any;
+    for (const ord of orderVariants) {
+      try {
+        questions = await this.dbService.query(questionSelect + ord, [attempt[0].exam_id]);
+        lastErr = undefined;
+        break;
+      } catch (e: any) {
+        lastErr = e;
+        if (e?.code !== '42703') throw e;
+      }
+    }
+    if (!questions) {
+      throw lastErr || new BadRequestException('Savollarni yuklab bo‘lmadi.');
     }
 
     const parseJson = (v: any, fb: any) => {
@@ -832,20 +870,11 @@ export class ExamsService {
            ? String(qCorrectRaw)
            : JSON.stringify(qCorrectRaw ?? '');
 
-       const numEq = (a: any, b: any) => Number(a) === Number(b);
-
        // Enhanced AI evaluation
        if (qType === 'multiple_choice' || qType === 'true_false') {
-         isCorrect =
-           numEq(uPayload, qCorrectRaw) ||
-           String(uPayload ?? '') === String(qCorrectRaw ?? '');
+         isCorrect = matchMcqOrTfStudentToCorrect(uPayload, qCorrectRaw);
        } else if (qType === 'multi_select' || qType === 'multiple_select') {
-         const pArr = (Array.isArray(uPayload) ? uPayload : []).map((x) => Number(x)).sort((a, b) => a - b);
-         const cArr = (Array.isArray(qCorrectRaw) ? qCorrectRaw : []).map((x) => Number(x)).sort((a, b) => a - b);
-         isCorrect =
-           cArr.length > 0 &&
-           pArr.length === cArr.length &&
-           pArr.every((v, i) => v === cArr[i]);
+         isCorrect = matchMultiSelectIndices(uPayload, qCorrectRaw);
        } else if (qType === 'text') {
          const aiGr = await this.aiService.gradeExamAnswer({
            questionText: qText,
@@ -886,7 +915,9 @@ export class ExamsService {
 
        if (isCorrect) correctCount++;
 
-       const pts = points || (isCorrect ? 10 : 0);
+       const rawPts = points ?? (isCorrect ? 10 : 0);
+       /** DB: `points_earned` INTEGER — AI ba'zan 6.5 kabi kasr qaytaradi */
+       const pts = Math.round(Math.min(10, Math.max(0, Number(rawPts) || 0)));
        try {
          await this.dbService.query(
            `UPDATE attempt_answers SET is_correct = $1, points_earned = $2 WHERE id = $3`,

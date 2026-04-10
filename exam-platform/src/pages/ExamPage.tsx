@@ -49,6 +49,22 @@ const ExamPage: React.FC = () => {
     restoreSession();
   }, [restoreSession]);
 
+  /** Backend vaqtincha o‘chganda navbatdagi javoblarni qayta yuborish */
+  useEffect(() => {
+    if (!isExamStarted || !attemptId) return;
+    const flush = () => {
+      const { pendingAnswers, retryPending } = useExamStore.getState();
+      if (pendingAnswers?.length) void retryPending();
+    };
+    const iv = window.setInterval(flush, 8000);
+    const onOnline = () => void useExamStore.getState().retryPending();
+    window.addEventListener('online', onOnline);
+    return () => {
+      window.clearInterval(iv);
+      window.removeEventListener('online', onOnline);
+    };
+  }, [isExamStarted, attemptId]);
+
   // Check if already submitted (ONLY on mount to avoid flicker after finish)
   useEffect(() => {
     if (isInitialMount.current && isExamFinished) {

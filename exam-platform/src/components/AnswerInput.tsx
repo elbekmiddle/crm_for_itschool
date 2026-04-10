@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Play } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, stableOptionId } from '../lib/utils';
 
 function normalizeOptionsList(raw: unknown): Array<{ id: string; text: string }> {
   if (raw == null) return [];
@@ -14,8 +14,8 @@ function normalizeOptionsList(raw: unknown): Array<{ id: string; text: string }>
   }
   if (!Array.isArray(parsed)) {
     if (parsed && typeof parsed === 'object') {
-      return Object.entries(parsed).map(([id, text]) => ({
-        id: String(id),
+      return Object.entries(parsed).map(([id, text], i) => ({
+        id: stableOptionId(id, i),
         text: String(text),
       }));
     }
@@ -24,7 +24,7 @@ function normalizeOptionsList(raw: unknown): Array<{ id: string; text: string }>
   return parsed.map((opt: any, i: number) => {
     if (opt != null && typeof opt === 'object') {
       return {
-        id: String(opt.id ?? opt.value ?? i + 1),
+        id: stableOptionId(opt.id ?? opt.value, i),
         text: String(opt.text ?? opt.label ?? opt.value ?? ''),
       };
     }

@@ -22,6 +22,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'PAYMENT_READ',
     'PAYMENT_CREATE',
     'PAYMENT_UPDATE',
+    'EXAM_PASS',
+    'EXAM_READ',
     'ANALYTICS_VIEW',
   ],
   TEACHER: [
@@ -36,6 +38,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'ATTENDANCE_MARK',
     'ATTENDANCE_READ',
     'EXAM_MANAGE',
+    'EXAM_PASS',
+    'EXAM_READ',
     'PAYMENT_READ',
     'ANALYTICS_VIEW',
   ],

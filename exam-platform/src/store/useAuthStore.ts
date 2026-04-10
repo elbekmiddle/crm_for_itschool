@@ -48,7 +48,6 @@ function unwrapToken(data: any): string {
 function parseJwt(token: string, phoneFallback = ''): Student {
   try {
     const d = jwtDecode<any>(token);
-    console.log('[Auth] JWT payload:', d);
     return {
       id: d.sub || '',
       first_name: d.first_name || '',

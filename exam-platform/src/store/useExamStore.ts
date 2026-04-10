@@ -6,6 +6,16 @@ import type { Question } from '../types';
 
 const answerSyncTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const ANSWER_SYNC_DEBOUNCE_MS = 450;
+const ANSWER_POST_RETRIES = 3;
+
+function isTransientNetworkError(e: unknown): boolean {
+  const err = e as { response?: unknown; code?: string; message?: string };
+  if (err?.response) return false;
+  const code = err?.code;
+  if (code === 'ERR_NETWORK' || code === 'ECONNABORTED' || code === 'ECONNREFUSED') return true;
+  const msg = String(err?.message ?? '');
+  return /Network Error|CONNECTION_REFUSED|Failed to fetch/i.test(msg);
+}
 
 interface ExamState {
   // Session
@@ -38,6 +48,7 @@ interface ExamState {
   startExam: (examId: string) => Promise<void>;
   setAnswer: (questionId: string, answer: any) => void;
   syncAnswer: (questionId: string, answer: any) => Promise<void>;
+  retryPending: () => Promise<void>;
   toggleFlag: (questionId: string) => void;
   tick: () => void;
   incrementViolations: () => void;
@@ -145,29 +156,43 @@ export const useExamStore = create<ExamState>()(
       syncAnswer: async (questionId, answer) => {
         const { attemptId } = get();
         if (!attemptId) return;
-        try {
-          await api.post(`/exams/attempt/${attemptId}/answer`, {
-            question_id: questionId,
-            answer_payload: answer,
-          });
+        for (let i = 0; i < ANSWER_POST_RETRIES; i++) {
+          try {
+            await api.post(`/exams/attempt/${attemptId}/answer`, {
+              question_id: questionId,
+              answer_payload: answer,
+            });
 
-          // Sync via socket for real-time visibility (if needed by teacher)
-          if (socket.connected) {
-            socket.emit('student_answered', { attemptId, questionId });
+            if (socket.connected) {
+              socket.emit('student_answered', { attemptId, questionId });
+            }
+
+            set((s) => ({
+              pendingAnswers: s.pendingAnswers.filter((p) => p.questionId !== questionId),
+            }));
+            return;
+          } catch (e) {
+            const transient = isTransientNetworkError(e);
+            if (!transient || i === ANSWER_POST_RETRIES - 1) {
+              set((s) => ({
+                pendingAnswers: [
+                  ...s.pendingAnswers.filter((p) => p.questionId !== questionId),
+                  { questionId, answer },
+                ],
+              }));
+              return;
+            }
+            await new Promise((r) => setTimeout(r, 400 * (i + 1)));
           }
+        }
+      },
 
-          // Remove from pending if synced
-          set((s) => ({
-            pendingAnswers: s.pendingAnswers.filter((p) => p.questionId !== questionId),
-          }));
-        } catch {
-          // Queue for retry
-          set((s) => ({
-            pendingAnswers: [
-              ...s.pendingAnswers.filter((p) => p.questionId !== questionId),
-              { questionId, answer },
-            ],
-          }));
+      retryPending: async () => {
+        const { pendingAnswers, attemptId } = get();
+        if (!attemptId || !pendingAnswers.length) return;
+        const batch = [...pendingAnswers];
+        for (const { questionId, answer } of batch) {
+          await get().syncAnswer(questionId, answer);
         }
       },
 
@@ -232,8 +257,11 @@ export const useExamStore = create<ExamState>()(
 
         answerSyncTimers.forEach((t) => clearTimeout(t));
         answerSyncTimers.clear();
+
+        await get().retryPending();
         const flush = Object.entries(answers).map(([qid, val]) => get().syncAnswer(qid, val));
         await Promise.allSettled(flush);
+        await get().retryPending();
 
         set({ isExamFinished: true, isExamStarted: false, finishReason: reason });
         localStorage.removeItem('exam-lock');

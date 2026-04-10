@@ -401,11 +401,14 @@ export class AuthService {
   }
 
   private async generateTokens(user: any) {
-    const role = normalizeRole(user.role) || user.role;
+    let resolvedRole = normalizeRole(user.role);
+    if (!resolvedRole && user.role != null && String(user.role).trim()) {
+      resolvedRole = normalizeRole(String(user.role));
+    }
     const payload = {
       sub: user.id,
-      role,
-      permissions: permissionsForRole(role),
+      role: resolvedRole || user.role,
+      permissions: permissionsForRole(resolvedRole),
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       phone: user.phone || '',

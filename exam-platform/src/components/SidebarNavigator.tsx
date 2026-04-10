@@ -28,7 +28,7 @@ const SidebarNavigator: React.FC = () => {
           return (
             <button
               type="button"
-              key={q.id}
+              key={q.id != null && String(q.id).trim() !== '' ? String(q.id) : `nav-${idx}`}
               onClick={() => { jumpToQuestion(idx); setIsOpen(false); }}
               className={cn(
                 "cursor-pointer relative h-11 w-11 rounded-xl text-sm font-bold flex items-center justify-center transition-all duration-200 border-2",

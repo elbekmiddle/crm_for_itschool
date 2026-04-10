@@ -4,6 +4,7 @@ import { useExamStore } from '../store/useExamStore';
 import { ArrowLeft, CheckCircle2, XCircle, Loader2, BookOpen } from 'lucide-react';
 import api from '../lib/api';
 import { displayQuestionTextUz } from '../lib/questionText';
+import { stableOptionId } from '../lib/utils';
 
 const unwrapCell = (raw: unknown) => {
   if (raw == null) return null;
@@ -18,6 +19,40 @@ const unwrapCell = (raw: unknown) => {
   return raw;
 };
 
+/** CRM 0-based indeks vs talaba 1-based id — backend bilan bir xil mantiq */
+function optionIsCorrectMcq(
+  correctRaw: unknown,
+  oi: number,
+  optId: unknown,
+  optText?: unknown,
+): boolean {
+  const ca = unwrapCell(correctRaw);
+  const oid = String(optId ?? '');
+  const txt = String(optText ?? '').trim();
+
+  if (Array.isArray(ca)) {
+    const set = new Set(ca.map((x) => String(x).trim()));
+    if (oid && set.has(oid)) return true;
+    if (set.has(String(oi + 1)) || set.has(String(oi))) return true;
+    return false;
+  }
+
+  if (txt !== '' && (String(ca ?? '').trim() === txt || String(ca) === txt)) return true;
+  if (String(ca ?? '').trim() === oid && oid !== '') return true;
+
+  const rawNum =
+    typeof ca === 'number'
+      ? ca
+      : typeof ca === 'string' && ca.trim() !== ''
+        ? Number(ca)
+        : NaN;
+  if (Number.isFinite(rawNum) && Number.isInteger(rawNum) && rawNum >= 0 && rawNum <= 40) {
+    if (oi === rawNum) return true;
+    if (oid === String(rawNum + 1)) return true;
+  }
+  return String(ca ?? '') === String(oi + 1);
+}
+
 const normalizeOptions = (opts: unknown): Array<{ id?: string; text?: string; value?: string }> => {
   if (opts == null) return [];
   let o: any = opts;
@@ -31,7 +66,7 @@ const normalizeOptions = (opts: unknown): Array<{ id?: string; text?: string; va
   if (!Array.isArray(o)) return [];
   return o.map((x: any, i: number) =>
     typeof x === 'object' && x !== null
-      ? { ...x, id: String(x.id ?? x.value ?? i + 1) }
+      ? { ...x, id: stableOptionId(x.id ?? x.value, i) }
       : { id: String(i + 1), text: String(x) },
   );
 };
@@ -171,11 +206,16 @@ const ReviewPage: React.FC = () => {
                       const optVal = typeof opt === 'object' ? opt.text || opt.value : opt;
                       const optId = typeof opt === 'object' ? opt.id ?? opt.value : opt;
                       const sa = q.student_answer;
-                      const ca = q.correct_answer;
-                      const isStudentAnswer =
-                        String(sa ?? '') === String(optId ?? '') || String(sa ?? '') === String(oi + 1);
-                      const isCorrectOpt =
-                        String(ca ?? '') === String(optId ?? '') || String(ca ?? '') === String(oi + 1);
+                      const isStudentAnswer = (() => {
+                        if (Array.isArray(sa)) {
+                          const ids = sa.map((x) => String(x));
+                          return ids.includes(String(optId ?? '')) || ids.includes(String(oi + 1));
+                        }
+                        return (
+                          String(sa ?? '') === String(optId ?? '') || String(sa ?? '') === String(oi + 1)
+                        );
+                      })();
+                      const isCorrectOpt = optionIsCorrectMcq(q.correct_answer, oi, optId, optVal);
                       const optKey = `${rowKey}-opt-${oi}-${String(optId ?? oi)}`;
                       return (
                         <div

@@ -44,7 +44,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
     
     const role = normalizeRole(payload.role);
-    const permissions = permissionsForRole(role);
+    /** Token ichidagi `permissions` (login paytida yozilgan) + rol bo‘yicha server ro‘yxati — eski/yarim tokenlarda 403 bo‘lmasin. */
+    const fromJwt = Array.isArray(payload.permissions)
+      ? payload.permissions.filter((x: unknown): x is string => typeof x === 'string')
+      : [];
+    const serverPerms = permissionsForRole(role);
+    const permissions = Array.from(new Set([...serverPerms, ...fromJwt]));
 
     return {
       id: payload.sub,
