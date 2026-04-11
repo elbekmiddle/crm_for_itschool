@@ -28,6 +28,8 @@ interface AuthState {
   checkInactivity: () => void;
   setStep: (step: VerifyStep) => void;
   setVerifyPhone: (phone: string) => void;
+  /** JWT dagi role noto‘g‘ri bo‘lishi mumkin — serverdan /auth/me bilan yangilash */
+  syncSession: () => Promise<void>;
 }
 
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
@@ -48,6 +50,7 @@ function unwrapToken(data: any): string {
 function parseJwt(token: string, phoneFallback = ''): Student {
   try {
     const d = jwtDecode<any>(token);
+    const r = d.role != null && String(d.role).trim() !== '' ? String(d.role).toUpperCase() : '';
     return {
       id: d.sub || '',
       first_name: d.first_name || '',
@@ -56,11 +59,12 @@ function parseJwt(token: string, phoneFallback = ''): Student {
       email: d.email || '',
       parent_name: d.parent_name || '',
       image_url: d.image_url || '',
-      role: d.role || 'STUDENT',
+      /** Default STUDENT emas — noto‘g‘ri rol bilan /students/me 403 bermasligi uchun syncSession ishlatiladi */
+      role: r,
     };
   } catch (e) {
     console.error('[Auth] JWT decode failed:', e);
-    return { id: '', first_name: '', last_name: '', phone: phoneFallback, email: '', parent_name: '', image_url: '', role: 'STUDENT' };
+    return { id: '', first_name: '', last_name: '', phone: phoneFallback, email: '', parent_name: '', image_url: '', role: '' };
   }
 }
 
@@ -168,6 +172,38 @@ export const useAuthStore = create<AuthState>()(
 
       setStep: (step) => set({ verifyStep: step }),
       setVerifyPhone: (phone) => set({ verifyPhone: phone }),
+
+      syncSession: async () => {
+        const tok = get().token || localStorage.getItem('token');
+        if (!tok) return;
+        try {
+          const { data: raw } = await api.get('/auth/me');
+          const me = (raw as any)?.data ?? raw;
+          if (!me || typeof me !== 'object') return;
+          const role = String((me as any).role ?? '')
+            .trim()
+            .toUpperCase();
+          set({
+            user: {
+              id: String((me as any).id ?? ''),
+              first_name: String((me as any).first_name ?? ''),
+              last_name: String((me as any).last_name ?? ''),
+              phone: String((me as any).phone ?? ''),
+              email: (me as any).email != null ? String((me as any).email) : '',
+              parent_name: (me as any).parent_name != null ? String((me as any).parent_name) : '',
+              image_url: (me as any).image_url != null ? String((me as any).image_url) : '',
+              role,
+            },
+          });
+        } catch {
+          try {
+            const t = get().token || localStorage.getItem('token');
+            if (t) set({ user: parseJwt(t) });
+          } catch {
+            /* */
+          }
+        }
+      },
     }),
     {
       name: 'auth-storage',

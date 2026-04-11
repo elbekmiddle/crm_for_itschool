@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore';
 import AppLayout from './components/AppLayout';
@@ -21,7 +22,7 @@ const StaffRedirect = () => {
   const logout = useAuthStore((s) => s.logout);
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-[#f4f3ec] p-8 text-center font-sans">
-      <p className="text-xl font-black text-[#08060d] tracking-tight">O‘qituvchi / xodim</p>
+      <p className="text-xl font-black text-[#08060d] tracking-tight">Xodim / administrator</p>
       <p className="text-[#6b6375] max-w-md text-sm font-medium leading-relaxed">
         Talaba imtihon paneli o‘rniga asosiy CRM kabinetidan foydalaning (telefon bilan kirish endi u yerda ham ishlaydi).
       </p>
@@ -46,14 +47,61 @@ const StaffRedirect = () => {
 };
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, syncSession, token } = useAuthStore();
+  const [sessionReady, setSessionReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!isAuthenticated) {
+        setSessionReady(true);
+        return;
+      }
+      const t = token || localStorage.getItem('token');
+      if (t) localStorage.setItem('token', t);
+      await syncSession();
+      if (!cancelled) setSessionReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, token, syncSession]);
+
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  if (user && (user.role === 'TEACHER' || user.role === 'MANAGER')) {
+  if (!sessionReady) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-[var(--bg)]">
+        <div className="h-10 w-10 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs font-bold text-[var(--text)] opacity-70">Sessiya tekshirilmoqda…</p>
+      </div>
+    );
+  }
+
+  if (user && !user.role) {
+    const logout = useAuthStore.getState().logout;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 bg-[var(--bg)] text-center">
+        <p className="text-sm font-bold text-[var(--text)]">Rol aniqlanmadi. Qayta kiring.</p>
+        <button
+          type="button"
+          className="rounded-2xl bg-[var(--accent)] px-6 py-3 text-white text-xs font-black uppercase"
+          onClick={() => {
+            logout();
+            window.location.href = '/login';
+          }}
+        >
+          Chiqish
+        </button>
+      </div>
+    );
+  }
+
+  if (user && (user.role === 'TEACHER' || user.role === 'MANAGER' || user.role === 'ADMIN')) {
     return <StaffRedirect />;
   }
 
-  if (user && user.role !== 'STUDENT' && user.role !== 'ADMIN') {
+  if (user && user.role !== 'STUDENT') {
     return <div className="p-10 text-center font-bold text-red-500">Kirish taqiqlangan. Bu platforma faqat talabalar uchun.</div>;
   }
 

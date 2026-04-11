@@ -17,6 +17,11 @@ export class AuditInterceptor implements NestInterceptor {
       tap(async () => {
         // Only log write operations
         if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(method)) {
+          const path = String(url).split('?')[0];
+          // Autosave: har savol uchun alohida audit — DB va loglarni yuklaydi
+          if (method === 'POST' && /\/attempt\/[^/]+\/answer$/.test(path)) {
+            return;
+          }
           const action = `${method} ${url}`;
           const entity = url.split('/')[1] || 'unknown';
           

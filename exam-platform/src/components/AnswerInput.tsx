@@ -103,7 +103,7 @@ export const MultiSelectInput: React.FC<MultiSelectProps> = ({
   questionId,
   options,
   selectedIds = [],
-  maxChoices = 4,
+  maxChoices = 99,
   onToggle,
 }) => {
   const handleToggle = (id: string) => {
@@ -319,12 +319,18 @@ const AnswerInput: React.FC<AnswerInputProps> = ({
   }
 
   if (qType === 'multi_select' || qType === 'multiple_select') {
+    const n = options.length;
+    const rawMax = question.max_choices;
+    const maxChoices =
+      rawMax != null && rawMax !== ''
+        ? Math.min(Math.max(1, Number(rawMax)), Math.max(1, n))
+        : Math.max(1, n);
     return (
       <MultiSelectInput
         questionId={question.id}
         options={options}
         selectedIds={Array.isArray(value) ? value.map(String) : []}
-        maxChoices={question.max_choices || 3}
+        maxChoices={maxChoices}
         onToggle={(_, ids) => onChange(ids)}
       />
     );

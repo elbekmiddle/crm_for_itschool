@@ -35,15 +35,39 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     const { profile } = get();
     if (!profile) set({ isLoading: true });
     try {
-      const { data } = await api.get('/students/me');
-      set({ profile: data, isLoading: false });
-    } catch {
-      try {
-        const { data } = await api.get('/analytics/student/me');
-        set({ profile: data, isLoading: false });
-      } catch (e2) {
-        set({ isLoading: false });
+      const { data: rawMe } = await api.get('/auth/me');
+      const me = (rawMe as any)?.data ?? rawMe;
+      const role = String(me?.role ?? '')
+        .trim()
+        .toUpperCase();
+      if (role !== 'STUDENT') {
+        set({ profile: null, isLoading: false });
+        return;
       }
+      try {
+        const { data } = await api.get('/students/me');
+        set({ profile: { ...data, role: 'STUDENT' }, isLoading: false });
+      } catch {
+        try {
+          const { data } = await api.get('/analytics/student/me');
+          set({ profile: data, isLoading: false });
+        } catch {
+          set({
+            profile: {
+              id: me.id,
+              first_name: me.first_name || '',
+              last_name: me.last_name || '',
+              phone: me.phone || '',
+              email: me.email || '',
+              parent_name: me.parent_name || '',
+              role: 'STUDENT',
+            },
+            isLoading: false,
+          });
+        }
+      }
+    } catch {
+      set({ isLoading: false });
     }
   },
 

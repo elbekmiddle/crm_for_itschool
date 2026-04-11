@@ -173,7 +173,7 @@ export class ExamsService {
       ...row,
       group_name,
       questions: normalized,
-      duration: row.duration_minutes ?? row.duration ?? 60,
+      duration: row.duration_minutes ?? row.time_limit ?? row.duration ?? 60,
       questions_count: normalized.length,
     };
   }
@@ -499,7 +499,7 @@ export class ExamsService {
       };
 
       const durationVariants = [
-        'COALESCE(e.time_limit, e.duration_minutes, 60)',
+        'COALESCE(e.duration_minutes, e.time_limit, 60)',
         'COALESCE(e.duration_minutes, 60)',
       ];
       let lastErr: any;
@@ -531,7 +531,7 @@ export class ExamsService {
     let exam: any[];
     try {
       exam = await this.dbService.query(
-        `SELECT e.id, COALESCE(e.time_limit, e.duration_minutes, 60) AS time_limit FROM exams e
+        `SELECT e.id, COALESCE(e.duration_minutes, e.time_limit, 60) AS time_limit FROM exams e
          WHERE e.id = $1 AND e.status = 'published'
          AND EXISTS (
            SELECT 1 FROM groups gx
@@ -595,8 +595,8 @@ export class ExamsService {
     // 3. Create new attempt
     const deadline = dayjs().add(exam[0].time_limit, 'minute').toDate();
     const result = await this.dbService.query(`
-      INSERT INTO exam_attempts (exam_id, student_id, deadline_at) 
-      VALUES ($1, $2, $3) RETURNING *
+      INSERT INTO exam_attempts (exam_id, student_id, deadline_at, started_at) 
+      VALUES ($1, $2, $3, NOW()) RETURNING *
     `, [examId, studentId, deadline]);
 
     try {
@@ -758,12 +758,9 @@ export class ExamsService {
   }
 
   async saveAnswer(attemptId: string, questionId: string, payload: any, clientTime?: number) {
-    const attempt = await this.dbService.query(`SELECT status FROM exam_attempts WHERE id = $1`, [attemptId]);
-    if (attempt[0].status !== 'in_progress') throw new ConflictException('Exam session is not active.');
-
     if (clientTime) {
       const serverTime = Date.now();
-      if (clientTime > serverTime + 300000) { // 5 minutes
+      if (clientTime > serverTime + 300000) {
         throw new ForbiddenException("Time manipulation detected");
       }
     }
@@ -772,23 +769,34 @@ export class ExamsService {
     const attempts = [
       `
       INSERT INTO attempt_answers (attempt_id, question_id, answer)
-      VALUES ($1, $2, $3::jsonb)
+      SELECT $1, $2, $3::jsonb
+      WHERE EXISTS (SELECT 1 FROM exam_attempts ea WHERE ea.id = $1 AND ea.status = 'in_progress')
       ON CONFLICT (attempt_id, question_id) DO UPDATE
       SET answer = EXCLUDED.answer, answered_at = NOW()
+      WHERE EXISTS (SELECT 1 FROM exam_attempts ea WHERE ea.id = EXCLUDED.attempt_id AND ea.status = 'in_progress')
+      RETURNING id
     `,
       `
       INSERT INTO attempt_answers (attempt_id, question_id, answer_payload)
-      VALUES ($1, $2, $3)
+      SELECT $1, $2, $3
+      WHERE EXISTS (SELECT 1 FROM exam_attempts ea WHERE ea.id = $1 AND ea.status = 'in_progress')
       ON CONFLICT (attempt_id, question_id) DO UPDATE
       SET answer_payload = EXCLUDED.answer_payload, answered_at = NOW()
+      WHERE EXISTS (SELECT 1 FROM exam_attempts ea WHERE ea.id = EXCLUDED.attempt_id AND ea.status = 'in_progress')
+      RETURNING id
     `,
     ];
 
     let last: any;
     for (const sql of attempts) {
       try {
-        return await this.dbService.query(sql, [attemptId, questionId, payloadStr]);
+        const rows = await this.dbService.query(sql, [attemptId, questionId, payloadStr]);
+        if (!rows.length) {
+          throw new ConflictException('Exam session is not active.');
+        }
+        return rows;
       } catch (e: any) {
+        if (e instanceof ConflictException) throw e;
         last = e;
         if (e?.code !== '42703') throw e;
       }
@@ -807,59 +815,57 @@ export class ExamsService {
     const { exam_id, student_id } = attempt[0];
 
     // Calculate score
-    const answers = await this.dbService.query(`
-      SELECT aa.*, q.correct_answer, q.id as question_id
+    const answers = await this.dbService.query(
+      `
+      SELECT aa.*,
+        q.type AS q_type, q.text AS q_text, q.correct_answer AS q_correct_answer
       FROM attempt_answers aa
       JOIN questions q ON aa.question_id = q.id
       WHERE aa.attempt_id = $1
-    `, [attemptId]);
+    `,
+      [attemptId],
+    );
 
     const totalQuestions = await this.dbService.query(`SELECT count(*) FROM exam_questions WHERE exam_id = $1`, [exam_id]);
     const totalCount = parseInt(totalQuestions[0].count) || 0;
 
     let correctCount = 0;
     
+    const unwrapPayloadCell = (raw: any) => {
+      if (raw == null || raw === '') return null;
+      if (typeof raw === 'object') return raw;
+      if (typeof raw === 'string') {
+        try {
+          return JSON.parse(raw);
+        } catch {
+          return raw;
+        }
+      }
+      return raw;
+    };
+    const unwrapCorrect = (v: any) => {
+      if (v == null) return null;
+      if (typeof v === 'string') {
+        try {
+          return JSON.parse(v);
+        } catch {
+          return v;
+        }
+      }
+      return v;
+    };
+
     for (const ans of answers) {
-       const question = await this.dbService.query(
-         `SELECT type, correct_answer, text FROM questions WHERE id = $1`,
-         [ans.question_id],
-       );
-       if (!question.length) continue;
-       
        let isCorrect = false;
        let points = 0;
-       let qType = String(question[0].type || '')
+       let qType = String(ans.q_type || '')
          .toLowerCase()
          .replace(/-/g, '_');
        if (qType === 'select' || qType === 'mcq') qType = 'multiple_choice';
        if (qType === 'boolean' || qType === 'tf') qType = 'true_false';
 
-       const unwrapPayloadCell = (raw: any) => {
-         if (raw == null || raw === '') return null;
-         if (typeof raw === 'object') return raw;
-         if (typeof raw === 'string') {
-           try {
-             return JSON.parse(raw);
-           } catch {
-             return raw;
-           }
-         }
-         return raw;
-       };
-       const unwrapCorrect = (v: any) => {
-         if (v == null) return null;
-         if (typeof v === 'string') {
-           try {
-             return JSON.parse(v);
-           } catch {
-             return v;
-           }
-         }
-         return v;
-       };
-
-       const qCorrectRaw = unwrapCorrect(question[0].correct_answer);
-       const qText = String(question[0].text || '');
+       const qCorrectRaw = unwrapCorrect(ans.q_correct_answer);
+       const qText = String(ans.q_text || '');
        const rawAns =
          ans.answer_payload != null && ans.answer_payload !== ''
            ? ans.answer_payload
@@ -1088,23 +1094,33 @@ export class ExamsService {
 
     const correct_count = details.filter((d) => d.is_correct).length;
     const incorrect_count = details.length - correct_count;
-    
-    // Time calculation (sekundlar; 0 ham “sarf vaqt” hisoblanadi)
+
     let time_taken = 0;
-    const started = attempt[0].started_at ? new Date(attempt[0].started_at).getTime() : NaN;
-    const finished = attempt[0].finished_at ? new Date(attempt[0].finished_at).getTime() : NaN;
-    if (!Number.isNaN(started) && !Number.isNaN(finished) && finished >= started) {
-      time_taken = Math.floor((finished - started) / 1000);
+    let fromResults = false;
+    try {
+      const er = await this.dbService.query(`SELECT time_taken FROM exam_results WHERE attempt_id = $1 LIMIT 1`, [
+        attemptId,
+      ]);
+      const tt = er[0]?.time_taken;
+      if (tt != null && Number(tt) > 0) {
+        time_taken = Math.floor(Number(tt));
+        fromResults = true;
+      }
+    } catch {
+      /* */
     }
-    if (time_taken <= 0) {
-      try {
-        const er = await this.dbService.query(`SELECT time_taken FROM exam_results WHERE attempt_id = $1 LIMIT 1`, [
-          attemptId,
-        ]);
-        const tt = er[0]?.time_taken;
-        if (tt != null && Number(tt) >= 0) time_taken = Number(tt);
-      } catch {
-        /* */
+    if (!fromResults) {
+      const started = attempt[0].started_at ? new Date(attempt[0].started_at).getTime() : NaN;
+      const finished = attempt[0].finished_at ? new Date(attempt[0].finished_at).getTime() : NaN;
+      if (!Number.isNaN(started) && !Number.isNaN(finished) && finished >= started) {
+        time_taken = Math.floor((finished - started) / 1000);
+      }
+    }
+    if (time_taken <= 0 && attempt[0].created_at && attempt[0].finished_at) {
+      const c = new Date(attempt[0].created_at).getTime();
+      const f = new Date(attempt[0].finished_at).getTime();
+      if (!Number.isNaN(c) && !Number.isNaN(f) && f >= c) {
+        time_taken = Math.floor((f - c) / 1000);
       }
     }
 
