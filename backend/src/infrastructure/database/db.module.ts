@@ -17,7 +17,7 @@ import { SchemaBootstrapService } from './schema-bootstrap.service';
           user: configService.get<string>('DB_USER', 'root'),
           password: configService.get<string>('DB_PASSWORD', 'password'),
           database: configService.get<string>('DB_NAME', 'it_school_crm'),
-          max: 20,
+          max: configService.get<number>('DB_POOL_MAX', 24),
           idleTimeoutMillis: 30000,
           connectionTimeoutMillis: configService.get<number>('DB_CONNECTION_TIMEOUT_MS', 30000),
           keepAlive: true,

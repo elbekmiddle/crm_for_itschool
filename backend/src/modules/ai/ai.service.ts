@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 
@@ -6,12 +6,14 @@ const PLACEHOLDER_OPENAI = new Set(['', 'your_openai_api_key', 'sk-your-openai-k
 const PLACEHOLDER_GEMINI = new Set(['', 'your_gemini_api_key', 'AIza-placeholder']);
 
 @Injectable()
-export class AiService {
+export class AiService implements OnModuleInit {
   private readonly logger = new Logger(AiService.name);
   private openai: OpenAI | null = null;
   private readonly model: string;
   private readonly geminiKey: string | null;
   private readonly geminiModel: string;
+  /** Bir marta muvaffaqiyatli ishlagan model — keyingi so‘rovlarda zanjir boshidan sinashni cheklaydi */
+  private geminiResolvedModelId: string | null = null;
 
   constructor(private configService: ConfigService) {
     const raw = (this.configService.get<string>('OPENAI_API_KEY') || '').trim();
@@ -30,6 +32,26 @@ export class AiService {
     this.geminiModel = (
       this.configService.get<string>('GEMINI_MODEL') || 'gemini-2.5-flash'
     ).trim();
+  }
+
+  async onModuleInit() {
+    const warmup =
+      String(this.configService.get<string>('AI_WARMUP') || '').toLowerCase() === 'true' ||
+      String(this.configService.get<string>('AI_WARMUP') || '') === '1';
+    if (!warmup || !this.geminiKey || this.resolveAiProvider() !== 'gemini') {
+      return;
+    }
+    try {
+      await this.callGemini({
+        system: 'Reply with the single word OK.',
+        user: 'ping',
+        maxOutputTokens: 8,
+        temperature: 0,
+      });
+      this.logger.log('AI warmup: Gemini javob berdi.');
+    } catch (e: any) {
+      this.logger.debug(`AI warmup: ${e?.message || e}`);
+    }
   }
 
   /** openai | gemini | none */
@@ -72,6 +94,11 @@ export class AiService {
     const extra = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
     const seen = new Set<string>();
     const out: string[] = [];
+    const resolved = (this.geminiResolvedModelId || '').trim();
+    if (resolved) {
+      seen.add(resolved);
+      out.push(resolved);
+    }
     for (const m of [this.geminiModel, ...extra]) {
       const id = (m || '').trim();
       if (id && !seen.has(id)) {
@@ -149,7 +176,9 @@ export class AiService {
     let lastErr: any;
     for (const modelId of this.geminiModelChain()) {
       try {
-        return await this.callGeminiOnce(modelId, options);
+        const text = await this.callGeminiOnce(modelId, options);
+        this.geminiResolvedModelId = modelId;
+        return text;
       } catch (e: any) {
         lastErr = e;
         const http = e?.httpStatus;
@@ -158,6 +187,9 @@ export class AiService {
           http === 404 ||
           /404|not longer available|is not found|not supported for generateContent/i.test(msg);
         if (modelGone) {
+          if (this.geminiResolvedModelId === modelId) {
+            this.geminiResolvedModelId = null;
+          }
           this.logger.debug(`Gemini model "${modelId}" ishlamadi, keyingisini sinaymiz…`);
           continue;
         }

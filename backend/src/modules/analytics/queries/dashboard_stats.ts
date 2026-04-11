@@ -36,8 +36,8 @@ export async function dashboard_stats(dbService: DbService) {
 }
 
 /**
- * Parallel Promise.all bilan bir vaqtda juda ko‘p ulanish ochilishi (pool_size)
- * Session mode / max clients xatosiga olib keladi — so‘rovlarni ketma-ket bajaramiz.
+ * KPI so‘rovlarini ketma-ket bajaramiz: parallel `Promise.all` poolni (va ba’zan
+ * DB `max_connections`ni) to‘ldirib, boshqa endpointlarda 500 berardi.
  */
 async function computeDashboardStats(dbService: DbService) {
   const students = await dbService.querySafe(
@@ -55,11 +55,7 @@ async function computeDashboardStats(dbService: DbService) {
     [],
     [{ count: '0' }],
   );
-  const revenue = await dbService.querySafe(
-    `SELECT SUM(amount) as total FROM payments`,
-    [],
-    [{ total: '0' }],
-  );
+  const revenue = await dbService.querySafe(`SELECT SUM(amount) as total FROM payments`, [], [{ total: '0' }]);
   const pendingPayments = await dbService.querySafe(
     `SELECT COUNT(*) FROM payments WHERE status = 'pending'`,
     [],

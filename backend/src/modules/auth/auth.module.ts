@@ -16,7 +16,7 @@ import { TelegramModule } from '../../infrastructure/notifications/telegram.modu
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get('JWT_SECRET'),
-        signOptions: { expiresIn: configService.get('JWT_EXPIRES_IN', '1h') },
+        signOptions: { expiresIn: configService.get('JWT_EXPIRES_IN', '15m') },
       }),
     }),
   ],

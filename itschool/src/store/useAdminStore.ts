@@ -14,6 +14,8 @@ interface AdminState {
   examResults: any[];
   users: any[];
   payments: any[];
+  paymentsTotal: number;
+  paymentsPage: number;
   lessons: any[];
   questions: any[];
   questionStats: any | null;
@@ -63,7 +65,7 @@ interface AdminState {
   deleteUser: (id: string) => Promise<void>;
   
   // Payments
-  fetchPayments: () => Promise<void>;
+  fetchPayments: (page?: number) => Promise<void>;
   createPayment: (data: any) => Promise<void>;
   deletePayment: (id: string) => Promise<void>;
   getStudentPayments: (studentId: string) => Promise<any>;
@@ -99,6 +101,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   examResults: [],
   users: [],
   payments: [],
+  paymentsTotal: 0,
+  paymentsPage: 1,
   lessons: [],
   questions: [],
   questionStats: null,
@@ -306,22 +310,47 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   // ──── Payments ────
-  fetchPayments: async () => {
+  fetchPayments: async (page?: number) => {
+    const targetPage = page !== undefined ? page : get().paymentsPage || 1;
     set({ isLoading: true });
     try {
-      const { data } = await api.get('/payments');
-      set({ payments: data, isLoading: false });
-    } catch (e: any) { set({ error: e.message, isLoading: false }); }
+      const { data } = await api.get('/payments', { params: { page: targetPage, limit: 50 } });
+      const pdata = data as { items?: unknown[]; total?: number; page?: number } | unknown[] | undefined;
+      const items = pdata && !Array.isArray(pdata) && Array.isArray(pdata.items)
+        ? pdata.items
+        : Array.isArray(pdata)
+          ? pdata
+          : [];
+      const total =
+        pdata && !Array.isArray(pdata) && typeof pdata.total === 'number' ? pdata.total : items.length;
+      const resolvedPage =
+        pdata && !Array.isArray(pdata) && typeof pdata.page === 'number' ? pdata.page : targetPage;
+      set({
+        payments: items,
+        paymentsTotal: total,
+        paymentsPage: resolvedPage,
+        isLoading: false,
+      });
+    } catch (e: any) {
+      set({ error: e.message, isLoading: false });
+    }
   },
 
   createPayment: async (data) => {
-    try { await api.post('/payments', data); await get().fetchPayments(); }
+    try {
+      await api.post('/payments', data);
+      await get().fetchPayments(get().paymentsPage || 1);
+    }
     catch (e: any) { alert(e.response?.data?.message || "To'lov yaratishda xatolik yuz berdi"); }
   },
 
   deletePayment: async (id) => {
-    try { await api.delete(`/payments/${id}`); set({ payments: get().payments.filter(p => p.id !== id) }); }
-    catch (e: any) { alert("O'chirishda xatolik yuz berdi"); }
+    try {
+      await api.delete(`/payments/${id}`);
+      await get().fetchPayments(get().paymentsPage || 1);
+    } catch (e: any) {
+      alert("O'chirishda xatolik yuz berdi");
+    }
   },
 
   getStudentPayments: async (studentId) => {

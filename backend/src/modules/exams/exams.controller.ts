@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Request, Patch, Delete, ForbiddenException } from '@nestjs/common';
 import { ExamsService } from './exams.service';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { GradeExamDto } from './dto/grade-exam.dto';
@@ -107,6 +107,16 @@ export class ExamsController {
   @ApiOperation({ summary: 'Get available exams for student', description: 'Permissions: EXAM_PASS' })
   getAvailableExams(@Request() req) {
     return this.examsService.getAvailableExams(req.user.id);
+  }
+
+  @Permissions('EXAM_PASS')
+  @Get('results/student/:studentId')
+  @ApiOperation({ summary: 'Talaba imtihon natijalari / tarixi', description: 'Permissions: EXAM_PASS; talaba faqat o‘zi' })
+  getStudentResults(@Param('studentId') studentId: string, @Request() req) {
+    if (req.user?.role === 'STUDENT' && studentId !== req.user.id) {
+      throw new ForbiddenException('Faqat o‘z natijalaringizni ko‘ra olasiz');
+    }
+    return this.examsService.getStudentResults(studentId);
   }
 
   @Permissions('EXAM_PASS')

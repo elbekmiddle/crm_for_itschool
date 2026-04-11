@@ -11,6 +11,7 @@ import {
   Req,
   UnauthorizedException,
   BadRequestException,
+  GoneException,
 } from '@nestjs/common';
 import { Response, Request as ExpressRequest } from 'express';
 import { AuthService } from './auth.service';
@@ -25,11 +26,29 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { ConfigService } from '@nestjs/config';
+
+/** JWT `expiresIn` qatori (masalan `15m`, `7d`) → cookie maxAge ms */
+function jwtExpiresToCookieMs(expr: unknown, fallbackMs: number): number {
+  if (typeof expr !== 'string' || !expr.trim()) return fallbackMs;
+  const m = /^(\d+)\s*(ms|s|m|h|d)$/i.exec(expr.trim());
+  if (!m) return fallbackMs;
+  const n = Number(m[1]);
+  if (!Number.isFinite(n) || n < 0) return fallbackMs;
+  const u = m[2].toLowerCase();
+  const mult =
+    u === 'ms' ? 1 : u === 's' ? 1000 : u === 'm' ? 60_000 : u === 'h' ? 3_600_000 : u === 'd' ? 86_400_000 : 0;
+  if (!mult) return fallbackMs;
+  return n * mult;
+}
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   /* ── ADMIN / TEACHER / MANAGER ── */
 
@@ -39,28 +58,20 @@ export class AuthController {
   async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.login(loginDto);
     this.setCookies(res, { access_token: result.access_token, refresh_token: result.refresh_token });
-    return { 
+    return {
       message: 'Muvaffaqiyatli tizimga kirdingiz',
       user: result.user,
-      access_token: result.access_token,
-      refresh_token: result.refresh_token
     };
   }
 
-  /* ── STUDENT LEGACY (phone + firstName) ── */
+  /* ── STUDENT LEGACY — o‘chirilgan (parolsiz kirish xavfli) ── */
 
   @Post('student-login')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'O\'quvchi kirishi telefon + ism bilan (eski usul)' })
-  async studentLogin(@Body() studentLoginDto: StudentLoginDto, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.studentLogin(studentLoginDto);
-    this.setCookies(res, { access_token: result.access_token, refresh_token: result.refresh_token });
-    return { 
-      message: 'Muvaffaqiyatli tizimga kirdingiz',
-      user: result.user,
-      access_token: result.access_token,
-      refresh_token: result.refresh_token
-    };
+  @ApiOperation({ summary: 'DEPRECATED — 410 Gone', description: 'Telefon + parol: POST /auth/student-login-password' })
+  studentLogin(@Body() _dto: StudentLoginDto) {
+    throw new GoneException(
+      "Bu endpoint o'chirilgan. POST /auth/student-login-password (telefon + parol) yoki Telegram tasdiqlash oqimidan foydalaning.",
+    );
   }
 
   /* ── STUDENT TELEGRAM VERIFICATION FLOW ── */
@@ -105,11 +116,9 @@ export class AuthController {
   async verifyCode(@Body() dto: VerifyCodeDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.verifyCodeAndSetPassword(dto);
     this.setCookies(res, { access_token: result.access_token, refresh_token: result.refresh_token });
-    return { 
+    return {
       message: 'Muvaffaqiyatli ro\'yxatdan o\'tdingiz va tizimga kirdingiz',
       user: result.user,
-      access_token: result.access_token,
-      refresh_token: result.refresh_token
     };
   }
 
@@ -122,11 +131,9 @@ export class AuthController {
   async studentPasswordLogin(@Body() dto: StudentPasswordLoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.studentPasswordLogin(dto);
     this.setCookies(res, { access_token: result.access_token, refresh_token: result.refresh_token });
-    return { 
+    return {
       message: 'Muvaffaqiyatli tizimga kirdingiz',
       user: result.user,
-      access_token: result.access_token,
-      refresh_token: result.refresh_token
     };
   }
 
@@ -139,8 +146,6 @@ export class AuthController {
     return {
       message: 'Muvaffaqiyatli tizimga kirdingiz',
       user: result.user,
-      access_token: result.access_token,
-      refresh_token: result.refresh_token,
     };
   }
 
@@ -156,11 +161,7 @@ export class AuthController {
     }
     const tokens = await this.authService.refreshToken(refreshToken as string);
     this.setCookies(res, tokens);
-    return { 
-      message: 'Token muvaffaqiyatli yangilandi',
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token
-    };
+    return { message: 'Token muvaffaqiyatli yangilandi' };
   }
 
   @Post('logout')
@@ -207,22 +208,22 @@ export class AuthController {
   /* ── HELPER: Set HTTPOnly Secure Cookies ── */
   private setCookies(res: Response, tokens: { access_token: string; refresh_token: string }) {
     const isProduction = process.env.NODE_ENV === 'production';
-    
-    // Access token - 30 kun (to match JWT_EXPIRES_IN)
+    const accessMs = jwtExpiresToCookieMs(this.configService.get('JWT_EXPIRES_IN'), 15 * 60 * 1000);
+    const refreshMs = jwtExpiresToCookieMs(this.configService.get('JWT_REFRESH_EXPIRES_IN'), 7 * 24 * 60 * 60 * 1000);
+
     res.cookie('access_token', tokens.access_token, {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      maxAge: accessMs,
       path: '/',
     });
 
-    // Refresh token - 60 kun (to match JWT_REFRESH_EXPIRES_IN)
     res.cookie('refresh_token', tokens.refresh_token, {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'lax',
-      maxAge: 60 * 24 * 60 * 60 * 1000, // 60 days
+      maxAge: refreshMs,
       path: '/',
     });
   }

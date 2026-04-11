@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, UseGuards, Delete, Query } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -30,9 +30,17 @@ export class PaymentsController {
 
   @Permissions('PAYMENT_READ')
   @Get()
-  @ApiOperation({ summary: 'Get all payments', description: 'Permissions: PAYMENT_READ' })
-  findAll() {
-    return this.paymentsService.findAll();
+  @ApiOperation({
+    summary: 'To‘lovlar ro‘yxati (sahifalangan)',
+    description: 'Permissions: PAYMENT_READ. `page` (default 1), `limit` (default 50, max 100).',
+  })
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const p = Math.max(1, parseInt(page ?? '1', 10) || 1);
+    const l = Math.min(100, Math.max(1, parseInt(limit ?? '50', 10) || 50));
+    return this.paymentsService.findAllPaged(p, l);
   }
 
   @Permissions('PAYMENT_READ')

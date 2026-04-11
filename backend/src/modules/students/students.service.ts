@@ -32,7 +32,9 @@ export class StudentsService {
   }
 
   async findAll(page: number = 1, limit: number = 20, user?: any, compact?: boolean) {
-    return all_students(this.dbService, page, limit, user, Boolean(compact));
+    const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+    const safeLimit = Math.min(Math.max(1, Math.floor(limit) || 20), 500);
+    return all_students(this.dbService, safePage, safeLimit, user, Boolean(compact));
   }
 
   async findOne(id: string) {

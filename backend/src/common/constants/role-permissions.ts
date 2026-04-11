@@ -25,6 +25,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'EXAM_PASS',
     'EXAM_READ',
     'ANALYTICS_VIEW',
+    'ATTENDANCE_READ',
   ],
   TEACHER: [
     'STUDENT_READ',

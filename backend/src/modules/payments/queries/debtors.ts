@@ -34,7 +34,7 @@ export async function list_debtor_students(dbService: DbService) {
       SELECT
         g.name AS group_name,
         c.name AS course_name,
-        NULL::timestamptz AS joined_at
+        gs.joined_at AS joined_at
       FROM group_students gs
       INNER JOIN groups g ON g.id = gs.group_id AND g.deleted_at IS NULL
       LEFT JOIN courses c ON c.id = g.course_id

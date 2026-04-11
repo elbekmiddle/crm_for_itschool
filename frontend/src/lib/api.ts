@@ -93,6 +93,7 @@ api.interceptors.response.use(
         401: 'Kirish rad etildi — qayta tizimga kiring',
         403: 'Ruxsat yo‘q',
         404: 'Ma’lumot topilmadi',
+        410: 'Bu resurs o‘chirilgan yoki ko‘chirilgan',
         409: 'Ma’lumot allaqachon mavjud',
         413: 'Fayl juda katta',
         429: 'Juda ko‘p so‘rov — birozdan keyin urinib ko‘ring',

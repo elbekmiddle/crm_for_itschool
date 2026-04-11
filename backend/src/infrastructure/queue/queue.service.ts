@@ -5,6 +5,8 @@ import Redis from 'ioredis';
 import { AiService } from '../../modules/ai/ai.service';
 import { DbService } from '../database/db.service';
 import { process_exam_questions } from './commands/process_exam_questions';
+
+@Injectable()
 export class QueueService implements OnModuleInit {
   private readonly logger = new Logger(QueueService.name);
   public aiQueue?: Queue;

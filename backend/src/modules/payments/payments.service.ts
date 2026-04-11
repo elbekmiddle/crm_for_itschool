@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, Logger, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { all_payments } from './queries/all_payments';
+import { all_payments_page, count_payments } from './queries/all_payments_paginated';
 import { list_debtor_students } from './queries/debtors';
 import { get_student_payments_raw } from './queries/get_student_payments_raw';
 import { create_payment } from './commands/create_payment';
@@ -25,14 +26,36 @@ export class PaymentsService implements OnModuleInit {
   async checkOverduePayments() {
     this.logger.log('Checking overdue payments...');
     try {
-      const students = await this.dbService.query(`SELECT id, first_name, telegram_chat_id FROM students WHERE deleted_at IS NULL`);
-      for (const student of students) {
-         if (!student.telegram_chat_id) continue;
-         const data = await this.getStudentPayments(student.id);
-         if (data.status === 'FROZEN' || data.status === 'PENDING') {
-             await this.telegramService.notifyPaymentDue(student.telegram_chat_id, student.first_name, 500000, 'Joriy', student.id);
-             await new Promise(r => setTimeout(r, 50));
-         }
+      /** Bitta so‘rov: oxirgi to‘langan sana (paid_at) bo‘yicha FROZEN/PENDING — N+1 yo‘q */
+      const rows = await this.dbService.query(
+        `
+        WITH pc AS (
+          SELECT student_id, COUNT(*)::int AS n,
+            MAX(paid_at) FILTER (WHERE paid_at IS NOT NULL) AS last_paid
+          FROM payments
+          GROUP BY student_id
+        )
+        SELECT s.id, s.first_name, s.telegram_chat_id
+        FROM students s
+        LEFT JOIN pc ON pc.student_id = s.id
+        WHERE s.deleted_at IS NULL
+          AND s.telegram_chat_id IS NOT NULL
+          AND (
+            COALESCE(pc.n, 0) = 0
+            OR pc.last_paid IS NULL
+            OR pc.last_paid < NOW() - INTERVAL '60 days'
+          )
+        `,
+      );
+      for (const student of rows) {
+        await this.telegramService.notifyPaymentDue(
+          student.telegram_chat_id,
+          student.first_name,
+          500000,
+          'Joriy',
+          student.id,
+        );
+        await new Promise((r) => setTimeout(r, 50));
       }
     } catch (e) {
       this.logger.error('Overdue payments check failed:', e);
@@ -65,13 +88,18 @@ export class PaymentsService implements OnModuleInit {
 
     let status = 'ACTIVE';
     if (payments.length > 0) {
-       const lastPaymentDate = new Date(payments[0].paid_at);
-       const daysSince = Math.floor((new Date().getTime() - lastPaymentDate.getTime()) / (1000 * 3600 * 24));
-       if (daysSince > 60) {
-         status = 'FROZEN';
-       }
+      const lastWithPaidAt = payments.find((p: { paid_at?: string | null }) => p.paid_at != null);
+      if (!lastWithPaidAt?.paid_at) {
+        status = 'PENDING';
+      } else {
+        const lastPaymentDate = new Date(lastWithPaidAt.paid_at);
+        const daysSince = Math.floor((new Date().getTime() - lastPaymentDate.getTime()) / (1000 * 3600 * 24));
+        if (daysSince > 60) {
+          status = 'FROZEN';
+        }
+      }
     } else {
-       status = 'PENDING';
+      status = 'PENDING';
     }
 
     return { status, payments };
@@ -79,6 +107,18 @@ export class PaymentsService implements OnModuleInit {
 
   async findAll() {
     return all_payments(this.dbService);
+  }
+
+  /** CRM ro‘yxat: sahifalash — butun jadvalni RAM ga yuklamaydi */
+  async findAllPaged(page: number, limit: number) {
+    const safeLimit = Math.min(100, Math.max(1, limit));
+    const safePage = Math.max(1, page);
+    const offset = (safePage - 1) * safeLimit;
+    const [items, total] = await Promise.all([
+      all_payments_page(this.dbService, safeLimit, offset),
+      count_payments(this.dbService),
+    ]);
+    return { items, total, page: safePage, limit: safeLimit };
   }
 
   async listDebtors() {

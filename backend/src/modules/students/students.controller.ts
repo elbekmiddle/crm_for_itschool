@@ -39,9 +39,10 @@ export class StudentsController {
     return this.studentsService.getStats(req.user.id);
   }
 
-  @Permissions('ATTENDANCE_READ')
+  /** Talaba JWT-da `permissions` bo‘lmasa ham STUDENT_READ rol bo‘yicha beriladi (PermissionsGuard). */
+  @Permissions('STUDENT_READ')
   @Get(':id/attendance')
-  @ApiOperation({ summary: 'Get attendance records for a student', description: 'Permissions: ATTENDANCE_READ' })
+  @ApiOperation({ summary: 'Get attendance records for a student', description: 'Permissions: STUDENT_READ' })
   @ApiParam({ name: 'id', description: 'Student UUID' })
   getAttendance(@Param('id') id: string, @Request() req) {
     const studentId = req.user.role === 'STUDENT' ? req.user.id : id;

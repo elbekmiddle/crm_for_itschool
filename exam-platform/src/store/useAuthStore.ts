@@ -20,7 +20,6 @@ interface AuthState {
   sendCode: (phone: string) => Promise<void>;
   verifyCode: (phone: string, code: string, password: string) => Promise<void>;
   loginWithPassword: (phone: string, password: string, kind?: 'student' | 'staff') => Promise<void>;
-  login: (phone: string, firstName: string) => Promise<void>;
   logout: () => void;
   updateActivity: () => void;
   checkInactivity: () => void;
@@ -137,26 +136,6 @@ export const useAuthStore = create<AuthState>()(
           set({ user, isAuthenticated: true, lastActivity: Date.now(), isLoading: false });
         } catch (e: unknown) {
           console.error('[Auth] loginWithPassword xato');
-          set({ isLoading: false });
-          throw e;
-        }
-      },
-
-      login: async (phone, firstName) => {
-        set({ isLoading: true });
-        try {
-          const { data } = await api.post('/auth/student-login', { phone, first_name: firstName });
-          const res = data as { user?: unknown };
-          let user = mapApiUserToStudent(res?.user, phone);
-          if (firstName) user = { ...user, first_name: firstName };
-          if (!user.id) {
-            await get().syncSession();
-            user = get().user || user;
-          }
-          if (!user.id) throw new Error('Foydalanuvchi ma’lumotlari qaytmadi');
-          reconnectRealtimeSocket();
-          set({ user, isAuthenticated: true, lastActivity: Date.now(), isLoading: false });
-        } catch (e) {
           set({ isLoading: false });
           throw e;
         }

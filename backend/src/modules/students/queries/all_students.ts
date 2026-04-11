@@ -65,24 +65,26 @@ export async function all_students(
     ${dataWhereAliased}
     ORDER BY s.created_at DESC LIMIT $1 OFFSET $2`;
 
-  const [data, total] = await Promise.all([
-    dbService.querySafe(dataSql, [limit, offset, ...filterParams], []),
-    dbService.querySafe(countSql, filterParams, [{ count: '0' }]),
-  ]);
+  const data = await dbService.querySafe(dataSql, [limit, offset, ...filterParams], []);
+  const total = await dbService.querySafe(countSql, filterParams, [{ count: '0' }]);
 
   const ids = (data || []).map((row: any) => row.id).filter(Boolean);
   const paidSet = new Set<string>();
   if (ids.length > 0) {
+    const chunkSize = 200;
     try {
-      const paidRows = await dbService.query(
-        `SELECT DISTINCT student_id FROM payments
-         WHERE student_id = ANY($1::uuid[])
-           AND paid_at IS NOT NULL
-           AND date_trunc('month', paid_at::timestamp) = date_trunc('month', CURRENT_TIMESTAMP)`,
-        [ids],
-      );
-      for (const r of paidRows) {
-        if (r.student_id) paidSet.add(String(r.student_id));
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        const paidRows = await dbService.query(
+          `SELECT DISTINCT student_id FROM payments
+           WHERE student_id = ANY($1::uuid[])
+             AND paid_at IS NOT NULL
+             AND date_trunc('month', paid_at::timestamp) = date_trunc('month', CURRENT_TIMESTAMP)`,
+          [chunk],
+        );
+        for (const r of paidRows) {
+          if (r.student_id) paidSet.add(String(r.student_id));
+        }
       }
     } catch {
       /* payments jadvali / ustunlari yo‘q bo‘lsa — ro‘yxat baribir qaytadi */

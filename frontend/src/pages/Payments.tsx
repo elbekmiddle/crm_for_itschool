@@ -16,11 +16,11 @@ import { paymentMethodLabel } from '../lib/paymentLabels';
 const PaymentsPage: React.FC = () => {
   const {
     payments,
+    paymentsTotal,
     debtors,
     students,
     stats,
     user,
-    fetchPayments,
     fetchStudents,
     fetchCourses,
     fetchStats,
@@ -51,11 +51,14 @@ const PaymentsPage: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchPayments();
     fetchStudents();
     fetchCourses();
     fetchStats();
   }, []);
+
+  useEffect(() => {
+    void useAdminStore.getState().fetchPayments(page);
+  }, [page]);
 
   useEffect(() => {
     const id = (location.state as { focusStudentId?: string } | null)?.focusStudentId;
@@ -66,7 +69,7 @@ const PaymentsPage: React.FC = () => {
     navigate('.', { replace: true, state: {} });
   }, [location.state, navigate]);
 
-  const totalRevenue = stats?.totalRevenue || payments.reduce((a: number, p: any) => a + (Number(p.amount) || 0), 0);
+  const totalRevenue = stats?.totalRevenue ?? 0;
   const chartTrend =
     chartPeriod === 'year'
       ? (stats?.growthTrendYearly || []).map((g: { year?: string; count?: number }) => ({
@@ -76,8 +79,8 @@ const PaymentsPage: React.FC = () => {
       : stats?.growthTrend || [];
   const mom = stats?.revenueMonthOverMonthPct;
   const list = tab === 'all' ? payments : [];
-  const totalPages = tab === 'all' ? Math.ceil(list.length / perPage) : 1;
-  const paginated = tab === 'all' ? list.slice((page - 1) * perPage, page * perPage) : [];
+  const totalPages = tab === 'all' ? Math.max(1, Math.ceil((paymentsTotal || 0) / perPage)) : 1;
+  const paginated = tab === 'all' ? list : [];
   const canEditPayment = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   const studentsForCreate = useMemo(() => {
@@ -411,7 +414,7 @@ const PaymentsPage: React.FC = () => {
 
         {tab === 'all' && totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-50">
-            <span className="text-xs text-slate-400">{list.length} ta natija</span>
+            <span className="text-xs text-slate-400">{paymentsTotal} ta natija</span>
             <div className="flex gap-1">
               <button type="button" disabled={page === 1} onClick={() => setPage(page - 1)} className="btn-pagination"><ChevronLeft className="w-4 h-4" /></button>
               {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (

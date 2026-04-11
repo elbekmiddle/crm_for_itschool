@@ -16,11 +16,8 @@ export function getRealtimeSocket(): Socket {
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 8000,
-      /** HTTP cookie (refresh) bilan birga — CORS da aniq origin ro‘yxati kerak */
+      /** HTTPOnly JWT cookie — `withCredentials`; localStorage token ishlatilmaydi */
       withCredentials: true,
-      auth: () => ({
-        token: typeof localStorage !== 'undefined' ? localStorage.getItem('access_token') : null,
-      }),
     });
   }
   return socket;

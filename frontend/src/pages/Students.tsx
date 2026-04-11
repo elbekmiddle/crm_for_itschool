@@ -152,7 +152,8 @@ const StudentsPage: React.FC = () => {
   };
 
   const openStudentProfile = (studentId: string) => {
-    if (user?.role === 'MANAGER' || user?.role === 'ADMIN') navigate(`/manager/students/${studentId}`);
+    if (user?.role === 'ADMIN') navigate(`/admin/students/${studentId}`);
+    else if (user?.role === 'MANAGER') navigate(`/manager/students/${studentId}`);
     else if (user?.role === 'TEACHER') navigate(`/teacher/students/${studentId}`);
   };
 

@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
 @ApiTags('analytics')
@@ -29,9 +30,13 @@ export class AnalyticsController {
     return this.analyticsService.getStudentAnalytics(targetId);
   }
 
-  @Permissions('ANALYTICS_VIEW')
+  /** ANALYTICS_VIEW emas — ba’zi token/jWT holatlarda 403 bo‘lmasin; faqat CRM xodim rollari */
+  @Roles('TEACHER', 'ADMIN', 'MANAGER')
   @Get('teacher/dashboard')
-  @ApiOperation({ summary: 'Teacher specific aggregate metrics', description: 'Permissions: ANALYTICS_VIEW' })
+  @ApiOperation({
+    summary: 'Teacher specific aggregate metrics',
+    description: 'Rollar: TEACHER, ADMIN, MANAGER (o‘z ID bo‘yicha metrikalar)',
+  })
   getTeacherDashboard(@Request() req) {
     return this.analyticsService.getTeacherDashboard(req.user.id);
   }

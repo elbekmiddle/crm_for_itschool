@@ -17,7 +17,6 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "types": ["jest", "node", "multer"],
-    "fallbackPolling": "dynamicPriority",
     "paths": {
       "@/*": ["src/*"]
     }

@@ -125,7 +125,7 @@ export class AnalyticsService {
 
   async getTeacherDashboard(teacherId: string) {
     const data = await teacher_dashboard_data(this.dbService, teacherId);
-    const { groups, students, attendance, debtors, attendance_stats, exams } = data;
+    const { groups, students, attendance, debtors, attendance_stats, exams, enrollmentTrend } = data;
     
     let ai_humor = null;
     let most_active_student = null;
@@ -210,6 +210,7 @@ export class AnalyticsService {
       most_active_student: most_active_student ? { ...most_active_student, badge: '😎' } : null,
       ai_humor,
       exams,
+      enrollmentTrend: enrollmentTrend ?? { week: [], month: [], year: [] },
     };
   }
 

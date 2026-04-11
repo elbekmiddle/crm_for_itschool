@@ -70,6 +70,10 @@ export class SchemaBootstrapService implements OnModuleInit {
         sql: `ALTER TABLE attendance ALTER COLUMN group_id DROP NOT NULL`,
       },
       {
+        label: 'attendance.notes',
+        sql: `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS notes TEXT`,
+      },
+      {
         label: 'students columns',
         sql: `
           ALTER TABLE students ADD COLUMN IF NOT EXISTS email TEXT;

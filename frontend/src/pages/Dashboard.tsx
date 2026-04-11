@@ -1,28 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
 import { formatPersonName } from '../lib/displayName';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
-import { LINE_PRIMARY, primaryGrowthDataset, standardLineChartOptions } from '../lib/chartLineTheme';
-import {
   Users, BookOpen, UserCheck, Wallet,
   TrendingUp, Sparkles, ChevronRight, ChevronLeft,
-  Loader2, LineChart, Calendar,
+  Loader2, Calendar,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatUzbekDayMonthYear } from '../lib/uzbekDate';
 import { SlidingTabIndicator } from '../components/ui/SlidingTabIndicator';
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
+import { RegistrationTrendChart } from '../components/analytics/RegistrationTrendChart';
 
 /* ─── Stat Card ─── */
 const StatCard: React.FC<{
@@ -83,6 +71,32 @@ const Dashboard: React.FC = () => {
   const [managerStudPage, setManagerStudPage] = useState(1);
   const managerPerPage = 10;
   const [teacherData, setTeacherData] = useState<any>(null);
+
+  const adminRegWeek = useMemo(
+    () =>
+      (stats?.growthTrendWeek || []).map((g: any) => ({
+        label: String(g.month ?? ''),
+        count: Number(g.count) || 0,
+      })),
+    [stats],
+  );
+  const adminRegMonth = useMemo(
+    () =>
+      (stats?.growthTrend || []).map((g: any) => ({
+        label: String(g.month ?? ''),
+        count: Number(g.count) || 0,
+      })),
+    [stats],
+  );
+  const adminRegYear = useMemo(
+    () =>
+      (stats?.growthTrendYearly || []).map((g: any) => ({
+        label: String(g.year ?? ''),
+        count: Number(g.count) || 0,
+      })),
+    [stats],
+  );
+
   useEffect(() => {
     if (!user?.role) return;
     if (user.role === 'ADMIN') {
@@ -154,6 +168,15 @@ const Dashboard: React.FC = () => {
              <p className="text-3xl font-black text-slate-800 dark:text-[var(--text-h)] mt-1">{teacherData?.avgAttendance || 0}%</p>
           </div>
         </div>
+
+        <RegistrationTrendChart
+          week={teacherData?.enrollmentTrend?.week ?? []}
+          month={teacherData?.enrollmentTrend?.month ?? []}
+          year={teacherData?.enrollmentTrend?.year ?? []}
+          title="Ro'yxatga olishlar"
+          subtitle="Yangi o'quvchilar · sizning guruh va kurslaringiz bo'yicha"
+          className="mb-8"
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
            <div className="lg:col-span-2 space-y-6">
@@ -506,51 +529,13 @@ const Dashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Activity from analytics (student registrations by month) */}
-          <div className="card p-6">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="section-title">Faollik</h2>
-                <p className="text-sm text-slate-400 mt-0.5">
-                  O'rtacha davomat (30 kun):{' '}
-                  <span className="text-green-600 font-bold">{stats?.attendanceAvg ?? 0}%</span>
-                </p>
-              </div>
-              <div className="bg-slate-100 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-500">So'nggi 6 oy</div>
-            </div>
-            <div className="h-48">
-              {(stats?.growthTrend || []).length > 0 ? (
-                <Line
-                  data={{
-                    labels: stats!.growthTrend!.map((g: any) => g.month),
-                    datasets: [
-                      primaryGrowthDataset(
-                        'Yangi talabalar',
-                        stats!.growthTrend!.map((g: any) => g.count),
-                        { borderColor: LINE_PRIMARY, tension: 0.35 },
-                      ),
-                    ],
-                  }}
-                  options={(() => {
-                    const base = standardLineChartOptions();
-                    const counts = stats!.growthTrend!.map((g: any) => Number(g.count) || 0);
-                    return {
-                      ...base,
-                      scales: {
-                        ...(base.scales as object),
-                        y: {
-                          ...(base.scales as { y: Record<string, unknown> }).y,
-                          suggestedMax: Math.max(4, ...counts, 1),
-                        },
-                      },
-                    };
-                  })()}
-                />
-              ) : (
-                <div className="h-full flex items-center justify-center text-slate-400 text-sm">Ma'lumot yo'q</div>
-              )}
-            </div>
-          </div>
+          <RegistrationTrendChart
+            week={adminRegWeek}
+            month={adminRegMonth}
+            year={adminRegYear}
+            title="Ro'yxatga olishlar"
+            subtitle="Yangi o'quvchilar · markaz bo'yicha"
+          />
         </div>
 
         {/* Right Column */}

@@ -1,113 +1,44 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
-  UserCheck, GraduationCap, TrendingUp,
+  UserCheck, GraduationCap,
   ArrowUpRight, ArrowDownRight, Calendar,
   PieChart, MessageSquare, Loader2,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAdminStore } from '../../store/useAdminStore';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
-import { LINE_ACCENT, primaryGrowthDataset, standardLineChartOptions } from '../../lib/chartLineTheme';
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
+import { RegistrationTrendChart } from '../../components/analytics/RegistrationTrendChart';
 
 const AdminDashboard: React.FC = () => {
   const { stats, fetchStats, isLoading } = useAdminStore();
-  const [growthPeriod, setGrowthPeriod] = useState<'week' | 'month' | 'year'>('month');
 
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
 
-  const { growthLabels, growthCounts, growthSubtitle } = useMemo(() => {
-    if (growthPeriod === 'week') {
-      const w = stats?.growthTrendWeek;
-      if (Array.isArray(w) && w.length) {
-        return {
-          growthLabels: w.map((g: any) => g.month),
-          growthCounts: w.map((g: any) => Number(g.count) || 0),
-          growthSubtitle: "So'nggi 7 kun",
-        };
-      }
-      return { growthLabels: ['—'], growthCounts: [0], growthSubtitle: "So'nggi 7 kun" };
-    }
-    if (growthPeriod === 'year') {
-      const y = stats?.growthTrendYearly;
-      if (Array.isArray(y) && y.length) {
-        return {
-          growthLabels: y.map((g: any) => String(g.year)),
-          growthCounts: y.map((g: any) => Number(g.count) || 0),
-          growthSubtitle: "So'nggi yillar",
-        };
-      }
-      return { growthLabels: ['—'], growthCounts: [0], growthSubtitle: "So'nggi yillar" };
-    }
-    const m = stats?.growthTrend;
-    return {
-      growthLabels: m?.map((g: any) => g.month) || ['Yan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-      growthCounts: m?.map((g: any) => g.count) || [30, 45, 57, 48, 63, 72],
-      growthSubtitle: "So'nggi 6 oy",
-    };
-  }, [growthPeriod, stats]);
-
-  const chartData = useMemo(
-    () => ({
-      labels: growthLabels,
-      datasets: [
-        primaryGrowthDataset("Yangi o'quvchilar", growthCounts, {
-          borderColor: LINE_ACCENT,
-          borderWidth: 3,
-          tension: 0.45,
-        }),
-      ],
-    }),
-    [growthLabels, growthCounts],
+  const adminRegWeek = useMemo(
+    () =>
+      (stats?.growthTrendWeek || []).map((g: any) => ({
+        label: String(g.month ?? ''),
+        count: Number(g.count) || 0,
+      })),
+    [stats],
   );
-
-  const chartOptions = useMemo(() => {
-    const baseChartOpts = standardLineChartOptions();
-    const nums = growthCounts.map((n: number) => Number(n) || 0);
-    const suggestedMax = nums.length ? Math.max(4, ...nums, 1) : 4;
-    return {
-      ...baseChartOpts,
-      plugins: {
-        ...baseChartOpts.plugins,
-        tooltip: {
-          ...baseChartOpts.plugins.tooltip,
-          backgroundColor: '#08060d',
-          padding: 16,
-          titleFont: { size: 14, weight: 'bold' as const, family: 'Outfit' },
-          bodyFont: { size: 13, family: 'Inter' },
-          cornerRadius: 16,
-          usePointStyle: true,
-        },
-      },
-      scales: {
-        ...baseChartOpts.scales,
-        y: {
-          ...(baseChartOpts.scales as { y: Record<string, unknown> }).y,
-          suggestedMax,
-          grid: { color: 'rgba(0, 0, 0, 0.02)', drawBorder: false },
-          ticks: { color: '#6b6375', font: { size: 11, weight: 'bold' as const } },
-        },
-        x: {
-          ...(baseChartOpts.scales as { x: Record<string, unknown> }).x,
-          ticks: { color: '#6b6375', font: { size: 11, weight: 'bold' as const } },
-        },
-      },
-    };
-  }, [growthCounts]);
+  const adminRegMonth = useMemo(
+    () =>
+      (stats?.growthTrend || []).map((g: any) => ({
+        label: String(g.month ?? ''),
+        count: Number(g.count) || 0,
+      })),
+    [stats],
+  );
+  const adminRegYear = useMemo(
+    () =>
+      (stats?.growthTrendYearly || []).map((g: any) => ({
+        label: String(g.year ?? ''),
+        count: Number(g.count) || 0,
+      })),
+    [stats],
+  );
 
   const primaryStats = useMemo(
     () => [
@@ -190,45 +121,15 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Analytics Chart */}
-        <div className="lg:col-span-2 card p-10 space-y-8 bg-white/50 dark:bg-[#1f2028]/50 backdrop-blur-md border border-[#e5e4e7] dark:border-[#2e303a]">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-             <div className="flex items-center gap-5">
-                <div className="w-14 h-14 bg-[#aa3bff]/10 text-[#aa3bff] rounded-2xl flex items-center justify-center shadow-inner">
-                   <TrendingUp className="w-7 h-7" />
-                </div>
-                <div>
-                   <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight mb-1">O'sish Tendentsiyasi</h3>
-                   <p className="text-xs text-[#6b6375] dark:text-[#9ca3af] font-bold uppercase tracking-widest opacity-60">
-                     Yangi ro&apos;yxatga olishlar · {growthSubtitle}
-                   </p>
-                </div>
-             </div>
-             <div className="flex bg-[#f4f3ec] dark:bg-[#16171d] p-1.5 rounded-[1.25rem] border border-[#e5e4e7] dark:border-[#2e303a]">
-                {([
-                  { key: 'week' as const, label: 'Hafta' },
-                  { key: 'month' as const, label: 'Oy' },
-                  { key: 'year' as const, label: 'Yil' },
-                ]).map(({ key, label }) => (
-                   <button
-                     key={key}
-                     type="button"
-                     onClick={() => setGrowthPeriod(key)}
-                     className={cn(
-                       "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300",
-                       growthPeriod === key
-                         ? "bg-white dark:bg-[#1f2028] text-[#aa3bff] shadow-lg shadow-black/5"
-                         : "text-[#6b6375] hover:text-[#aa3bff]",
-                     )}
-                   >
-                      {label}
-                   </button>
-                ))}
-             </div>
-          </div>
-          <div className="h-[400px] w-full mt-4">
-             <Line data={chartData} options={chartOptions} />
-          </div>
+        <div className="lg:col-span-2">
+          <RegistrationTrendChart
+            week={adminRegWeek}
+            month={adminRegMonth}
+            year={adminRegYear}
+            title="Ro'yxatga olishlar"
+            subtitle="Yangi o'quvchilar · markaz bo'yicha"
+            className="bg-white/50 p-10 dark:bg-[#1f2028]/50"
+          />
         </div>
 
         {/* Top Courses */}

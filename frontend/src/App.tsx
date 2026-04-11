@@ -6,6 +6,8 @@ import { ToastProvider } from './context/ToastContext';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import { useAdminStore } from './store/useAdminStore';
+import { getStaffHomePath } from './lib/staffHomePath';
 import { Loader2 } from 'lucide-react';
 
 import './index.css';
@@ -31,6 +33,13 @@ const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 const BlogAdminPage = lazy(() => import('./pages/admin/BlogAdmin'));
 
 const queryClient = new QueryClient();
+
+const DashboardEntry: React.FC = () => {
+  const { user } = useAdminStore();
+  const home = getStaffHomePath(user?.role);
+  if (home) return <Navigate to={home} replace />;
+  return <Dashboard />;
+};
 
 const LoadingScreen = () => (
   <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4">
@@ -61,7 +70,7 @@ const App: React.FC = () => {
                 
                 {/* Protected Routes (shared Layout for Manager, Teacher, Student) */}
                 <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<DashboardEntry />} />
                   <Route path="/settings" element={<SettingsPage />} />
 
                   {/* MANAGER Panel */}
@@ -95,6 +104,7 @@ const App: React.FC = () => {
                   <Route path="teachers" element={<UsersPage roleFilter="TEACHER" />} />
                   <Route path="managers" element={<UsersPage roleFilter="MANAGER" />} />
                   <Route path="students" element={<StudentsPage />} />
+                  <Route path="students/:id" element={<StudentProfilePage />} />
                   <Route path="courses" element={<CoursesPage />} />
                   <Route path="groups" element={<GroupsPage />} />
                   <Route path="analytics" element={<AnalyticsPage />} />

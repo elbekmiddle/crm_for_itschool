@@ -30,16 +30,13 @@ import { GroupsService } from '../groups/groups.service';
 function matchMcqOrTfStudentToCorrect(studentPayload: unknown, correctRaw: unknown): boolean {
   const uStr = String(studentPayload ?? '').trim();
   const cStr = String(correctRaw ?? '').trim();
-  if (uStr !== '' && cStr !== '' && uStr === cStr) return true;
-
   const uNum = Number(uStr);
   const cNum = Number(correctRaw);
-  if (!Number.isFinite(cNum) || !Number.isInteger(cNum) || cNum < 0 || cNum > 40) {
-    return false;
+  /** CRM 0-based variant indeksi — talaba 1-based ("1","2"…) yuboradi; `"2"` bilan `correct===2` string tengligi yolg‘on musbat berardi. */
+  if (Number.isFinite(cNum) && Number.isInteger(cNum) && cNum >= 0 && cNum <= 40) {
+    return Number.isFinite(uNum) && uNum === cNum + 1;
   }
-  /** CRM 0-based indeks → kutiladigan talaba id raqami */
-  if (Number.isFinite(uNum) && uNum === cNum + 1) return true;
-  return false;
+  return uStr !== '' && cStr !== '' && uStr === cStr;
 }
 
 function matchMultiSelectIndices(studentPayload: unknown, correctRaw: unknown): boolean {

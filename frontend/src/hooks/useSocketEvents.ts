@@ -14,7 +14,7 @@ function useDebouncedDashboardRefresh(delayMs: number) {
       timerRef.current = null;
       const st = useAdminStore.getState();
       void st.fetchStats();
-      void st.fetchPayments();
+      void st.fetchPayments(st.paymentsPage ?? 1);
       void st.fetchStudents(1, 20);
       void st.fetchGroups();
       void st.fetchCourses();

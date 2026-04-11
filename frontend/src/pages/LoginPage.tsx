@@ -18,6 +18,7 @@ import {
 import api from '../lib/api';
 import { reconnectRealtimeSocket } from '../lib/realtimeSocket';
 import { useAdminStore } from '../store/useAdminStore';
+import { getStaffHomePath } from '../lib/staffHomePath';
 import { useToast } from '../context/ToastContext';
 
 type LoginStep = 'IDENTIFY' | 'PASSWORD' | 'TELEGRAM_CODE' | 'SET_PASSWORD';
@@ -113,12 +114,7 @@ const LoginPage: React.FC = () => {
         return;
       }
 
-      const routes: Record<string, string> = {
-        ADMIN: '/admin/dashboard',
-        MANAGER: '/manager/dashboard',
-        TEACHER: '/teacher/dashboard',
-      };
-      navigate(routes[updatedUser.role] || '/dashboard');
+      navigate(getStaffHomePath(updatedUser.role) || '/dashboard');
       showToast("Xush kelibsiz!", "success");
     } catch (err: any) {
       showToast(err.response?.data?.message || err.message || "Parol noto'g'ri", "error");
@@ -174,7 +170,7 @@ const LoginPage: React.FC = () => {
          showToast('Talabalar uchun alohida platforma. Administratordan havola oling.', 'error');
          return;
        }
-       navigate('/dashboard');
+       navigate(getStaffHomePath(u?.role) || '/dashboard');
        showToast("Parol o'rnatildi va tizimga kirildi!", "success");
     } catch (err: any) {
        showToast(err.response?.data?.message || "Xatolik", "error");

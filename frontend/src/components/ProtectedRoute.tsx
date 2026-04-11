@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAdminStore } from '../store/useAdminStore';
+import { getStaffHomePath } from '../lib/staffHomePath';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -41,7 +42,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, roles }) => {
 
   // If roles are specified, check if user has required role
   if (roles && !roles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
+    const home = getStaffHomePath(user.role);
+    return <Navigate to={home ?? '/dashboard'} replace />;
   }
 
   return <>{children}</>;

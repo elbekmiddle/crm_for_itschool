@@ -16,6 +16,9 @@ interface AdminState {
   examResults: any[];
   users: any[];
   payments: any[];
+  /** Server-side pagination (GET /payments) */
+  paymentsTotal: number;
+  paymentsPage: number;
   debtors: any[];
   lessons: any[];
   questions: any[];
@@ -81,7 +84,7 @@ interface AdminState {
   deleteUser: (id: string) => Promise<void>;
   
   // Payments
-  fetchPayments: () => Promise<void>;
+  fetchPayments: (page?: number) => Promise<void>;
   createPayment: (data: any) => Promise<void>;
   updatePayment: (id: string, data: Partial<{ amount: number; paid_at: string; description: string | null }>) => Promise<void>;
   deletePayment: (id: string) => Promise<void>;
@@ -184,6 +187,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   examResults: [],
   users: [],
   payments: [],
+  paymentsTotal: 0,
+  paymentsPage: 1,
   debtors: [],
   lessons: [],
   questions: [],
@@ -544,16 +549,33 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   // ──── Payments ────
-  fetchPayments: async () => {
+  fetchPayments: async (page?: number) => {
+    const targetPage = page !== undefined ? page : get().paymentsPage || 1;
     set({ isLoading: true });
     try {
       const [payRes, debtRes] = await Promise.all([
-        api.get('/payments'),
+        api.get('/payments', { params: { page: targetPage, limit: 10 } }),
         api.get('/payments/debtors').catch(() => ({ data: [] })),
       ]);
+      const pdata = payRes?.data as { items?: unknown[]; total?: number; page?: number } | unknown[] | undefined;
       const debtRaw = debtRes?.data;
+      const items = pdata && !Array.isArray(pdata) && Array.isArray((pdata as { items?: unknown[] }).items)
+        ? (pdata as { items: unknown[] }).items
+        : Array.isArray(pdata)
+          ? pdata
+          : [];
+      const total =
+        pdata && !Array.isArray(pdata) && typeof (pdata as { total?: number }).total === 'number'
+          ? (pdata as { total: number }).total
+          : items.length;
+      const resolvedPage =
+        pdata && !Array.isArray(pdata) && typeof (pdata as { page?: number }).page === 'number'
+          ? (pdata as { page: number }).page
+          : targetPage;
       set({
-        payments: payRes.data,
+        payments: items,
+        paymentsTotal: total,
+        paymentsPage: resolvedPage,
         debtors: Array.isArray(debtRaw) ? debtRaw : [],
         isLoading: false,
       });
@@ -564,19 +586,23 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
   createPayment: async (data) => {
     await api.post('/payments', data);
-    await get().fetchPayments();
+    await get().fetchPayments(get().paymentsPage || 1);
     await get().fetchStats();
   },
 
   updatePayment: async (id, data) => {
     await api.patch(`/payments/${id}`, data);
-    await get().fetchPayments();
+    await get().fetchPayments(get().paymentsPage || 1);
     await get().fetchStats();
   },
 
   deletePayment: async (id) => {
-    try { await api.delete(`/payments/${id}`); set({ payments: get().payments.filter(p => p.id !== id) }); }
-    catch (e: any) { alert("O'chirishda xatolik yuz berdi"); }
+    try {
+      await api.delete(`/payments/${id}`);
+      await get().fetchPayments(get().paymentsPage || 1);
+    } catch (e: any) {
+      alert("O'chirishda xatolik yuz berdi");
+    }
   },
 
   getStudentPayments: async (studentId) => {
