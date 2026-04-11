@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import api from '../lib/api';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
 import {
@@ -83,12 +84,38 @@ const ExamsPage: React.FC = () => {
     correct: 0,
     level: 'medium',
   });
+  const [noGroupStudents, setNoGroupStudents] = useState<any[]>([]);
+  const [selectedIndividualIds, setSelectedIndividualIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetchExams();
     fetchCourses();
     if (user?.role === 'TEACHER' || user?.role === 'ADMIN' || user?.role === 'MANAGER') fetchGroups();
   }, [user?.role]);
+
+  useEffect(() => {
+    if (user?.role !== 'TEACHER') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get('/groups/my-individual-students');
+        if (!cancelled) setNoGroupStudents(Array.isArray(data) ? data : []);
+      } catch {
+        if (!cancelled) setNoGroupStudents([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.role]);
+
+  const filteredNoGroupStudents = useMemo(
+    () =>
+      noGroupStudents.filter(
+        (s: any) => !form.course_id || String(s.course_id) === String(form.course_id),
+      ),
+    [noGroupStudents, form.course_id],
+  );
 
   useModalOverlayEffects(!!modal, {
     onEscape: () => {
@@ -106,6 +133,7 @@ const ExamsPage: React.FC = () => {
 
   const openCreate = () => {
     setForm({ title: '', course_id: '', group_id: '', duration_minutes: '30', passing_score: '60' });
+    setSelectedIndividualIds([]);
     setModal('create');
   };
 
@@ -118,13 +146,28 @@ const ExamsPage: React.FC = () => {
       duration_minutes: e.duration_minutes?.toString() || '30',
       passing_score: e.passing_score?.toString() || '60',
     });
+    setSelectedIndividualIds(Array.isArray(e.individual_student_ids) ? e.individual_student_ids : []);
     setModal('edit');
   };
 
+  const toggleIndividualStudent = (id: string) => {
+    setSelectedIndividualIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= 4) return prev;
+      return [...prev, id];
+    });
+  };
+
   const handleSave = async () => {
-    if (user?.role === 'TEACHER' && modal === 'create' && !form.group_id) {
-      toast.error("Guruhni tanlang — nashr qilinganda imtihon faqat shu guruh o'quvchilariga chiqadi.");
-      return;
+    if (user?.role === 'TEACHER' && modal === 'create') {
+      if (!form.group_id && selectedIndividualIds.length === 0) {
+        toast.error("Guruhni tanlang yoki 1–4 tagacha alohida talabani belgilang.");
+        return;
+      }
+      if (selectedIndividualIds.length > 0 && !form.course_id) {
+        toast.error('Alohida talabalar uchun avval kursni tanlang.');
+        return;
+      }
     }
     const payload: Record<string, unknown> = {
       title: form.title,
@@ -133,6 +176,9 @@ const ExamsPage: React.FC = () => {
       passing_score: Number(form.passing_score),
     };
     if (form.group_id) payload.group_id = form.group_id;
+    if (modal === 'create' && selectedIndividualIds.length > 0) {
+      payload.individual_student_ids = selectedIndividualIds;
+    }
     try {
       if (modal === 'create') await createExam(payload as any);
       else if (targetExam) await updateExam(targetExam.id, payload);
@@ -419,6 +465,7 @@ const ExamsPage: React.FC = () => {
               <tbody>
                 {paginated.map((exam: any) => {
                   const st = statusMap[exam.status?.toLowerCase()] || statusMap.draft;
+                  const questionCount = Number(exam.question_count) || 0;
                   return (
                     <tr key={exam.id}>
                       <td>
@@ -428,7 +475,7 @@ const ExamsPage: React.FC = () => {
                           </div>
                           <div>
                             <p className="font-bold text-slate-700">{exam.title}</p>
-                            <p className="text-[11px] text-slate-400">{exam.question_count || 0} savol</p>
+                            <p className="text-[11px] text-slate-400">{questionCount} savol</p>
                           </div>
                         </div>
                       </td>
@@ -476,7 +523,22 @@ const ExamsPage: React.FC = () => {
                               <button onClick={() => { setTargetExam(exam); setAiForm({ ...aiForm, topic: exam.title }); setModal('ai'); }} className="shrink-0 p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600 dark:hover:bg-indigo-950/40" title="AI Savol Yaratish">
                                 <Sparkles className="w-4 h-4" />
                               </button>
-                              <button onClick={() => handlePublish(exam.id)} className="shrink-0 p-1.5 rounded-lg hover:bg-green-50 text-green-600 dark:hover:bg-green-950/40" title="Nashr qilish">
+                              <button
+                                type="button"
+                                disabled={questionCount < 1}
+                                onClick={() => questionCount >= 1 && void handlePublish(exam.id)}
+                                className={cn(
+                                  'shrink-0 p-1.5 rounded-lg text-green-600 dark:hover:bg-green-950/40',
+                                  questionCount < 1
+                                    ? 'cursor-not-allowed opacity-40'
+                                    : 'hover:bg-green-50',
+                                )}
+                                title={
+                                  questionCount < 1
+                                    ? "Nashr qilish uchun avval kamida bitta savol qo'shing"
+                                    : 'Nashr qilish'
+                                }
+                              >
                                 <Play className="w-4 h-4" />
                               </button>
                             </>
@@ -628,7 +690,7 @@ const ExamsPage: React.FC = () => {
               {groups.length > 0 && (user?.role === 'TEACHER' || user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
                 <div>
                   <label className="input-label">
-                    Guruh {user?.role === 'TEACHER' ? '(majburiy)' : '(ixtiyoriy)'}
+                    Guruh {user?.role === 'TEACHER' ? '(yoki pastdan alohida talaba)' : '(ixtiyoriy)'}
                   </label>
                   <select
                     value={form.group_id}
@@ -643,7 +705,11 @@ const ExamsPage: React.FC = () => {
                     }}
                     className="select"
                   >
-                    <option value="">{user?.role === 'TEACHER' ? 'Guruhni tanlang' : 'Barcha kurs o‘quvchilari (guruhsiz)'}</option>
+                    <option value="">
+                      {user?.role === 'TEACHER'
+                        ? 'Guruh — yoki faqat alohida talaba (pastda)'
+                        : 'Barcha kurs o‘quvchilari (guruhsiz)'}
+                    </option>
                     {groups.map((g: any) => (
                       <option key={g.id} value={g.id}>
                         {g.name} — {g.course_name || 'Kurs'}
@@ -651,7 +717,7 @@ const ExamsPage: React.FC = () => {
                     ))}
                   </select>
                   <p className="text-[10px] text-slate-400 mt-1">
-                    Guruh tanlansa, nashr qilingan imtihon faqat shu guruh a‘zolariga ko‘rinadi. Kurs maydoni guruh bo‘yicha avtomatik to‘ldiriladi.
+                    Guruh tanlansa, nashr qilingan imtihon shu guruh a‘zolariga ham ko‘rinadi. Alohida talabalar uchun kursni tanlang.
                   </p>
                 </div>
               )}
@@ -671,6 +737,33 @@ const ExamsPage: React.FC = () => {
                   ))}
                 </select>
               </div>
+              {user?.role === 'TEACHER' && filteredNoGroupStudents.length > 0 && (
+                <div>
+                  <label className="input-label">Alohida talabalar (maks. 4)</label>
+                  <p className="text-[10px] text-slate-400 mb-2">
+                    Guruhga kirmagan talabalar. Kurs tanlangan bo‘lsa, ro‘yxat shu kurs bo‘yicha filtrlanadi.
+                  </p>
+                  <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-slate-100 p-3 dark:border-[var(--border)]">
+                    {filteredNoGroupStudents.map((s: any) => (
+                      <label key={s.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedIndividualIds.includes(s.id)}
+                          onChange={() => toggleIndividualStudent(s.id)}
+                          disabled={!selectedIndividualIds.includes(s.id) && selectedIndividualIds.length >= 4}
+                          className="rounded border-slate-300"
+                        />
+                        <span>
+                          {s.first_name} {s.last_name}
+                          {s.course_name ? (
+                            <span className="text-slate-400"> — {s.course_name}</span>
+                          ) : null}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="input-label">Vaqt (daqiqa)</label>

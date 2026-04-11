@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsUUID, IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsString, IsNotEmpty, IsUUID, IsOptional, IsInt, Min, Max, IsArray, ArrayMaxSize } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -17,6 +17,16 @@ export class CreateExamDto {
   @IsOptional()
   @IsUUID()
   group_id?: string;
+
+  @ApiPropertyOptional({
+    description: 'Guruhga kirmagan alohida talabalar (ustoz kursi), maksimal 4 ta — guruh tanlanmagan bo‘lsa majburiy',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @ArrayMaxSize(4)
+  individual_student_ids?: string[];
 
   @ApiPropertyOptional({ description: 'Imtihon davomiyligi (daqiqa)', example: 30, default: 60 })
   @IsOptional()

@@ -173,6 +173,18 @@ export class SchemaBootstrapService implements OnModuleInit {
         `,
       },
       {
+        label: 'exam_individual_students (guruhga kirmagan talabalar uchun imtihon)',
+        sql: `
+          CREATE TABLE IF NOT EXISTS exam_individual_students (
+            exam_id UUID NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
+            student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (exam_id, student_id)
+          );
+          CREATE INDEX IF NOT EXISTS idx_exam_indiv_student ON exam_individual_students(student_id);
+        `,
+      },
+      {
         label: 'payments.course_id',
         sql: `ALTER TABLE payments ADD COLUMN IF NOT EXISTS course_id UUID REFERENCES courses(id) ON DELETE SET NULL`,
       },

@@ -9,7 +9,12 @@ async function syncTimeLimitIfPresent(dbService: DbService, examId: string, minu
   }
 }
 
-export async function create_exam(dbService: DbService, createExamDto: CreateExamDto, teacherId: string) {
+export async function create_exam(
+  dbService: DbService,
+  createExamDto: CreateExamDto,
+  teacherId: string,
+  individualStudentIds?: string[],
+) {
   const { title, course_id, group_id, duration_minutes, passing_score } = createExamDto;
   const dm =
     duration_minutes != null && Number.isFinite(Number(duration_minutes))
@@ -20,6 +25,7 @@ export async function create_exam(dbService: DbService, createExamDto: CreateExa
       ? Math.round(Number(passing_score))
       : 60;
 
+  let row: any;
   if (group_id) {
     try {
       const withGroup = await dbService.query(
@@ -27,18 +33,35 @@ export async function create_exam(dbService: DbService, createExamDto: CreateExa
          VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
         [title, course_id, teacherId, group_id, dm, ps],
       );
-      await syncTimeLimitIfPresent(dbService, withGroup[0].id, dm);
-      return withGroup[0];
+      row = withGroup[0];
+      await syncTimeLimitIfPresent(dbService, row.id, dm);
     } catch (e: any) {
       if (e?.code !== '42703') throw e;
     }
   }
 
-  const result = await dbService.query(
-    `INSERT INTO exams (title, course_id, created_by, duration_minutes, passing_score)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [title, course_id, teacherId, dm, ps],
-  );
-  await syncTimeLimitIfPresent(dbService, result[0].id, dm);
-  return result[0];
+  if (!row) {
+    const result = await dbService.query(
+      `INSERT INTO exams (title, course_id, created_by, duration_minutes, passing_score)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [title, course_id, teacherId, dm, ps],
+    );
+    row = result[0];
+    await syncTimeLimitIfPresent(dbService, row.id, dm);
+  }
+
+  const examId = row.id as string;
+  if (individualStudentIds?.length) {
+    for (const sid of individualStudentIds) {
+      try {
+        await dbService.query(
+          `INSERT INTO exam_individual_students (exam_id, student_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+          [examId, sid],
+        );
+      } catch (e: any) {
+        if (e?.code !== '42P01' && e?.code !== '42703') throw e;
+      }
+    }
+  }
+  return row;
 }

@@ -98,12 +98,25 @@ const LoginPage: React.FC = () => {
       if (!updatedUser) {
         throw new Error("Foydalanuvchi ma'lumotlarini yuklab bo'lmadi");
       }
-      
+
+      if (updatedUser.role === 'STUDENT') {
+        const portal = (import.meta.env.VITE_STUDENT_EXAM_APP_URL as string | undefined)?.trim();
+        if (portal) {
+          window.location.replace(portal);
+          return;
+        }
+        useAdminStore.getState().logout();
+        showToast(
+          'Talabalar uchun imtihon platformasi alohida. Administratordan havola oling.',
+          'error',
+        );
+        return;
+      }
+
       const routes: Record<string, string> = {
-        'ADMIN': '/admin/dashboard',
-        'MANAGER': '/manager/dashboard',
-        'TEACHER': '/teacher/dashboard',
-        'STUDENT': '/student/dashboard'
+        ADMIN: '/admin/dashboard',
+        MANAGER: '/manager/dashboard',
+        TEACHER: '/teacher/dashboard',
       };
       navigate(routes[updatedUser.role] || '/dashboard');
       showToast("Xush kelibsiz!", "success");
@@ -150,7 +163,18 @@ const LoginPage: React.FC = () => {
        await api.post('/auth/verify-code', { phone: loginValue, code: verificationCode, password: newPassword });
        await fetchMe();
        reconnectRealtimeSocket();
-       navigate('/student/dashboard');
+       const u = useAdminStore.getState().user;
+       if (u?.role === 'STUDENT') {
+         const portal = (import.meta.env.VITE_STUDENT_EXAM_APP_URL as string | undefined)?.trim();
+         if (portal) {
+           window.location.replace(portal);
+           return;
+         }
+         useAdminStore.getState().logout();
+         showToast('Talabalar uchun alohida platforma. Administratordan havola oling.', 'error');
+         return;
+       }
+       navigate('/dashboard');
        showToast("Parol o'rnatildi va tizimga kirildi!", "success");
     } catch (err: any) {
        showToast(err.response?.data?.message || "Xatolik", "error");

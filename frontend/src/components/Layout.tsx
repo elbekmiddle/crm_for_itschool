@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
 import { Bell, Menu, X, GraduationCap, Moon, Sun, Search, CheckCheck } from 'lucide-react';
@@ -21,6 +21,10 @@ const Layout: React.FC = () => {
   });
   const { user } = useAdminStore();
   const navigate = useNavigate();
+
+  if (user?.role === 'STUDENT') {
+    return <Navigate to="/login" replace />;
+  }
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotifications();
   const notifWrapRef = useRef<HTMLDivElement>(null);
   const [notifQuery, setNotifQuery] = useState('');

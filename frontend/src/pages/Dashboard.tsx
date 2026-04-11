@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
-import { useStudentStore } from '../store/useStudentStore';
-import api from '../lib/api';
 import { cn } from '../lib/utils';
 import { formatPersonName } from '../lib/displayName';
 import {
@@ -80,14 +78,11 @@ const Dashboard: React.FC = () => {
     fetchStudents,
     isLoading,
   } = useAdminStore();
-  const { exams: studentExams, fetchExams } = useStudentStore();
   const navigate = useNavigate();
   const [view, setView] = useState<'daily' | 'monthly'>('daily');
   const [managerStudPage, setManagerStudPage] = useState(1);
   const managerPerPage = 10;
   const [teacherData, setTeacherData] = useState<any>(null);
-  const [studentAnalytics, setStudentAnalytics] = useState<any>(null);
-
   useEffect(() => {
     if (!user?.role) return;
     if (user.role === 'ADMIN') {
@@ -102,22 +97,6 @@ const Dashboard: React.FC = () => {
       fetchGroups();
     }
   }, [user?.role, user?.id, fetchStats, fetchCourses, fetchGroups, fetchTeacherDashboard, fetchStudents]);
-
-  useEffect(() => {
-    if (user?.role !== 'STUDENT') return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const [anRes] = await Promise.all([api.get('/analytics/student/me'), fetchExams()]);
-        if (!cancelled) setStudentAnalytics(anRes.data);
-      } catch {
-        if (!cancelled) setStudentAnalytics(null);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.role]);
 
   if (isLoading && (!stats && !teacherData)) {
     return (
@@ -313,167 +292,6 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // ──── Student Dashboard View ────
-  if (user?.role === 'STUDENT') {
-    const sa = studentAnalytics;
-    const sum = sa?.attendance_summary || [];
-    const presentN = Number(sum.find((x: any) => String(x.status).toUpperCase() === 'PRESENT')?.count) || 0;
-    const absentN = Number(sum.find((x: any) => String(x.status).toUpperCase() === 'ABSENT')?.count) || 0;
-    const totalA = presentN + absentN;
-    const attPct = totalA > 0 ? Math.round((presentN / totalA) * 100) : null;
-    const examResults = Array.isArray(sa?.exam_results) ? sa.exam_results : [];
-    const avgExam =
-      examResults.length > 0
-        ? Math.round(examResults.reduce((a: number, r: any) => a + Number(r.score ?? 0), 0) / examResults.length)
-        : null;
-    const pendingExams = studentExams
-      .filter((e: any) => !(e.status === 'completed' || Number(e.attemptCount) > 0))
-      .slice(0, 4);
-    const showPending = pendingExams.length ? pendingExams : studentExams.slice(0, 3);
-    const aiText = sa?.ai_humor && String(sa.ai_humor).trim();
-    const pi = sa?.personal_info;
-    const courseLabel = pi?.course_name || 'Kurs';
-
-    return (
-      <div className="page-container animate-in">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Mening Kabinetim</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Xush kelibsiz, {user.first_name}! Bilim olishda davom eting! ✨</p>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <button type="button" onClick={() => navigate('/student/profile')} className="btn-secondary py-2 text-xs">
-              Profil
-            </button>
-            <button type="button" onClick={() => navigate('/student/exams')} className="btn-primary py-2 text-xs">
-              Imtihonlar
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="card p-6 bg-gradient-to-br from-indigo-600 to-primary-700 text-white border-0 shadow-xl shadow-primary-100">
-            <p className="text-xs font-bold uppercase tracking-widest opacity-80">O'rtacha imtihon</p>
-            <p className="text-4xl font-black mt-2">{avgExam != null ? `${avgExam}%` : '—'}</p>
-            <p className="text-xs mt-4 opacity-70 font-medium">
-              {examResults.length > 0 ? `${examResults.length} ta topshirilgan imtihon` : 'Natijalar hali qo‘shilmagan'}
-            </p>
-          </div>
-          <div className="card p-6">
-            <p className="label-subtle">Davomat</p>
-            <p className="text-3xl font-black text-slate-800 dark:text-[var(--text-h)] mt-1">{attPct != null ? `${attPct}%` : '—'}</p>
-            {totalA > 0 && (
-              <p className="text-[10px] text-slate-400 mt-2 font-bold">
-                {presentN} kelgan / {absentN} qolmagan
-              </p>
-            )}
-          </div>
-          <div className="card p-6">
-            <p className="label-subtle">To'lovlar (jami)</p>
-            <p className="text-3xl font-black text-slate-800 mt-1 tabular-nums">
-              {sa?.total_paid != null ? Number(sa.total_paid).toLocaleString('uz-UZ') : '—'}
-            </p>
-            <p className="text-xs text-primary-600 font-bold mt-2">so'm</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="card p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="section-title">Imtihonlar</h2>
-                <button type="button" onClick={() => navigate('/student/exams')} className="text-xs font-bold text-primary-600 hover:underline">
-                  Hammasi
-                </button>
-              </div>
-              <div className="space-y-4">
-                {showPending.length === 0 ? (
-                  <p className="text-sm text-slate-400 py-6 text-center">Hozircha imtihonlar ro'yxati bo'sh</p>
-                ) : (
-                  showPending.map((exam: any) => (
-                    <div
-                      key={exam.id}
-                      className="flex items-center justify-between p-4 rounded-2xl bg-primary-50/50 border border-primary-100 group"
-                    >
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-primary-600 shadow-sm shrink-0">
-                          <BookOpen className="w-5 h-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-bold text-slate-700 truncate">{exam.title}</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                            {exam.duration_minutes ?? '—'} daqiqa • {exam.questions_count ?? '?'} savol
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => navigate('/student/exams')}
-                        className="w-9 h-9 bg-primary-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-primary-200 hover:scale-110 transition-all shrink-0"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="card p-6">
-              <h2 className="section-title mb-5">Oxirgi natijalar</h2>
-              <div className="space-y-4">
-                {examResults.length === 0 ? (
-                  <p className="text-sm text-slate-400 text-center py-6">Hozircha natija yo'q</p>
-                ) : (
-                  examResults.slice(0, 6).map((res: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
-                          <LineChart className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-slate-700 truncate">{res.title}</p>
-                          <p className="text-[10px] text-slate-400">
-                            {res.submitted_at ? new Date(res.submitted_at).toLocaleDateString('uz-UZ') : ''}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-black text-primary-600">{Number(res.score ?? 0)}%</p>
-                        <span className="text-[9px] font-bold text-green-500 uppercase tracking-widest">Topshirildi</span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="card p-6">
-              <h3 className="section-title mb-4">Mening kursim</h3>
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Yo'nalish</p>
-                <p className="text-sm font-black text-slate-700 mb-3">{courseLabel}</p>
-                <p className="text-xs text-slate-500">Ma'lumotlar profil va CRM bilan yangilanadi.</p>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl p-6 text-white shadow-xl shadow-amber-100">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-5 h-5" />
-                <span className="text-xs font-black uppercase tracking-widest">AI yordamchi</span>
-              </div>
-              <p className="text-sm font-bold leading-relaxed">
-                {aiText ||
-                  `Har bir qiyinchilik — mahorat cho'qqisiga qadam. Davom eting, ${user.first_name || 'talaba'}!`}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
   const isManager = user?.role === 'MANAGER';
   const managerStudTotalPages =
     isManager && students?.length

@@ -24,9 +24,6 @@ const UsersPage = lazy(() => import('./pages/Users'));
 const PaymentsPage = lazy(() => import('./pages/Payments'));
 const AnalyticsPage = lazy(() => import('./pages/Analytics'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
-const StudentExams = lazy(() => import('./pages/StudentExams'));
-const ExamSession = lazy(() => import('./pages/ExamSession'));
-const ExamResult = lazy(() => import('./pages/ExamResult'));
 const TeacherExamReview = lazy(() => import('./pages/TeacherExamReview'));
 // Admin dedicated layout & pages
 const AdminLayout = lazy(() => import('./pages/admin/Layout'));
@@ -88,15 +85,6 @@ const App: React.FC = () => {
                   <Route path="/teacher/exams/create" element={<ProtectedRoute roles={['TEACHER']}><ExamsPage /></ProtectedRoute>} />
                   <Route path="/teacher/exams/:id" element={<ProtectedRoute roles={['TEACHER']}><ExamsPage /></ProtectedRoute>} />
                   <Route path="/teacher/exams/:examId/review" element={<TeacherExamReview />} />
-
-                  {/* STUDENT Panel */}
-                  <Route path="/student" element={<ProtectedRoute roles={['STUDENT']}><Navigate to="/student/dashboard" replace /></ProtectedRoute>} />
-                  <Route path="/student/dashboard" element={<ProtectedRoute roles={['STUDENT']}><Dashboard /></ProtectedRoute>} />
-                  <Route path="/student/profile" element={<ProtectedRoute roles={['STUDENT']}><StudentProfilePage /></ProtectedRoute>} />
-                  <Route path="/student/exams" element={<ProtectedRoute roles={['STUDENT']}><StudentExams /></ProtectedRoute>} />
-                  <Route path="/student/exam-session/:id" element={<ProtectedRoute roles={['STUDENT']}><ExamSession /></ProtectedRoute>} />
-                  <Route path="/student/exams/:id/result" element={<ProtectedRoute roles={['STUDENT']}><ExamResult /></ProtectedRoute>} />
-                  <Route path="/student/exams/:id/review" element={<ProtectedRoute roles={['STUDENT']}><ExamResult /></ProtectedRoute>} />
                 </Route>
 
                 {/* ADMIN Panel (Dedicated Layout) */}

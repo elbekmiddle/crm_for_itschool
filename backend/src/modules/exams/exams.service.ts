@@ -20,6 +20,7 @@ import { validate as uuidValidate } from 'uuid';
 import { TelegramService } from '../../infrastructure/notifications/telegram.service';
 import { SocketsGateway } from '../sockets/sockets.gateway';
 import { AiService } from '../ai/ai.service';
+import { GroupsService } from '../groups/groups.service';
 
 /**
  * CRM (TeacherExamReview) MCQ/TF uchun to‘g‘ri javob — variantning 0-based indeksi (0,1,2…).
@@ -66,6 +67,7 @@ export class ExamsService {
     private readonly telegramService: TelegramService,
     private readonly socketsGateway: SocketsGateway,
     private readonly aiService: AiService,
+    private readonly groupsService: GroupsService,
   ) {}
 
   private buildExamListSql(filterDeleted: boolean, joinGroup: boolean, teacherId: string | null) {
@@ -173,22 +175,98 @@ export class ExamsService {
     }
 
     const row = exam[0];
+    let individual_student_ids: string[] = [];
+    try {
+      const indRows = await this.dbService.query(
+        `SELECT student_id FROM exam_individual_students WHERE exam_id = $1 ORDER BY student_id`,
+        [id],
+      );
+      individual_student_ids = (indRows || []).map((r: any) => String(r.student_id));
+    } catch (e: any) {
+      if (e?.code !== '42P01' && e?.code !== '42703') throw e;
+    }
     return {
       ...row,
       group_name,
+      individual_student_ids,
       questions: normalized,
       duration: row.duration_minutes ?? row.time_limit ?? row.duration ?? 60,
       questions_count: normalized.length,
     };
   }
 
-  async create(createExamDto: CreateExamDto, teacherId: string, role?: string) {
-    if (role === 'TEACHER' && !createExamDto.group_id?.trim()) {
-      throw new BadRequestException(
-        "Guruhni tanlang — nashr qilganda imtihon faqat shu guruh a'zolariga ko'rinadi.",
-      );
+  private async assertTeacherIndividualStudents(
+    teacherId: string,
+    courseId: string,
+    ids: string[],
+  ) {
+    const allowed = await this.groupsService.findTeacherStudentsWithoutGroup(teacherId);
+    const byId = new Map(allowed.map((r: any) => [String(r.id), r]));
+    for (const raw of ids) {
+      const id = String(raw);
+      const row = byId.get(id);
+      if (!row) {
+        throw new ForbiddenException(
+          'Baʼzi talabalar sizning «guruhga kirmagan» roʻyxatingizda emas yoki boshqa kursga tegishli.',
+        );
+      }
+      if (courseId && row.course_id != null && String(row.course_id) !== String(courseId)) {
+        throw new BadRequestException(
+          'Tanlangan alohida talabalar imtihon kursi bilan mos kelmaydi (har biri faol kursga yozilgan boʻlishi kerak).',
+        );
+      }
     }
-    const newExam = await create_exam(this.dbService, createExamDto, teacherId);
+  }
+
+  /** Nashr qilishdan oldin kamida bitta savol borligini tekshiradi */
+  private async assertExamHasAtLeastOneQuestion(examId: string) {
+    try {
+      const r = await this.dbService.query(
+        `SELECT COUNT(*)::int AS n FROM exam_questions WHERE exam_id = $1`,
+        [examId],
+      );
+      const n = Number(r[0]?.n) || 0;
+      if (n < 1) {
+        throw new BadRequestException(
+          "Nashr qilish mumkin emas: imtihonda savol yo'q. Avval kamida bitta savol qo'shing.",
+        );
+      }
+    } catch (e: any) {
+      if (e instanceof BadRequestException) throw e;
+      if (e?.code === '42P01') {
+        throw new BadRequestException(
+          "Nashr qilish mumkin emas: savollar jadvali topilmadi.",
+        );
+      }
+      throw e;
+    }
+  }
+
+  async create(createExamDto: CreateExamDto, teacherId: string, role?: string) {
+    const rawInd = createExamDto.individual_student_ids;
+    const individualStudentIds = Array.isArray(rawInd)
+      ? [...new Set(rawInd.filter((x) => x && String(x).trim()))]
+      : [];
+    if (individualStudentIds.length > 4) {
+      throw new BadRequestException('Alohida talabalarni maksimal 4 tagacha belgilash mumkin.');
+    }
+    const hasGroup = !!createExamDto.group_id?.trim();
+    if (role === 'TEACHER') {
+      if (!hasGroup && individualStudentIds.length === 0) {
+        throw new BadRequestException(
+          "Guruhni tanlang yoki kamida bitta alohida talabani belgilang — nashr qilinganda faqat ular ko'radi.",
+        );
+      }
+      if (individualStudentIds.length > 0) {
+        await this.assertTeacherIndividualStudents(teacherId, createExamDto.course_id, individualStudentIds);
+      }
+    }
+    const newExam = await create_exam(
+      this.dbService,
+      createExamDto,
+      teacherId,
+      individualStudentIds.length ? individualStudentIds : undefined,
+    );
     this.socketsGateway.emitToAll('exam_created', newExam);
     this.socketsGateway.emitDashboardRefresh({ source: 'exam', action: 'created' });
     return newExam;
@@ -203,6 +281,12 @@ export class ExamsService {
     }
     const prevStatusRows = await this.dbService.query(`SELECT status FROM exams WHERE id = $1`, [id]);
     const prevStatus = prevStatusRows[0]?.status as string | undefined;
+
+    const becomingPublished =
+      String(rest.status ?? '').toLowerCase() === 'published' && String(prevStatus ?? '').toLowerCase() !== 'published';
+    if (becomingPublished) {
+      await this.assertExamHasAtLeastOneQuestion(id);
+    }
 
     const fields = keys.map((key, i) => `${key} = $${i + 2}`).join(', ');
     const values = keys.map((k) => rest[k]);
@@ -232,9 +316,20 @@ export class ExamsService {
         );
         const row = rows[0];
         if (row && String(row.created_by) === String(user.id)) {
-          if (row.group_id == null || row.group_id === '') {
+          const hasGroup = row.group_id != null && row.group_id !== '';
+          let hasIndividuals = false;
+          try {
+            const c = await this.dbService.query(
+              `SELECT COUNT(*)::int AS n FROM exam_individual_students WHERE exam_id = $1`,
+              [id],
+            );
+            hasIndividuals = Number(c[0]?.n) > 0;
+          } catch (e: any) {
+            if (e?.code !== '42P01' && e?.code !== '42703') throw e;
+          }
+          if (!hasGroup && !hasIndividuals) {
             throw new BadRequestException(
-              "Avval imtihonni tahrirlab guruhni bog'lang — faqat tanlangan guruh o'quvchilari ko'radi.",
+              "Avval imtihonni tahrirlab guruh yoki alohida talabalarni bog'lang.",
             );
           }
         }
@@ -337,6 +432,8 @@ export class ExamsService {
   async approveAllQuestions(examId: string) {
     const exam = await this.dbService.query(`SELECT id FROM exams WHERE id = $1`, [examId]);
     if (!exam.length) throw new NotFoundException('Imtihon topilmadi');
+
+    await this.assertExamHasAtLeastOneQuestion(examId);
 
     try {
       await this.dbService.query(
@@ -493,11 +590,17 @@ export class ExamsService {
       JOIN courses c ON e.course_id = c.id
       WHERE e.status = 'published'
       ${deletedFilter}
-      AND EXISTS (
+      AND (
+        EXISTS (
         SELECT 1 FROM groups gx
         INNER JOIN group_students gs ON gs.group_id = gx.id AND gs.student_id = $1
         WHERE gx.course_id = e.course_id
         ${scope}
+        )
+        OR EXISTS (
+          SELECT 1 FROM exam_individual_students eis
+          WHERE eis.exam_id = e.id AND eis.student_id = $1
+        )
       )
     `;
       };
@@ -533,49 +636,59 @@ export class ExamsService {
   async startExamAttempt(examId: string, studentUserId: string) {
     const studentId = studentUserId;
     let exam: any[];
-    try {
-      exam = await this.dbService.query(
-        `SELECT e.id, COALESCE(e.duration_minutes, e.time_limit, 60) AS time_limit FROM exams e
-         WHERE e.id = $1 AND e.status = 'published'
-         AND EXISTS (
+    const sqlWithIndividuals = `
+      SELECT e.id, COALESCE(e.duration_minutes, e.time_limit, 60) AS time_limit FROM exams e
+       WHERE e.id = $1 AND e.status = 'published'
+       AND (
+         EXISTS (
            SELECT 1 FROM groups gx
            INNER JOIN group_students gs ON gs.group_id = gx.id AND gs.student_id = $2
            WHERE gx.course_id = e.course_id
            AND (e.group_id IS NULL OR e.group_id = gx.id)
-         )`,
-        [examId, studentId],
-      );
+         )
+         OR EXISTS (
+           SELECT 1 FROM exam_individual_students eis
+           WHERE eis.exam_id = e.id AND eis.student_id = $2
+         )
+       )`;
+    const sqlGroupFallback = `
+      SELECT e.id, COALESCE(e.duration_minutes, e.time_limit, 60) AS time_limit FROM exams e
+       WHERE e.id = $1 AND e.status = 'published'
+       AND EXISTS (
+         SELECT 1 FROM groups gx
+         INNER JOIN group_students gs ON gs.group_id = gx.id AND gs.student_id = $2
+         WHERE gx.course_id = e.course_id
+         AND (e.group_id IS NULL OR e.group_id = gx.id)
+       )`;
+    try {
+      exam = await this.dbService.query(sqlWithIndividuals, [examId, studentId]);
     } catch (e: any) {
-      if (e?.code !== '42703') throw e;
-      try {
-        exam = await this.dbService.query(
-          `SELECT e.id, COALESCE(e.duration_minutes, 60) AS time_limit FROM exams e
-           WHERE e.id = $1 AND e.status = 'published'
-           AND EXISTS (
-             SELECT 1 FROM groups gx
-             INNER JOIN group_students gs ON gs.group_id = gx.id AND gs.student_id = $2
-             WHERE gx.course_id = e.course_id
-             AND (e.group_id IS NULL OR e.group_id = gx.id)
-           )`,
-          [examId, studentId],
-        );
-      } catch (e2: any) {
-        if (e2?.code !== '42703') throw e2;
-        exam = await this.dbService.query(
-          `SELECT e.id, COALESCE(e.duration_minutes, 60) AS time_limit FROM exams e
-           WHERE e.id = $1 AND e.status = 'published'
-           AND EXISTS (
-             SELECT 1 FROM groups gx
-             INNER JOIN group_students gs ON gs.group_id = gx.id AND gs.student_id = $2
-             WHERE gx.course_id = e.course_id
-           )`,
-          [examId, studentId],
-        );
+      if (e?.code === '42P01') {
+        try {
+          exam = await this.dbService.query(sqlGroupFallback, [examId, studentId]);
+        } catch (e2: any) {
+          if (e2?.code !== '42703') throw e2;
+          exam = await this.dbService.query(
+            `SELECT e.id, COALESCE(e.duration_minutes, 60) AS time_limit FROM exams e
+             WHERE e.id = $1 AND e.status = 'published'
+             AND EXISTS (
+               SELECT 1 FROM groups gx
+               INNER JOIN group_students gs ON gs.group_id = gx.id AND gs.student_id = $2
+               WHERE gx.course_id = e.course_id
+               AND (e.group_id IS NULL OR e.group_id = gx.id)
+             )`,
+            [examId, studentId],
+          );
+        }
+      } else if (e?.code === '42703') {
+        exam = await this.dbService.query(sqlGroupFallback, [examId, studentId]);
+      } else {
+        throw e;
       }
     }
     if (!exam.length) {
       throw new NotFoundException(
-        "Imtihon topilmadi, nashr qilinmagan yoki sizga biriktirilgan guruh uchun emas.",
+        "Imtihon topilmadi, nashr qilinmagan yoki sizga biriktirilgan guruh / ro‘yxat uchun emas.",
       );
     }
 
@@ -1179,23 +1292,11 @@ export class ExamsService {
     const examId = exam?.id as string | undefined;
     const title = String(exam?.title ?? 'Imtihon');
     const groupId = exam?.group_id as string | undefined;
-    if (!examId || !groupId) return;
-
-    let rows: { student_id: string }[];
-    try {
-      rows = await this.dbService.query(
-        `SELECT student_id FROM group_students WHERE group_id = $1 AND (left_at IS NULL)`,
-        [groupId],
-      );
-    } catch (e: any) {
-      if (e?.code !== '42703') return;
-      rows = await this.dbService.query(`SELECT student_id FROM group_students WHERE group_id = $1`, [groupId]);
-    }
+    if (!examId) return;
 
     const msg = `${title} — imtihon e'lon qilindi. «Imtihonlar» bo'limidan topshirishingiz mumkin.`;
-    for (const r of rows) {
-      const sid = r.student_id;
-      await this.dbService
+    const notifySid = (sid: string) => {
+      void this.dbService
         .query(`INSERT INTO notifications (student_id, title, message) VALUES ($1, $2, $3)`, [
           sid,
           'Yangi imtihon',
@@ -1207,12 +1308,36 @@ export class ExamsService {
         title,
         message: msg,
       });
+    };
+
+    if (groupId) {
+      let rows: { student_id: string }[];
+      try {
+        rows = await this.dbService.query(
+          `SELECT student_id FROM group_students WHERE group_id = $1 AND (left_at IS NULL)`,
+          [groupId],
+        );
+      } catch (e: any) {
+        if (e?.code !== '42703') return;
+        rows = await this.dbService.query(`SELECT student_id FROM group_students WHERE group_id = $1`, [groupId]);
+      }
+      for (const r of rows) notifySid(r.student_id);
+    }
+
+    try {
+      const ind = await this.dbService.query(
+        `SELECT student_id FROM exam_individual_students WHERE exam_id = $1`,
+        [examId],
+      );
+      for (const r of ind || []) notifySid(r.student_id);
+    } catch (e: any) {
+      if (e?.code !== '42P01' && e?.code !== '42703') throw e;
     }
 
     this.socketsGateway.emitToAll('exam_published', {
       examId,
       title,
-      groupId,
+      groupId: groupId ?? null,
     });
   }
 }

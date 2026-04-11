@@ -7,6 +7,10 @@ export async function teacher_students_without_group(dbService: DbService, teach
   try {
     return await dbService.query(
       `SELECT DISTINCT s.id, s.first_name, s.last_name, s.phone, s.status, s.parent_name,
+        (SELECT c.id FROM student_courses sc
+         INNER JOIN courses c ON c.id = sc.course_id
+         WHERE sc.student_id = s.id AND sc.status = 'active' AND c.teacher_id = $1
+         ORDER BY sc.created_at DESC LIMIT 1) AS course_id,
         (SELECT c.name FROM student_courses sc
          JOIN courses c ON c.id = sc.course_id
          WHERE sc.student_id = s.id AND sc.status = 'active'
@@ -31,6 +35,10 @@ export async function teacher_students_without_group(dbService: DbService, teach
     if (e?.code === '42703') {
       return dbService.query(
         `SELECT DISTINCT s.id, s.first_name, s.last_name, s.phone, s.status, s.parent_name,
+          (SELECT c.id FROM student_courses sc
+           INNER JOIN courses c ON c.id = sc.course_id
+           WHERE sc.student_id = s.id AND sc.status = 'active' AND c.teacher_id = $1
+           ORDER BY sc.created_at DESC LIMIT 1) AS course_id,
           (SELECT c.name FROM student_courses sc
            JOIN courses c ON c.id = sc.course_id
            WHERE sc.student_id = s.id AND sc.status = 'active'

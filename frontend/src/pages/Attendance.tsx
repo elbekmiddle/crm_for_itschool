@@ -452,8 +452,8 @@ const AttendancePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="card p-6 dark:border-[var(--border)] dark:bg-[var(--bg-card)]">
+          <div className="space-y-6">
+            <div className="card h-[325px] p-6 dark:border-[var(--border)] dark:bg-[var(--bg-card)]">
               <h3 className="section-title mb-4">Tanlangan kun</h3>
               <p className="text-2xl font-black text-slate-800 dark:text-[var(--text-h)]">{lessonDateLabel}</p>
               <div className="mt-4 grid grid-cols-2 gap-3">
@@ -467,7 +467,7 @@ const AttendancePage: React.FC = () => {
                 </div>
               </div>
               <div className="mt-4">
-                <div className="mb-1 flex items-center justify-between text-sm">
+                <div className="mb-1 flex items-center h-[50px] justify-between text-sm">
                   <span className="font-semibold text-slate-500 dark:text-slate-400">Davomat</span>
                   <span className="font-bold text-green-600 dark:text-emerald-400">{attendancePercent}%</span>
                 </div>

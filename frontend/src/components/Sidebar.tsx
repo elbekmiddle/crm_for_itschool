@@ -20,9 +20,9 @@ import { useConfirm } from '../context/ConfirmContext';
  * ADMIN  → Dedicated layout (pages/admin/Layout.tsx), not rendered here
  * MANAGER → Dashboard, Students (create/manage), Payments
  * TEACHER → Dashboard, Groups (create/manage students), Attendance, Exams
- * STUDENT → Dashboard, Profile, Exams
  */
 const getNavItems = (role: string) => {
+  if (role === 'STUDENT') return [];
   if (role === 'MANAGER') return [
     { to: '/manager/dashboard', icon: LayoutDashboard, label: 'Bosh sahifa' },
     { to: '/manager/students', icon: GraduationCap, label: "O'quvchilar" },
@@ -35,12 +35,6 @@ const getNavItems = (role: string) => {
     { to: '/teacher/groups', icon: Users, label: 'Guruhlar' },
     { to: '/teacher/attendance', icon: Calendar, label: 'Davomat' },
     { to: '/teacher/exams', icon: ClipboardList, label: 'Imtihonlar' },
-  ];
-
-  if (role === 'STUDENT') return [
-    { to: '/student/dashboard', icon: LayoutDashboard, label: 'Bosh sahifa' },
-    { to: '/student/profile', icon: Users, label: 'Profil' },
-    { to: '/student/exams', icon: ClipboardList, label: 'Imtihonlar' },
   ];
 
   // ADMIN should never reach this sidebar (uses own layout), but fallback:

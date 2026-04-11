@@ -154,7 +154,6 @@ const StudentsPage: React.FC = () => {
   const openStudentProfile = (studentId: string) => {
     if (user?.role === 'MANAGER' || user?.role === 'ADMIN') navigate(`/manager/students/${studentId}`);
     else if (user?.role === 'TEACHER') navigate(`/teacher/students/${studentId}`);
-    else navigate('/student/profile');
   };
 
   const goQuickPayment = (studentId: string) => {
