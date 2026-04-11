@@ -138,10 +138,10 @@ export class AuthService {
   // ----- STUDENT LOGIN (legacy phone+firstName) -----
   async studentLogin(studentLoginDto: StudentLoginDto) {
     const students = await get_student_by_phone(this.dbService, studentLoginDto.phone);
-    if (!students.length) throw new NotFoundException('Student not found with this phone number');
+    if (!students.length) throw new NotFoundException('Bu telefon raqam bilan talaba topilmadi.');
     const student = students[0];
     if (student.first_name.toLowerCase() !== studentLoginDto.first_name.toLowerCase()) {
-      throw new UnauthorizedException('Invalid first name for this phone number');
+      throw new UnauthorizedException('Ism bu telefon raqamga mos kelmaydi.');
     }
     const tokens = await this.generateTokens({ ...student, role: 'STUDENT' });
     return { ...tokens, user: { id: student.id, phone: student.phone, role: 'STUDENT', first_name: student.first_name, last_name: student.last_name } };
@@ -196,7 +196,7 @@ export class AuthService {
   async sendVerifyCode(dto: CheckPhoneDto) {
     const phone = this.normalizePhone(dto.phone);
     const students = await get_student_by_phone(this.dbService, phone);
-    if (!students.length) throw new NotFoundException('Student not found');
+    if (!students.length) throw new NotFoundException('Talaba topilmadi — telefon raqamni tekshiring.');
 
     const student = students[0];
 
@@ -210,7 +210,7 @@ export class AuthService {
       this.verifyCodeMemory.set(phone, { code, exp: Date.now() + 300_000 });
       this.logger.warn(`[sendVerifyCode] Redis yo'q — kod vaqtinchalik server xotirasida: ${redisKey}`);
     }
-    this.logger.debug(`[sendVerifyCode] phone=${phone} code=${code} redis_key=${redisKey}`);
+    this.logger.debug(`[sendVerifyCode] phone=${phone} redis_key=${redisKey} (6 xonali kod yuborildi)`);
 
     if (student.telegram_chat_id) {
       await this.telegramService.sendVerifyCode(student.telegram_chat_id, code, student.first_name, student.id);
@@ -258,7 +258,7 @@ export class AuthService {
     const phone = this.normalizePhone(dto.phone);
     const entered = String(dto.code || '').replace(/\D/g, '');
     const storedNorm = await this.readVerifyCode(phone);
-    this.logger.debug(`[checkCode] phone=${phone} entered=${entered} stored_len=${storedNorm?.length ?? 0}`);
+    this.logger.debug(`[checkCode] phone=${phone} has_stored=${!!storedNorm}`);
     if (!storedNorm) {
       throw new BadRequestException('Kod muddati tugagan. Qaytadan so\'rang.');
     }
@@ -275,7 +275,7 @@ export class AuthService {
     const phone = this.normalizePhone(dto.phone);
     const entered = String(dto.code || '').replace(/\D/g, '');
     const storedNorm = await this.readVerifyCode(phone);
-    this.logger.debug(`[verifyCode] phone=${phone} entered=${entered} stored_len=${storedNorm?.length ?? 0}`);
+    this.logger.debug(`[verifyCode] phone=${phone} has_stored=${!!storedNorm}`);
     if (!storedNorm) {
       throw new BadRequestException('Kod muddati tugagan. Qaytadan so\'rang.');
     }
@@ -294,7 +294,7 @@ export class AuthService {
     );
     await this.clearVerifyCode(phone);
     const students = await get_student_by_phone(this.dbService, phone);
-    if (!students.length) throw new NotFoundException('Student not found');
+    if (!students.length) throw new NotFoundException('Talaba topilmadi.');
 
     const student = students[0];
 
@@ -385,11 +385,11 @@ export class AuthService {
       let user;
       if (payload.role === 'STUDENT') {
         const studentRes = await get_student_by_id_with_auth_data(this.dbService, payload.sub);
-        if (!studentRes.length) throw new Error('Student not found');
+        if (!studentRes.length) throw new UnauthorizedException('Talaba topilmadi');
         user = { ...studentRes[0], role: 'STUDENT' };
       } else {
         const userRes = await get_user_by_id_for_auth(this.dbService, payload.sub);
-        if (!userRes.length) throw new Error('User not found');
+        if (!userRes.length) throw new UnauthorizedException('Foydalanuvchi topilmadi');
         user = userRes[0];
       }
       

@@ -59,7 +59,7 @@ export class AnalyticsService {
     }
 
     const data = await student_analytics_data(this.dbService, studentId);
-    if (!data) return { error: 'Student not found' };
+    if (!data) return { error: 'Talaba topilmadi' };
 
     const { student, presence, attendanceHistory, payments, exams } = data;
     const totalPaid = payments.reduce(

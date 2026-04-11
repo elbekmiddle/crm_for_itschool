@@ -270,17 +270,30 @@ h1, h2, h3, h4 {
 }
 .data-table tbody tr:hover { background-color: var(--accent-bg); }
 
-/* ── Modal ── */
+/* ── Modal (CRM bilan bir xil qatlam — toast/modallar tartibi) ── */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
   background-color: rgba(15,23,42,0.5);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: examModalBackdropIn 0.26s ease-out;
+}
+@keyframes examModalBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.modal-overlay > * {
+  animation: examModalPanelIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes examModalPanelIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .modal-content {
   background-color: var(--bg-card);
@@ -291,6 +304,7 @@ h1, h2, h3, h4 {
   max-height: 90vh;
   overflow-y: auto;
   border: 1px solid var(--border);
+  transition: box-shadow 0.22s ease, transform 0.2s ease;
 }
 .modal_content_exam{
   width: 100%;

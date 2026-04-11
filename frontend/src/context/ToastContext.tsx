@@ -30,7 +30,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-6 right-6 z-[999] flex flex-col gap-3">
+      {/* modal-overlay z-[10000] ustida ko‘rinishi uchun */}
+      <div className="fixed bottom-6 right-6 z-[11000] flex flex-col gap-3 pointer-events-auto">
         <AnimatePresence>
           {toasts.map(t => (
             <motion.div

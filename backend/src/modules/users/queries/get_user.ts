@@ -8,6 +8,6 @@ export async function get_user(dbService: DbService, id: string) {
      WHERE id = $1`,
     [id]
   );
-  if (!result.length) throw new NotFoundException('User not found');
+  if (!result.length) throw new NotFoundException('Foydalanuvchi topilmadi');
   return result[0];
 }

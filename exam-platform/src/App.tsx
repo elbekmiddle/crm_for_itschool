@@ -47,7 +47,7 @@ const StaffRedirect = () => {
 };
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, user, syncSession, token } = useAuthStore();
+  const { isAuthenticated, user, syncSession } = useAuthStore();
   const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
@@ -57,17 +57,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         setSessionReady(true);
         return;
       }
-      const t = token || localStorage.getItem('token');
-      if (t && localStorage.getItem('token') !== t) {
-        localStorage.setItem('token', t);
-      }
       await syncSession();
       if (!cancelled) setSessionReady(true);
     })();
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, token, syncSession]);
+  }, [isAuthenticated, syncSession]);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 

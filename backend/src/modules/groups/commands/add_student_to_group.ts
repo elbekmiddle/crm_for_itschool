@@ -10,7 +10,7 @@ export async function add_student_to_group(dbService: DbService, groupId: string
      FROM groups g WHERE g.id = $1`,
     [groupId],
   );
-  if (!groupData.length) throw new NotFoundException('Group not found');
+  if (!groupData.length) throw new NotFoundException('Guruh topilmadi');
   const { course_id, capacity, current_count } = groupData[0];
   const capNum =
     capacity == null || capacity === '' || Number.isNaN(Number(capacity))

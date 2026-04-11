@@ -89,6 +89,8 @@ interface AdminState {
   
   // Attendance
   fetchAttendance: (groupId: string) => Promise<void>;
+  /** Guruhga kirmagan talaba (group_id null yozuvlar) */
+  fetchIndividualAttendance: (studentId: string) => Promise<void>;
   markAttendance: (data: any) => Promise<void>;
   updateAttendance: (id: string, status: string) => Promise<void>;
   
@@ -591,6 +593,16 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       const { data } = await api.get(`/attendance/group/${groupId}`);
       set({ attendance: data, isLoading: false });
     } catch (e: any) { set({ error: e.message, isLoading: false }); }
+  },
+
+  fetchIndividualAttendance: async (studentId) => {
+    set({ isLoading: true });
+    try {
+      const { data } = await api.get(`/attendance/individual/${studentId}`);
+      set({ attendance: Array.isArray(data) ? data : [], isLoading: false });
+    } catch (e: any) {
+      set({ attendance: [], isLoading: false });
+    }
   },
 
   markAttendance: async (data) => {

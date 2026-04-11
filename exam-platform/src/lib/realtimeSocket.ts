@@ -14,9 +14,8 @@ export function getRealtimeSocket(): Socket {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 8000,
       withCredentials: true,
-      auth: () => ({
-        token: typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null,
-      }),
+      /** JWT HTTPOnly cookie bilan (withCredentials); header yuborilmaydi */
+      auth: () => ({}),
     });
   }
   return socket;

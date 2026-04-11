@@ -13,10 +13,21 @@ import { localYmd, toLocalYmd } from '../lib/localDate';
 const AttendancePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { groups, attendance, fetchGroups, fetchAttendance, markAttendance, isLoading } = useAdminStore();
+  const {
+    groups,
+    attendance,
+    fetchGroups,
+    fetchAttendance,
+    fetchIndividualAttendance,
+    markAttendance,
+    isLoading,
+  } = useAdminStore();
   const { fetchGroupStudents } = useAdminStore();
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [students, setStudents] = useState<any[]>([]);
+  /** Guruhga kirmagan talabalar (faqat ustoz kursi) */
+  const [noGroupStudents, setNoGroupStudents] = useState<any[]>([]);
+  const [rosterLoading, setRosterLoading] = useState(false);
   const [lessonDate, setLessonDate] = useState(() => localYmd());
   const [topic, setTopic] = useState('');
   const [topicSaving, setTopicSaving] = useState(false);
@@ -33,23 +44,87 @@ const AttendancePage: React.FC = () => {
     };
   }, []);
 
-  const loadGroup = async (groupId: string) => {
-    setSelectedGroupId(groupId);
-    const data = await fetchGroupStudents(groupId);
-    setStudents(data || []);
-    await fetchAttendance(groupId);
-  };
+  useEffect(() => {
+    let cancelled = false;
+    setRosterLoading(true);
+    (async () => {
+      try {
+        const { data } = await api.get('/groups/my-individual-students');
+        if (!cancelled) setNoGroupStudents(Array.isArray(data) ? data : []);
+      } catch {
+        if (!cancelled) setNoGroupStudents([]);
+      } finally {
+        if (!cancelled) setRosterLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
+  /** URL: ?group= — guruh; ?student= — guruhga kirmagan talaba (group_id yo‘q davomat) */
   useEffect(() => {
     const gid = searchParams.get('group');
-    if (!gid || groups.length === 0) return;
-    const exists = groups.some((g: any) => String(g.id) === String(gid));
-    if (exists && selectedGroupId !== gid) {
-      loadGroup(gid);
+    const sid = searchParams.get('student');
+
+    if (gid && sid) {
+      setSearchParams({ group: gid });
+      return;
     }
-  }, [searchParams, groups]);
+
+    if (!gid && !sid) {
+      setSelectedGroupId('');
+      setStudents([]);
+      return;
+    }
+
+    if (sid && !gid) {
+      let cancelled = false;
+      (async () => {
+        setSelectedGroupId('');
+        const row = noGroupStudents.find((s: any) => String(s.id) === String(sid));
+        if (!cancelled) setStudents(row ? [row] : []);
+        if (!cancelled) await fetchIndividualAttendance(sid);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (gid && groups.length === 0) return;
+
+    if (gid) {
+      const groupOk = groups.some((g: any) => String(g.id) === String(gid));
+      if (!groupOk) return;
+
+      let cancelled = false;
+      (async () => {
+        setSelectedGroupId(gid);
+        const data = await fetchGroupStudents(gid);
+        if (cancelled) return;
+        setStudents(data || []);
+        await fetchAttendance(gid);
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [searchParams, groups, fetchGroupStudents, fetchAttendance, fetchIndividualAttendance, noGroupStudents, setSearchParams]);
 
   const selectedGroup = groups.find((g: any) => g.id === selectedGroupId);
+
+  const selectCompositeValue = useMemo(() => {
+    const gid = searchParams.get('group');
+    const sid = searchParams.get('student');
+    if (sid && !gid) return `i:${sid}`;
+    if (gid && !sid) return `g:${gid}`;
+    return '';
+  }, [searchParams]);
+
+  /** Guruhga kirmagan talaba (faqat ?student=) */
+  const isNoGroupStudent = Boolean(searchParams.get('student') && !searchParams.get('group'));
+  const hasAttendanceContext = Boolean(searchParams.get('group') || searchParams.get('student'));
 
   const lessonDateLabel = useMemo(() => {
     const [y, m, d] = lessonDate.split('-').map(Number);
@@ -58,17 +133,22 @@ const AttendancePage: React.FC = () => {
   }, [lessonDate]);
 
   const scheduleAllowsMarking = useMemo(() => {
+    if (isNoGroupStudent) return true;
     if (!selectedGroup) return true;
     const [y, m, d] = lessonDate.split('-').map(Number);
     if (!y || !m || !d) return true;
     return isGroupLessonDay(selectedGroup.schedule, new Date(y, m - 1, d));
-  }, [selectedGroup, lessonDate]);
+  }, [isNoGroupStudent, selectedGroup, lessonDate]);
 
   const todayStr = localYmd();
   const isFutureDate = lessonDate > todayStr;
   const canMarkDate = lessonDate <= todayStr;
 
   useEffect(() => {
+    if (isNoGroupStudent) {
+      setTopic('');
+      return;
+    }
     if (!selectedGroupId || !lessonDate) {
       setTopic('');
       return;
@@ -85,7 +165,7 @@ const AttendancePage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [selectedGroupId, lessonDate]);
+  }, [isNoGroupStudent, selectedGroupId, lessonDate]);
 
   const saveTopic = async () => {
     if (!selectedGroupId) return;
@@ -103,19 +183,24 @@ const AttendancePage: React.FC = () => {
     }
   };
 
-  const onGroupChange = (groupId: string) => {
-    setSelectedGroupId(groupId);
-    if (groupId) {
-      setSearchParams({ group: groupId });
-      loadGroup(groupId);
-    } else {
+  const onSelectionChange = (val: string) => {
+    if (!val) {
       setSearchParams({});
-      setStudents([]);
-      setTopic('');
+      return;
+    }
+    if (val.startsWith('g:')) {
+      setSearchParams({ group: val.slice(2) });
+      return;
+    }
+    if (val.startsWith('i:')) {
+      setSearchParams({ student: val.slice(2) });
     }
   };
 
   const handleMark = (studentId: string, status: 'PRESENT' | 'ABSENT' | 'LATE') => {
+    const gidParam = searchParams.get('group');
+    const sidParam = searchParams.get('student');
+    const indiv = Boolean(sidParam && !gidParam);
     if (isFutureDate) {
       showToast('Kelajak sanasiga davomat qo‘yib bo‘lmaydi', 'error');
       return;
@@ -130,11 +215,12 @@ const AttendancePage: React.FC = () => {
       try {
         await markAttendance({
           student_id: studentId,
-          group_id: selectedGroupId,
+          ...(indiv ? { group_id: null } : { group_id: selectedGroupId }),
           status,
           lesson_date: lessonDate,
         });
-        await fetchAttendance(selectedGroupId);
+        if (indiv && sidParam) await fetchIndividualAttendance(sidParam);
+        else await fetchAttendance(selectedGroupId);
       } catch (e: any) {
         showToast(e?.response?.data?.message || 'Davomat yozilmadi', 'error');
       }
@@ -152,7 +238,9 @@ const AttendancePage: React.FC = () => {
   const attendancePercent = Math.round((presentCount / totalStudents) * 100);
 
   const perStudentRollup = useMemo(() => {
-    if (!selectedGroupId || students.length === 0) return [];
+    if (students.length === 0) return [];
+    const indiv = Boolean(searchParams.get('student') && !searchParams.get('group'));
+    if (!indiv && !selectedGroupId) return [];
     return students.map((s: any) => {
       const rows = attendance.filter((a: any) => a.student_id === s.id);
       const present = rows.filter((a: any) => {
@@ -163,7 +251,7 @@ const AttendancePage: React.FC = () => {
       const pct = total > 0 ? Math.round((present / total) * 100) : null;
       return { student: s, present, total, pct };
     });
-  }, [students, attendance, selectedGroupId]);
+  }, [students, attendance, selectedGroupId, searchParams]);
 
   return (
     <div className="page-container animate-in">
@@ -171,27 +259,45 @@ const AttendancePage: React.FC = () => {
         <div>
           <p className="label-subtle mb-1">GURUHLAR › DAVOMAT</p>
           <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-[var(--text-h)]">
-            {selectedGroup?.name || 'Davomat'}
+            {isNoGroupStudent && students[0]
+              ? `${students[0].first_name || ''} ${students[0].last_name || ''}`.trim() || 'Talaba'
+              : selectedGroup?.name || 'Davomat'}
           </h1>
-          {selectedGroup && (
-            <p className="mt-0.5 text-sm text-slate-400">{selectedGroup.course_name}</p>
+          {isNoGroupStudent && students[0] ? (
+            <p className="mt-0.5 text-sm text-slate-400">
+              {students[0].course_name ? `Kurs: ${students[0].course_name}` : 'Guruhga kirmagan talaba'}
+            </p>
+          ) : (
+            selectedGroup && (
+              <p className="mt-0.5 text-sm text-slate-400">{selectedGroup.course_name}</p>
+            )
           )}
         </div>
         <select
-          value={selectedGroupId}
-          onChange={(e) => onGroupChange(e.target.value)}
-          className="select max-w-xs bg-[var(--bg-card)] text-[var(--text-h)]"
+          value={selectCompositeValue}
+          onChange={(e) => onSelectionChange(e.target.value)}
+          disabled={rosterLoading}
+          className="select max-w-md bg-[var(--bg-card)] text-[var(--text-h)]"
         >
-          <option value="">Guruhni tanlang</option>
-          {groups.map((g: any) => (
-            <option key={g.id} value={g.id}>
-              {g.name}
-            </option>
-          ))}
+          <option value="">{rosterLoading ? 'Yuklanmoqda…' : 'Guruh yoki talabani tanlang'}</option>
+          <optgroup label="Guruhlar">
+            {groups.map((g: any) => (
+              <option key={g.id} value={`g:${g.id}`}>
+                {g.name}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Talabalar (alohida)">
+            {noGroupStudents.map((s: any) => (
+              <option key={s.id} value={`i:${s.id}`}>
+                {s.first_name} {s.last_name}
+              </option>
+            ))}
+          </optgroup>
         </select>
       </div>
 
-      {selectedGroupId ? (
+      {hasAttendanceContext ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
             <div className="card p-6 dark:border-[var(--border)] dark:bg-[var(--bg-card)]">
@@ -221,22 +327,26 @@ const AttendancePage: React.FC = () => {
                   Jadval bo‘yicha bu kunda dars kuni ko‘rinmayapti — baribir davomatni belgilashingiz mumkin (masalan, qo‘shimcha dars yoki jadval yangilanmagan bo‘lsa).
                 </p>
               )}
-              <label className="input-label">Bugun nima o‘tilgani?</label>
-              <textarea
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                rows={3}
-                className="input min-h-[88px] resize-y"
-                placeholder="Masalan: NestJS modullar, dependency injection..."
-              />
-              <button
-                type="button"
-                onClick={saveTopic}
-                disabled={topicSaving}
-                className="btn-primary mt-3 w-full sm:w-auto"
-              >
-                {topicSaving ? 'Saqlanmoqda…' : 'Mavzuni saqlash'}
-              </button>
+              {!isNoGroupStudent && (
+                <>
+                  <label className="input-label">Bugun nima o‘tilgani?</label>
+                  <textarea
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    rows={3}
+                    className="input min-h-[88px] resize-y"
+                    placeholder="Masalan: NestJS modullar, dependency injection..."
+                  />
+                  <button
+                    type="button"
+                    onClick={saveTopic}
+                    disabled={topicSaving}
+                    className="btn-primary mt-3 w-full sm:w-auto"
+                  >
+                    {topicSaving ? 'Saqlanmoqda…' : 'Mavzuni saqlash'}
+                  </button>
+                </>
+              )}
             </div>
 
             <div className="card p-6 dark:border-[var(--border)] dark:bg-[var(--bg-card)]">
@@ -331,7 +441,11 @@ const AttendancePage: React.FC = () => {
                     );
                   })}
                   {students.length === 0 && (
-                    <div className="py-12 text-center text-slate-400">Bu guruhda talabalar yo'q</div>
+                    <div className="py-12 text-center text-slate-400">
+                      {isNoGroupStudent
+                        ? 'Talaba ro‘yxatda emas yoki allaqachon guruhga biriktirilgan.'
+                        : "Bu guruhda talabalar yo'q"}
+                    </div>
                   )}
                 </div>
               )}
@@ -405,8 +519,10 @@ const AttendancePage: React.FC = () => {
       ) : (
         <div className="card p-16 text-center dark:border-[var(--border)]">
           <Calendar className="mx-auto mb-4 h-12 w-12 text-slate-300" />
-          <h2 className="text-lg font-bold text-slate-500 dark:text-slate-400">Guruhni tanlang</h2>
-          <p className="mt-1 text-sm text-slate-400">Davomat belgilash uchun guruhni tanlang.</p>
+          <h2 className="text-lg font-bold text-slate-500 dark:text-slate-400">Guruh yoki talaba</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            Yuqoridan guruhni yoki bitta talabani tanlang — davomat belgilash bir xil.
+          </p>
         </div>
       )}
     </div>

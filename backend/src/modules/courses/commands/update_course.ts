@@ -20,6 +20,6 @@ export async function update_course(dbService: DbService, id: string, data: any)
     `UPDATE courses SET ${updates.join(', ')} WHERE id = $${queryIndex} AND deleted_at IS NULL RETURNING *`,
     values
   );
-  if (!result.length) throw new NotFoundException('Course not found');
+  if (!result.length) throw new NotFoundException('Kurs topilmadi');
   return result[0];
 }

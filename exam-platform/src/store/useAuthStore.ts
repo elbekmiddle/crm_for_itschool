@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { jwtDecode } from 'jwt-decode';
 import api from '../lib/api';
 import { disconnectRealtimeSocket, reconnectRealtimeSocket } from '../lib/realtimeSocket';
 import type { Student } from '../types';
@@ -9,7 +8,6 @@ type VerifyStep = 'phone' | 'code' | 'password' | 'login';
 
 interface AuthState {
   user: Student | null;
-  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   lastActivity: number;
@@ -28,51 +26,43 @@ interface AuthState {
   checkInactivity: () => void;
   setStep: (step: VerifyStep) => void;
   setVerifyPhone: (phone: string) => void;
-  /** JWT dagi role noto‘g‘ri bo‘lishi mumkin — serverdan /auth/me bilan yangilash */
+  /** Serverdan /auth/me bilan yangilash (JWT cookie orqali) */
   syncSession: () => Promise<void>;
 }
 
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
 
-/** Safely extract JWT from any response shape the backend might return */
-function unwrapToken(data: any): string {
-  // Direct: { access_token: '...' }
-  if (data?.access_token) return data.access_token;
-  if (data?.token) return data.token;
-  // Wrapped by NestJS interceptor: { success: true, data: { access_token: '...' } }
-  if (data?.data?.access_token) return data.data.access_token;
-  if (data?.data?.token) return data.data.token;
-  console.warn('[Auth] Could not find token in response:', JSON.stringify(data).slice(0, 200));
-  return '';
-}
-
-/** Decode JWT and build Student object — never throws */
-function parseJwt(token: string, phoneFallback = ''): Student {
-  try {
-    const d = jwtDecode<any>(token);
-    const r = d.role != null && String(d.role).trim() !== '' ? String(d.role).toUpperCase() : '';
+function mapApiUserToStudent(u: unknown, phoneFallback = ''): Student {
+  if (!u || typeof u !== 'object') {
     return {
-      id: d.sub || '',
-      first_name: d.first_name || '',
-      last_name: d.last_name || '',
-      phone: d.phone || phoneFallback,
-      email: d.email || '',
-      parent_name: d.parent_name || '',
-      image_url: d.image_url || '',
-      /** Default STUDENT emas — noto‘g‘ri rol bilan /students/me 403 bermasligi uchun syncSession ishlatiladi */
-      role: r,
+      id: '',
+      first_name: '',
+      last_name: '',
+      phone: phoneFallback,
+      email: '',
+      parent_name: '',
+      image_url: '',
+      role: '',
     };
-  } catch (e) {
-    console.error('[Auth] JWT decode failed:', e);
-    return { id: '', first_name: '', last_name: '', phone: phoneFallback, email: '', parent_name: '', image_url: '', role: '' };
   }
+  const o = u as Record<string, unknown>;
+  const role = o.role != null && String(o.role).trim() !== '' ? String(o.role).toUpperCase() : '';
+  return {
+    id: String(o.id ?? ''),
+    first_name: String(o.first_name ?? ''),
+    last_name: String(o.last_name ?? ''),
+    phone: String(o.phone ?? phoneFallback),
+    email: o.email != null ? String(o.email) : '',
+    parent_name: o.parent_name != null ? String(o.parent_name) : '',
+    image_url: o.image_url != null ? String(o.image_url) : '',
+    role,
+  };
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
-      token: null,
       isAuthenticated: false,
       isLoading: false,
       lastActivity: Date.now(),
@@ -85,59 +75,70 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const { data } = await api.post('/auth/check-phone', { phone });
-          console.log('[Auth] checkPhone:', data);
           const d = data?.data || data;
           set({ verifyPhone: phone, isVerified: !!d.is_verified, hasTelegram: !!d.has_telegram, isLoading: false });
           return { is_verified: !!d.is_verified, has_telegram: !!d.has_telegram };
         } catch (e) {
-          set({ isLoading: false }); throw e;
+          set({ isLoading: false });
+          throw e;
         }
       },
 
       sendCode: async (phone) => {
         set({ isLoading: true });
         try {
-          const { data } = await api.post('/auth/send-verify-code', { phone });
-          console.log('[Auth] sendCode:', data);
+          await api.post('/auth/send-verify-code', { phone });
           set({ isLoading: false });
         } catch (e) {
-          set({ isLoading: false }); throw e;
+          set({ isLoading: false });
+          throw e;
         }
       },
 
       verifyCode: async (phone, code, password) => {
         set({ isLoading: true });
-        console.log('[Auth] verifyCode — phone:', phone, 'code:', code);
         try {
           const { data } = await api.post('/auth/verify-code', { phone, code, password });
-          console.log('[Auth] verifyCode response:', data);
-          const token = unwrapToken(data);
-          if (!token) throw new Error('Server JWT tokenni qaytarmadi');
-          const user = parseJwt(token, phone);
-          localStorage.setItem('token', token);
-          set({ user, token, isAuthenticated: true, lastActivity: Date.now(), isLoading: false, isVerified: true });
-        } catch (e: any) {
-          console.error('[Auth] verifyCode error:', e.response?.data || e.message);
-          set({ isLoading: false }); throw e;
+          const res = data as { user?: unknown };
+          let user = mapApiUserToStudent(res?.user, phone);
+          if (!user.id) {
+            await get().syncSession();
+            user = get().user || user;
+          }
+          if (!user.id) throw new Error('Foydalanuvchi ma’lumotlari qaytmadi');
+          reconnectRealtimeSocket();
+          set({
+            user,
+            isAuthenticated: true,
+            lastActivity: Date.now(),
+            isLoading: false,
+            isVerified: true,
+          });
+        } catch (e: unknown) {
+          console.error('[Auth] verifyCode xato');
+          set({ isLoading: false });
+          throw e;
         }
       },
 
       loginWithPassword: async (phone, password, kind = 'student') => {
         set({ isLoading: true });
-        console.log('[Auth] loginWithPassword — phone:', phone, 'kind:', kind);
         try {
           const path = kind === 'staff' ? '/auth/staff-phone-login' : '/auth/student-login-password';
           const { data } = await api.post(path, { phone, password });
-          console.log('[Auth] loginWithPassword response:', data);
-          const token = unwrapToken(data);
-          if (!token) throw new Error('Server JWT tokenni qaytarmadi');
-          const user = parseJwt(token, phone);
-          localStorage.setItem('token', token);
+          const res = data as { user?: unknown };
+          let user = mapApiUserToStudent(res?.user, phone);
+          if (!user.id) {
+            await get().syncSession();
+            user = get().user || user;
+          }
+          if (!user.id) throw new Error('Foydalanuvchi ma’lumotlari qaytmadi');
           reconnectRealtimeSocket();
-          set({ user, token, isAuthenticated: true, lastActivity: Date.now(), isLoading: false });
-        } catch (e: any) {
-          console.error('[Auth] loginWithPassword error:', e.response?.data || e.message);
-          set({ isLoading: false }); throw e;
+          set({ user, isAuthenticated: true, lastActivity: Date.now(), isLoading: false });
+        } catch (e: unknown) {
+          console.error('[Auth] loginWithPassword xato');
+          set({ isLoading: false });
+          throw e;
         }
       },
 
@@ -145,23 +146,38 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const { data } = await api.post('/auth/student-login', { phone, first_name: firstName });
-          const token = unwrapToken(data);
-          const user = parseJwt(token, phone);
-          if (firstName) user.first_name = firstName;
-          localStorage.setItem('token', token);
+          const res = data as { user?: unknown };
+          let user = mapApiUserToStudent(res?.user, phone);
+          if (firstName) user = { ...user, first_name: firstName };
+          if (!user.id) {
+            await get().syncSession();
+            user = get().user || user;
+          }
+          if (!user.id) throw new Error('Foydalanuvchi ma’lumotlari qaytmadi');
           reconnectRealtimeSocket();
-          set({ user, token, isAuthenticated: true, lastActivity: Date.now(), isLoading: false });
+          set({ user, isAuthenticated: true, lastActivity: Date.now(), isLoading: false });
         } catch (e) {
-          set({ isLoading: false }); throw e;
+          set({ isLoading: false });
+          throw e;
         }
       },
 
       logout: () => {
-        disconnectRealtimeSocket();
-        localStorage.removeItem('token');
-        localStorage.removeItem('exam-lock');
-        localStorage.removeItem('auth-storage');
-        set({ user: null, token: null, isAuthenticated: false, verifyStep: 'phone', verifyPhone: '' });
+        void (async () => {
+          disconnectRealtimeSocket();
+          try {
+            await api.post('/auth/logout');
+          } catch {
+            /* cookie tozalashga harakat qilindi */
+          }
+          try {
+            localStorage.removeItem('exam-lock');
+            localStorage.removeItem('auth-storage');
+          } catch {
+            /* */
+          }
+          set({ user: null, isAuthenticated: false, verifyStep: 'phone', verifyPhone: '' });
+        })();
       },
 
       updateActivity: () => set({ lastActivity: Date.now() }),
@@ -175,40 +191,39 @@ export const useAuthStore = create<AuthState>()(
       setVerifyPhone: (phone) => set({ verifyPhone: phone }),
 
       syncSession: async () => {
-        const tok = get().token || localStorage.getItem('token');
-        if (!tok) return;
         try {
           const { data: raw } = await api.get('/auth/me');
-          const me = (raw as any)?.data ?? raw;
+          const me = (raw as { data?: unknown })?.data ?? raw;
           if (!me || typeof me !== 'object') return;
-          const role = String((me as any).role ?? '')
+          const m = me as Record<string, unknown>;
+          const role = String(m.role ?? '')
             .trim()
             .toUpperCase();
           set({
             user: {
-              id: String((me as any).id ?? ''),
-              first_name: String((me as any).first_name ?? ''),
-              last_name: String((me as any).last_name ?? ''),
-              phone: String((me as any).phone ?? ''),
-              email: (me as any).email != null ? String((me as any).email) : '',
-              parent_name: (me as any).parent_name != null ? String((me as any).parent_name) : '',
-              image_url: (me as any).image_url != null ? String((me as any).image_url) : '',
+              id: String(m.id ?? ''),
+              first_name: String(m.first_name ?? ''),
+              last_name: String(m.last_name ?? ''),
+              phone: String(m.phone ?? ''),
+              email: m.email != null ? String(m.email) : '',
+              parent_name: m.parent_name != null ? String(m.parent_name) : '',
+              image_url: m.image_url != null ? String(m.image_url) : '',
               role,
             },
+            isAuthenticated: true,
           });
         } catch {
-          try {
-            const t = get().token || localStorage.getItem('token');
-            if (t) set({ user: parseJwt(t) });
-          } catch {
-            /* */
-          }
+          set({ user: null, isAuthenticated: false });
         }
       },
     }),
     {
       name: 'auth-storage',
-      partialize: (s) => ({ user: s.user, token: s.token, isAuthenticated: s.isAuthenticated, lastActivity: s.lastActivity }),
+      partialize: (s) => ({
+        user: s.user,
+        isAuthenticated: s.isAuthenticated,
+        lastActivity: s.lastActivity,
+      }),
     },
   ),
 );

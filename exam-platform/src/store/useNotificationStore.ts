@@ -21,8 +21,6 @@ interface NotificationState {
   disconnectSocket: () => void;
 }
 
-let socket: WebSocket | null = null;
-
 export const useNotificationStore = create<NotificationState>()((set, get) => ({
   notifications: [],
   unreadCount: 0,
@@ -60,76 +58,9 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
   clearAll: () => set({ notifications: [], unreadCount: 0 }),
 
   connectSocket: () => {
-    const token = localStorage.getItem('token');
-    if (!token || get().isConnected) return;
-
-    try {
-      const wsUrl = `ws://localhost:5001/ws?token=${token}`;
-      socket = new WebSocket(wsUrl);
-
-      socket.onopen = () => {
-        set({ isConnected: true });
-        console.log('[WS] Connected');
-      };
-
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          const { addNotification } = get();
-
-          switch (data.type) {
-            case 'exam_started':
-              addNotification({
-                type: 'exam_started',
-                message: data.message || "Imtihon boshlandi! Platformani oching.",
-              });
-              break;
-            case 'missed_lesson':
-              addNotification({
-                type: 'missed_lesson',
-                message: data.message || "Bugungi darsga kelmadingiz.",
-              });
-              break;
-            case 'exam_reminder':
-              addNotification({
-                type: 'exam_reminder',
-                message: data.message || "Imtihon 10 daqiqadan boshlanadi!",
-              });
-              break;
-            default:
-              addNotification({
-                type: 'info',
-                message: data.message || 'Yangi xabarnoma',
-              });
-          }
-        } catch {
-          console.error('[WS] Failed to parse message');
-        }
-      };
-
-      socket.onclose = () => {
-        set({ isConnected: false });
-        console.log('[WS] Disconnected');
-        // Auto-reconnect after 5 seconds
-        setTimeout(() => {
-          if (!get().isConnected) get().connectSocket();
-        }, 5000);
-      };
-
-      socket.onerror = () => {
-        console.error('[WS] Connection error');
-      };
-
-    } catch (e) {
-      console.error('[WS] Failed to connect', e);
-    }
+    /** Eski /ws?token= rejimi — JWT endi HTTPOnly cookie’da; bu klient cookie bilan WS qo‘llab-quvvatlanguncha o‘chirilgan */
+    if (get().isConnected) return;
   },
 
-  disconnectSocket: () => {
-    if (socket) {
-      socket.close();
-      socket = null;
-    }
-    set({ isConnected: false });
-  },
+  disconnectSocket: () => set({ isConnected: false }),
 }));

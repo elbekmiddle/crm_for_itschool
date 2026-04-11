@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConfirmProvider } from './context/ConfirmContext';
 import { ToastProvider } from './context/ToastContext';
+import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Loader2 } from 'lucide-react';
@@ -50,6 +51,11 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <ConfirmProvider>
         <ToastProvider>
+          <Toaster
+            position="bottom-right"
+            containerStyle={{ zIndex: 11000 }}
+            toastOptions={{ duration: 4000, style: { zIndex: 11000 } }}
+          />
           <Router>
             <Suspense fallback={<LoadingScreen />}>
               <Routes>

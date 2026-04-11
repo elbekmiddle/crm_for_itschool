@@ -3,7 +3,7 @@ import { useStudentStore } from '../store/useStudentStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { Wallet, CheckCircle2, AlertTriangle, CreditCard, Loader2, Sparkles, TrendingDown, TrendingUp, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { cn } from '../lib/utils';
+import { cn, formatPaymentDisplayUz, formatPaymentMethodUz } from '../lib/utils';
 import { isPaymentPaid } from '../lib/paymentStatus';
 
 const PaymentsPage: React.FC = () => {
@@ -112,9 +112,15 @@ const PaymentsPage: React.FC = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-black text-[var(--text-h)] truncate">
-                          {p.month || (p.created_at ? new Date(p.created_at).toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' }) : `To'lov #${i + 1}`)}
+                          {formatPaymentDisplayUz({
+                            month: p.month,
+                            paid_at: p.paid_at,
+                            created_at: p.created_at,
+                          }) || `To'lov #${i + 1}`}
                         </p>
-                        <p className="text-[10px] text-[var(--text)] font-bold uppercase tracking-widest mt-1">{p.payment_method || 'Naqd'}</p>
+                        <p className="text-[10px] text-[var(--text)] font-bold uppercase tracking-widest mt-1">
+                          {formatPaymentMethodUz(p.payment_method)}
+                        </p>
                       </div>
                       <div className="text-right flex flex-col items-end gap-2">
                         <p className={cn("font-black text-lg tabular-nums", isPaid ? 'text-emerald-500' : 'text-red-500')}>

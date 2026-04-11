@@ -6,6 +6,6 @@ export async function soft_delete_group(dbService: DbService, id: string) {
     `DELETE FROM groups WHERE id = $1 RETURNING id`,
     [id]
   );
-  if (!result.length) throw new NotFoundException('Group not found');
+  if (!result.length) throw new NotFoundException('Guruh topilmadi');
   return { success: true };
 }

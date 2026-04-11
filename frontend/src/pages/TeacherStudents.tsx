@@ -150,7 +150,7 @@ const TeacherStudentsPage: React.FC = () => {
               role="dialog"
               aria-modal="true"
               aria-labelledby="teacher-add-student-title"
-              className="card my-auto max-h-[min(90vh,calc(100dvh-2rem))] w-full max-w-md overflow-y-auto border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-2xl"
+              className="card animate-in-scale my-auto max-h-[min(90vh,calc(100dvh-2rem))] w-full max-w-md overflow-y-auto border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-4 flex items-center justify-between">

@@ -8,7 +8,7 @@ export const ToastContainer = () => {
 
   return (
     <>
-      <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2">
+      <div className="fixed top-4 right-4 z-[11000] flex flex-col gap-2 pointer-events-auto">
         {toasts.map((t) => (
           <div
             key={t.id}
@@ -31,7 +31,7 @@ export const ToastContainer = () => {
       </div>
 
       {confirmState.isOpen && (
-        <div className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center animate-in fade-in" onClick={hideConfirm}>
+        <div className="fixed inset-0 z-[11000] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center animate-in fade-in" onClick={hideConfirm}>
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
             <div className="flex flex-col items-center text-center">
               <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">

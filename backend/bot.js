@@ -10,6 +10,10 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const BASE_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
 const API_URL = `http://localhost:${process.env.PORT || 5001}/api/v1`;
 
+/** Blog havolasi (ixtiyoriy). Kurslar bazadan (callback) ko‘rinadi. */
+const LINK_BLOG = (process.env.TELEGRAM_MENU_BLOG_URL || '').trim();
+const PUBLIC_WEB = (process.env.PUBLIC_WEB_URL || 'http://localhost:5173').replace(/\/$/, '');
+
 // Simple Redis client via Upstash REST API
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -52,12 +56,41 @@ async function sendMessage(chatId, text, extra = {}) {
   });
 }
 
-async function editMessage(chatId, messageId, text) {
+async function answerCallbackQuery(callbackQueryId, text) {
+  const body = { callback_query_id: callbackQueryId };
+  if (text) {
+    body.text = text;
+    body.show_alert = text.length > 180;
+  }
+  await fetch(`${BASE_URL}/answerCallbackQuery`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+/** Kurslar (bazadan), ixtiyoriy Blog URL, Tasdiqlash kodi */
+function mainMenuInlineKeyboard() {
+  const rows = [];
+  rows.push([{ text: '📚 Kurslar', callback_data: 'list_courses' }]);
+  if (LINK_BLOG) rows.push([{ text: '📰 Blog', url: LINK_BLOG }]);
+  rows.push([{ text: '🔐 Tasdiqlash kodi', callback_data: 'verify_code' }]);
+  return { inline_keyboard: rows };
+}
+
+async function editMessage(chatId, messageId, text, extra = {}) {
   await fetch(`${BASE_URL}/editMessageText`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, message_id: messageId, text, parse_mode: 'HTML' }),
+    body: JSON.stringify({ chat_id: chatId, message_id: messageId, text, parse_mode: 'HTML', ...extra }),
   });
+}
+
+function escapeHtmlBot(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 // ─── DB helpers ──────────────────────────────────────────────────────────────
@@ -131,29 +164,23 @@ async function handleMessage(msg) {
   if (text === '/start') {
     const student = await getStudentByChatId(chatId);
     if (student) {
-      await sendMessage(chatId,
+      await sendMessage(
+        chatId,
         `👋 Salom, <b>${student.first_name}</b>!\n\n` +
-        `Siz IT School platformasiga ulangan holdasiz.\n\n` +
-        `📋 <b>Buyruqlar:</b>\n` +
-        `/status — Hisob holati\n` +
-        `/reset — Parolni tiklash\n` +
-        `/help — Yordam`
+          `🏫 <b>IT School o'quv markazining rasmiy botiga xush kelibsiz!</b>\n\n` +
+          `Quyidagi menyudan kerakli bo'limni tanlang.\n\n` +
+          `📋 <b>Buyruqlar:</b> /status · /reset · /help`,
+        { reply_markup: mainMenuInlineKeyboard() }
       );
     } else {
-      await sendMessage(chatId,
-        `👋 Salom, <b>${name}</b>! IT School Telegram Botiga xush kelibsiz.\n\n` +
-        `📱 Hisobingizni ulash uchun telefon raqamingizni yuboring:\n` +
-        `Misol: <code>+998901234567</code>\n\n` +
-        `Bu raqam IT School'dagi ro'yxatingizda bo'lishi kerak.`,
-        {
-          reply_markup: {
-            keyboard: [[{ text: '📱 Raqamimni yuborish', request_contact: true }]],
-            resize_keyboard: true,
-            one_time_keyboard: true,
-          }
-        }
+      await sendMessage(
+        chatId,
+          `🏫 <b>IT School o'quv markazining rasmiy botiga xush kelibsiz!</b>\n\n` +
+          `Quyidagi menyudan kerakli bo'limni tanlang: kurslar, blog yoki <b>«Tasdiqlash kodi»</b> — ` +
+          `unda telefon kontaktingizni yuborasiz va tizim sizga 6 xonali kod beradi (CRM / Exam login).\n\n` +
+          `🌐 Veb: <code>${PUBLIC_WEB}</code>`,
+        { reply_markup: mainMenuInlineKeyboard() }
       );
-      await redisSet(stateKey, STATE_LINKING, 300);
     }
     return;
   }
@@ -284,6 +311,103 @@ async function handleMessage(msg) {
   }
 }
 
+// ─── Inline tugma: «Tasdiqlash kodi» → kontakt so‘rash ─────────────────────────
+async function handleCallback(query) {
+  const chatId = query.message?.chat?.id;
+  const data = (query.data || '').trim();
+  if (!chatId) return;
+
+  if (data === 'verify_code') {
+    const already = await getStudentByChatId(chatId);
+    if (already) {
+      await answerCallbackQuery(query.id, 'Hisob allaqachon ulangan');
+      await sendMessage(
+        chatId,
+        '✅ Bu Telegram allaqachon talaba hisobiga ulangan.\n\n/status yoki /help'
+      );
+      return;
+    }
+  }
+
+  if (data === 'list_courses') {
+    await answerCallbackQuery(query.id, '');
+    const qm = query.message;
+    const mid = qm?.message_id;
+    if (!mid) return;
+    const res = await db.query(
+      `SELECT id, name FROM courses WHERE deleted_at IS NULL ORDER BY name ASC NULLS LAST LIMIT 35`
+    );
+    if (!res.rows.length) {
+      await editMessage(chatId, mid, '📚 Hozircha kurslar ro\'yxati bo\'sh.', {
+        reply_markup: { inline_keyboard: [[{ text: '🔙 Orqaga', callback_data: 'menu_home' }]] },
+      });
+      return;
+    }
+    const rowsKb = [];
+    for (const c of res.rows) {
+      rowsKb.push([{ text: (c.name || 'Kurs').slice(0, 58), callback_data: `CRS|${c.id}` }]);
+    }
+    rowsKb.push([{ text: '🔙 Orqaga', callback_data: 'menu_home' }]);
+    await editMessage(chatId, mid, '<b>Markazimiz kurslari</b> (faqat ma\'lumot):', {
+      reply_markup: { inline_keyboard: rowsKb },
+    });
+    return;
+  }
+
+  if (data === 'menu_home') {
+    await answerCallbackQuery(query.id, '');
+    const qm = query.message;
+    const mid = qm?.message_id;
+    if (!mid) return;
+    await editMessage(
+      chatId,
+      mid,
+      `🏫 <b>IT School</b> — bosh menyu\n\n🌐 <code>${PUBLIC_WEB}</code>`,
+      { reply_markup: mainMenuInlineKeyboard() }
+    );
+    return;
+  }
+
+  if (data && data.startsWith('CRS|')) {
+    await answerCallbackQuery(query.id, '');
+    const id = data.split('|')[1];
+    const qm = query.message;
+    const mid = qm?.message_id;
+    if (!mid) return;
+    const r = await db.query(
+      `SELECT name, COALESCE(description,'') AS description FROM courses WHERE id = $1 AND deleted_at IS NULL`,
+      [id]
+    );
+    if (!r.rows.length) return;
+    const c = r.rows[0];
+    const body = `📚 <b>${escapeHtmlBot(c.name)}</b>\n\n${escapeHtmlBot((c.description || '').trim() || "Qo‘shimcha tavsif yo‘q.")}`;
+    await editMessage(chatId, mid, body, {
+      reply_markup: { inline_keyboard: [[{ text: '🔙 Kurslar', callback_data: 'list_courses' }]] },
+    });
+    return;
+  }
+
+  await answerCallbackQuery(query.id, data === 'verify_code' ? 'Kontaktingizni yuboring' : '');
+
+  if (data === 'verify_code') {
+    const stateKey = `bot:state:${chatId}`;
+    await redisSet(stateKey, STATE_LINKING, 600);
+    await sendMessage(
+      chatId,
+      `🔐 <b>Tasdiqlash kodi</b>\n\n` +
+        `Telefon raqamingiz IT School bazasidagi bilan mos kelishi kerak.\n` +
+        `Pastdagi tugma orqali kontaktingizni yuboring yoki raqamni matn bilan yozing:`,
+      {
+        reply_markup: {
+          keyboard: [[{ text: '📱 Raqamimni yuborish', request_contact: true }]],
+          resize_keyboard: true,
+          one_time_keyboard: true,
+        },
+      }
+    );
+  }
+}
+
 // ─── Polling loop ─────────────────────────────────────────────────────────────
 let offset = 0;
 
@@ -299,7 +423,11 @@ async function poll() {
 
     for (const update of data.result) {
       offset = update.update_id + 1;
-      if (update.message) {
+      if (update.callback_query) {
+        await handleCallback(update.callback_query).catch((e) =>
+          console.error('[BOT] Callback error:', e.message)
+        );
+      } else if (update.message) {
         await handleMessage(update.message).catch((e) =>
           console.error('[BOT] Handler error:', e.message)
         );

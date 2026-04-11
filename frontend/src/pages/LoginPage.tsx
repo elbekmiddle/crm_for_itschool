@@ -1,7 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, Loader2, Phone, ChevronRight, MessageSquare, ShieldCheck, ArrowLeft, Zap } from 'lucide-react';
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Loader2,
+  Phone,
+  ChevronRight,
+  MessageSquare,
+  ShieldCheck,
+  ArrowLeft,
+  Zap,
+  ExternalLink,
+} from 'lucide-react';
 import api from '../lib/api';
 import { reconnectRealtimeSocket } from '../lib/realtimeSocket';
 import { useAdminStore } from '../store/useAdminStore';
@@ -26,6 +39,9 @@ const LoginPage: React.FC = () => {
 
   const { fetchMe } = useAdminStore();
   const navigate = useNavigate();
+
+  /** Login / «Tasdiqlash kodi» — `frontend/.env` da VITE_TELEGRAM_BOT_URL=https://t.me/BotName */
+  const telegramBotUrl = (import.meta.env.VITE_TELEGRAM_BOT_URL as string | undefined)?.trim();
 
   const isPhone = (val: string) => /^\+?[0-9]{7,15}$/.test(val.replace(/\s/g, ''));
 
@@ -256,28 +272,65 @@ const LoginPage: React.FC = () => {
                {step === 'TELEGRAM_CODE' && (
                  <motion.form 
                     key="tg-code" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}
-                    onSubmit={handleVerifyCode} className="space-y-8"
+                    onSubmit={handleVerifyCode} className="space-y-6"
                  >
-                    <div className="bg-[#aa3bff]/5 p-8 rounded-[2rem] border border-[#aa3bff]/10 mb-8 relative overflow-hidden">
-                       <div className="absolute top-0 right-0 w-32 h-32 bg-[#aa3bff]/10 rounded-full blur-2xl -mr-16 -mt-16" />
-                       <p className="text-sm font-bold text-[#4f147a] leading-relaxed relative z-10 flex items-start gap-3">
-                          <MessageSquare className="w-5 h-5 shrink-0" />
-                          <span>Sizning Telegramingizga 6 xonali tasdiqlash kodi yuborildi. Hisobingiz xavfsizligi uchun kodni kiriting.</span>
+                    <div className="text-center space-y-2">
+                       <h3 className="text-2xl font-black text-[#08060d] tracking-tight">Tasdiqlash kodi</h3>
+                       <p className="text-sm font-semibold text-[#6b6375]">Tasdiqlash kodi Telegram bot orqali yuboriladi.</p>
+                       <p className="text-xs text-[#6b6375] leading-relaxed max-w-sm mx-auto">
+                          <strong className="text-[#08060d]">IT School o‘quv markazining</strong> rasmiy botida{' '}
+                          <strong className="text-[#08060d]">Start</strong> ni bosing. Quyidagi menyudan kerakli bo‘limni tanlang: kurslar, blog yoki{' '}
+                          <strong className="text-[#08060d]">«Tasdiqlash kodi»</strong> — u yerda kontaktingizni yuborasiz, keyin bot sizga 6 xonali kod beradi
+                          (CRM / Exam login bilan bir xil raqam).
                        </p>
                     </div>
+
+                    {telegramBotUrl ? (
+                       <a
+                         href={telegramBotUrl}
+                         target="_blank"
+                         rel="noopener noreferrer"
+                         className="flex items-center justify-center gap-3 w-full py-4 rounded-[2rem] border-2 border-[#229ED9]/40 bg-[#229ED9]/5 text-[#08060d] font-black text-sm hover:bg-[#229ED9]/10 hover:border-[#229ED9]/60 transition-all"
+                       >
+                          <MessageSquare className="w-5 h-5 text-[#229ED9] shrink-0" />
+                          Rasmiy Telegram botga o‘tish
+                          <ExternalLink className="w-4 h-4 opacity-60 shrink-0" />
+                       </a>
+                    ) : (
+                       <p className="text-center text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 rounded-2xl py-3 px-4">
+                          Administrator: <code className="font-mono">VITE_TELEGRAM_BOT_URL</code> ni frontend <code className="font-mono">.env</code> ga qo‘shing (masalan <code className="font-mono">https://t.me/BotName</code>).
+                       </p>
+                    )}
+
+                    <div className="bg-[#aa3bff]/5 p-6 rounded-[2rem] border border-[#aa3bff]/10 relative overflow-hidden">
+                       <div className="absolute top-0 right-0 w-32 h-32 bg-[#aa3bff]/10 rounded-full blur-2xl -mr-16 -mt-16" />
+                       <p className="text-sm font-bold text-[#4f147a] leading-relaxed relative z-10 flex flex-col gap-3">
+                          <span className="flex items-start gap-3">
+                             <MessageSquare className="w-5 h-5 shrink-0 mt-0.5" />
+                             <span>Telegram botdan 6 xonali kodni oling va quyiga kiriting.</span>
+                          </span>
+                          <span className="pl-8 text-[#6b6375] font-semibold text-xs">
+                             Telefon: <span className="text-[#08060d] font-black tabular-nums">{loginValue}</span>
+                          </span>
+                       </p>
+                    </div>
+
                     <div>
-                       <label className="text-[11px] font-black text-[#6b6375] uppercase tracking-[0.2em] mb-4 block text-center">Tasdiqlash kodi</label>
+                       <label className="text-[11px] font-black text-[#6b6375] uppercase tracking-[0.2em] mb-4 block text-center">6 xonali kod</label>
                        <input 
                          type="text" value={verificationCode} onChange={e => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                         placeholder="0 0 0 0 0 0" maxLength={6} required autoFocus
-                         className="w-full bg-[#f4f3ec]/50 border-2 border-transparent rounded-[2.5rem] py-7 text-center text-5xl font-black tracking-[0.6em] focus:bg-white focus:border-[#aa3bff] focus:outline-none transition-all duration-500 text-[#08060d] shadow-xl placeholder:opacity-20"
+                         placeholder="000000" maxLength={6} required autoFocus
+                         inputMode="numeric"
+                         autoComplete="one-time-code"
+                         className="w-full bg-[#f4f3ec]/50 border-2 border-transparent rounded-[2.5rem] py-7 text-center text-5xl font-black tracking-[0.5em] focus:bg-white focus:border-[#aa3bff] focus:outline-none transition-all duration-500 text-[#08060d] shadow-xl placeholder:opacity-20"
                        />
+                       <p className="text-center text-[10px] text-[#6b6375] font-semibold mt-3 opacity-80">Telegram bot orqali yuborilgan kod</p>
                     </div>
                     <button disabled={loading || verificationCode.length < 6} className="w-full bg-[#aa3bff] hover:bg-[#9329e6] text-white font-black py-5 rounded-[2rem] transition-all duration-500 shadow-2xl shadow-[#aa3bff]/30 active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest">
-                       {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'KODNI TASDIQLASH'}
+                       {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Kodini tasdiqlash'}
                     </button>
                     <button type="button" onClick={() => setStep('PASSWORD')} className="w-full text-center text-xs font-black text-[#6b6375] hover:text-[#08060d] uppercase tracking-[0.2em] opacity-60 hover:opacity-100 transition-all">
-                       ORTGA QAYTISH
+                       Ortga qaytish
                     </button>
                  </motion.form>
                )}

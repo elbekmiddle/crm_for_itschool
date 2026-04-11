@@ -11,14 +11,7 @@ const api = axios.create({
   },
 });
 
-// Automatic token injection
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// JWT faqat HTTPOnly cookie orqali (withCredentials); Authorization header qo‘shilmaydi
 
 // Response interceptor to handle auth errors and data unwrapping
 api.interceptors.response.use(
@@ -31,11 +24,11 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      if (window.location.pathname !== '/login' && !authRedirectInProgress) {
+      const url = `${error.config?.baseURL || ''}${error.config?.url || ''}`;
+      const isSessionProbe = url.includes('/auth/me');
+      if (!isSessionProbe && window.location.pathname !== '/login' && !authRedirectInProgress) {
         authRedirectInProgress = true;
-        localStorage.removeItem('token');
         localStorage.removeItem('user');
-        /** Zustand persist — aks holda qayta yuklanganda isAuthenticated=true bo‘lib login↔dashboard tsikli */
         localStorage.removeItem('auth-storage');
         window.location.href = '/login';
       }

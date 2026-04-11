@@ -34,6 +34,6 @@ export async function update_group(dbService: DbService, id: string, data: any) 
     `UPDATE groups SET ${updates.join(', ')} WHERE id = $${queryIndex} AND deleted_at IS NULL RETURNING *`,
     values
   );
-  if (!result.length) throw new NotFoundException('Group not found');
+  if (!result.length) throw new NotFoundException('Guruh topilmadi');
   return result[0];
 }

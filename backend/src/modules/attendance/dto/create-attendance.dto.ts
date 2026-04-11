@@ -2,10 +2,10 @@ import { IsNotEmpty, IsUUID, IsEnum, IsOptional, IsDateString } from 'class-vali
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateAttendanceDto {
-  @ApiProperty({ example: 'group_uuid' })
+  @ApiProperty({ example: 'group_uuid', required: false, description: 'Yo‘q — guruhga kirmagan talaba (individual davomat)' })
+  @IsOptional()
   @IsUUID('4')
-  @IsNotEmpty()
-  group_id: string;
+  group_id?: string | null;
 
   @ApiProperty({ example: 'student_uuid' })
   @IsUUID('4')

@@ -6,7 +6,7 @@ export async function grade_exam(dbService: DbService, examId: string, grades: {
   
   // Check if exam exists
   const examCheck = await dbService.query(`SELECT id FROM exams WHERE id = $1`, [examId]);
-  if (!examCheck.length) throw new NotFoundException('Exam not found');
+  if (!examCheck.length) throw new NotFoundException('Imtihon topilmadi');
 
   const valueRows = grades.map((_, i) => `($1, $${i * 3 + 2}, $${i * 3 + 3}, $${i * 3 + 4})`).join(', ');
   const flatValues = grades.reduce((acc, g) => [...acc, g.student_id, g.score, g.feedback || ''], [examId]);

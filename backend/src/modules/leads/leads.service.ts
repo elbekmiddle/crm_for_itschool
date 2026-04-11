@@ -46,7 +46,7 @@ export class LeadsService {
 
   async convertLead(id: string, branchId: string = null, groupId: string = null) {
     const lead = await this.dbService.query(`SELECT * FROM leads WHERE id=$1`, [id]);
-    if (!lead.length) throw new BadRequestException('Lead not found');
+    if (!lead.length) throw new BadRequestException('Lid topilmadi');
 
     const l = lead[0];
     const password = '123'; // Temporary password

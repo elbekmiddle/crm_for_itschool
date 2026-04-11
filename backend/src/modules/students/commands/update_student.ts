@@ -34,6 +34,6 @@ export async function update_student(dbService: DbService, id: string, updateStu
   const query = `UPDATE students SET ${updates.join(', ')} WHERE id = $${queryIdx} AND deleted_at IS NULL RETURNING *`;
   
   const result = await dbService.query(query, values);
-  if (!result.length) throw new NotFoundException('Student not found');
+  if (!result.length) throw new NotFoundException('Talaba topilmadi');
   return result[0];
 }

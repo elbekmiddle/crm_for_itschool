@@ -84,7 +84,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             id: c.course_id || 'base-1',
             name: c.course_name || 'Kurs',
             course_name: c.course_name,
-            level: c.current_level || 'Boshlang\'ich',
+            level: c.current_level ?? undefined,
             group_name: g?.group_name || 'Guruhsiz',
             teacher_name: g?.teacher_name || 'Ustoz',
           } as CourseInfo,

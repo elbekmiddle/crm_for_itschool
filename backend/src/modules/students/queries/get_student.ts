@@ -6,6 +6,6 @@ export async function get_student(dbService: DbService, id: string) {
     `SELECT * FROM students WHERE id = $1 AND deleted_at IS NULL`,
     [id]
   );
-  if (!result.length) throw new NotFoundException('Student not found');
+  if (!result.length) throw new NotFoundException('Talaba topilmadi');
   return result[0];
 }

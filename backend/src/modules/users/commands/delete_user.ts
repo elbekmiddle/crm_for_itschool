@@ -47,7 +47,7 @@ export async function delete_user(dbService: DbService, id: string) {
 
     const del = await client.query(`DELETE FROM users WHERE id = $1::uuid RETURNING id`, [id]);
     await client.query('COMMIT');
-    if (!del.rows.length) throw new NotFoundException('User not found');
+    if (!del.rows.length) throw new NotFoundException('Foydalanuvchi topilmadi');
     return del.rows[0];
   } catch (e: any) {
     try {

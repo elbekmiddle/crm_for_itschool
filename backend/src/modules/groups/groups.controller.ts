@@ -42,6 +42,19 @@ export class GroupsController {
     return this.groupsService.findTeacherGroups(req.user.id);
   }
 
+  @Permissions('GROUP_READ')
+  @Get('my-individual-students')
+  @ApiOperation({
+    summary: 'Guruhga kirmagan, lekin ustoz kursiga yozilgan talabalar (davomat individual)',
+    description: 'Permissions: GROUP_READ; faqat TEACHER',
+  })
+  findMyIndividualStudents(@Request() req) {
+    if (req.user?.role !== 'TEACHER') {
+      throw new ForbiddenException('Faqat o‘qituvchi uchun');
+    }
+    return this.groupsService.findTeacherStudentsWithoutGroup(req.user.id);
+  }
+
   @Permissions('STUDENT_READ')
   @Get('debtors')
   @ApiOperation({ summary: 'Get debtors in teacher groups', description: 'Permissions: STUDENT_READ' })

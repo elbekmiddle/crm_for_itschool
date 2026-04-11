@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Patch, Request } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -16,8 +16,8 @@ export class AttendanceController {
   @Permissions('ATTENDANCE_MARK')
   @Post()
   @ApiOperation({ summary: 'Mark attendance for a given student', description: 'Permissions: ATTENDANCE_MARK' })
-  markAttendance(@Body() body: CreateAttendanceDto) {
-    return this.attendanceService.markAttendance(body);
+  markAttendance(@Body() body: CreateAttendanceDto, @Request() req: { user: { id: string } }) {
+    return this.attendanceService.markAttendance(body, req.user);
   }
 
   @Permissions('ATTENDANCE_READ')
@@ -25,6 +25,16 @@ export class AttendanceController {
   @ApiOperation({ summary: 'Get full attendance trace for a group', description: 'Permissions: ATTENDANCE_READ' })
   getGroupAttendance(@Param('id') id: string) {
     return this.attendanceService.getGroupAttendance(id);
+  }
+
+  @Permissions('ATTENDANCE_READ')
+  @Get('individual/:studentId')
+  @ApiOperation({
+    summary: 'Guruhga kirmagan talaba uchun davomat yozuvlari (group_id NULL)',
+    description: 'Permissions: ATTENDANCE_READ',
+  })
+  getIndividualAttendance(@Param('studentId') studentId: string, @Request() req: { user: { id: string } }) {
+    return this.attendanceService.getIndividualAttendance(studentId, req.user.id);
   }
 
   @Permissions('ATTENDANCE_MARK')

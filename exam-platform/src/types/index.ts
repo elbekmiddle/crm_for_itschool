@@ -45,6 +45,8 @@ export interface Payment {
   month: string;
   status: 'PAID' | 'UNPAID' | 'PARTIAL';
   created_at: string;
+  paid_at?: string | null;
+  payment_method?: string | null;
 }
 
 // ── Exam ──

@@ -8,6 +8,7 @@ import { remove_student_from_group } from './commands/remove_student_from_group'
 import { update_group } from './commands/update_group';
 import { soft_delete_group } from './commands/soft_delete_group';
 import { get_teacher_debtors } from './queries/get_teacher_debtors';
+import { teacher_students_without_group } from './queries/teacher_students_without_group';
 import { get_group_lesson_log } from './queries/get_group_lesson_log';
 import { upsert_group_lesson_log } from './commands/upsert_group_lesson_log';
 import { SocketsGateway } from '../sockets/sockets.gateway';
@@ -96,6 +97,11 @@ export class GroupsService {
 
   async getTeacherDebtors(teacherId: string) {
     return get_teacher_debtors(this.dbService, teacherId);
+  }
+
+  /** Davomat: guruhga kirmagan, lekin ustozning kursiga yozilgan talabalar */
+  async findTeacherStudentsWithoutGroup(teacherId: string) {
+    return teacher_students_without_group(this.dbService, teacherId);
   }
 
   async isGroupOwner(groupId: string, teacherId: string): Promise<boolean> {

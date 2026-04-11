@@ -8,7 +8,16 @@ import {
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 
-const LEVELS = ['Boshlang`ich', 'O`rta', 'Yuqori'];
+/** API / DB bilan bir xil apostrof; noto‘g‘ri satr bo‘lsa indexOf -1 va progress 0%. */
+const LEVELS = ['Boshlang\'ich', 'O\'rta', 'Yuqori'] as const;
+
+function levelIndexFromApi(level: string | undefined | null): number {
+  const s = String(level ?? '').trim();
+  if (!s) return -1;
+  const lower = s.toLowerCase();
+  const i = LEVELS.findIndex((l) => l.toLowerCase() === lower);
+  return i;
+}
 
 const CoursePage: React.FC = () => {
   const { course, fetchCourse, fetchAttendance, attendanceStats, isLoading } = useStudentStore();
@@ -19,11 +28,10 @@ const CoursePage: React.FC = () => {
     if (user?.id) fetchAttendance(user.id);
   }, [user?.id]);
 
-  const levelIdx = useMemo(() => 
-    LEVELS.indexOf(course?.level || '') >= 0 ? LEVELS.indexOf(course?.level || '') : 0
-  , [course?.level]);
-  
-  const progress = Math.round(((levelIdx + 1) / LEVELS.length) * 100);
+  const levelIdx = useMemo(() => levelIndexFromApi(course?.level), [course?.level]);
+
+  const progress =
+    levelIdx < 0 ? 0 : Math.round(((levelIdx + 1) / LEVELS.length) * 100);
 
   return (
     <div className="page-container space-y-8 pb-32 lg:pb-12 h-full">
@@ -120,7 +128,7 @@ const CoursePage: React.FC = () => {
                   <div>
                     <h3 className="text-[#6b6375] font-black text-[10px] uppercase tracking-[0.2em] mb-1">Kurs Darajasi</h3>
                     <p className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-                      {course.level || 'Boshlang\'ich'}
+                      {course.level?.trim() ? course.level : 'Belgilanmagan'}
                     </p>
                   </div>
                 </div>
@@ -151,7 +159,7 @@ const CoursePage: React.FC = () => {
                   />
                   
                   {LEVELS.map((l, i) => {
-                    const isReached = i <= levelIdx;
+                    const isReached = levelIdx >= 0 && i <= levelIdx;
                     return (
                       <div key={l} className="relative z-20 flex flex-col items-center">
                         <div className={cn(

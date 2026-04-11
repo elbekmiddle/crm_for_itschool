@@ -61,7 +61,7 @@ const ExamListPage: React.FC = () => {
       </header>
 
       {/* Filters with refined design */}
-      <div className="sticky top-0 z-20 bg-white/80 dark:bg-[#16171d]/80 backdrop-blur-xl py-4 -mx-4 px-4 overflow-x-auto no-scrollbar border-b border-slate-100 dark:border-white/5">
+      <div className="sticky top-0 z-20 rounded-2xl bg-white/80 dark:bg-[#16171d]/80 backdrop-blur-xl py-4 -mx-4 px-4 overflow-x-auto no-scrollbar border border-slate-100 dark:border-white/5">
         <div className="flex gap-2 min-w-max">
           {tabs.map(({ id, label }) => {
             const isActive = tab === id;

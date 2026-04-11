@@ -380,7 +380,7 @@ export class ExamsService {
         [examId],
       );
     }
-    if (!exam.length) throw new NotFoundException('Exam not found');
+    if (!exam.length) throw new NotFoundException('Imtihon topilmadi');
 
     const title = (exam[0].title || '').trim();
     const courseName = (exam[0].course_name || '').trim();
@@ -591,7 +591,7 @@ export class ExamsService {
       // Check if time is up
       if (dayjs().isAfter(dayjs(activeAttempt[0].deadline_at))) {
         await this.finishAttempt(activeAttempt[0].id);
-        throw new BadRequestException('Exam time limit exceeded. Session closed.');
+        throw new BadRequestException('Imtihon vaqti tugadi. Sessiya yopildi.');
       }
       return activeAttempt[0];
     }
@@ -620,7 +620,7 @@ export class ExamsService {
 
   async getAttemptQuestions(attemptId: string) {
     const attempt = await this.dbService.query(`SELECT exam_id FROM exam_attempts WHERE id = $1`, [attemptId]);
-    if (!attempt.length) throw new NotFoundException('Attempt not found.');
+    if (!attempt.length) throw new NotFoundException('Urinish topilmadi.');
 
     /** Tartibni imtihon savollari bilan moslashtiramiz. Eski sxemalarda `exam_questions.created_at` / `question_order` bo‘lmasligi mumkin. */
     const questionSelect = `
@@ -814,7 +814,7 @@ export class ExamsService {
 
   private async finishAttempt(attemptId: string) {
     const attempt = await this.dbService.query(`SELECT exam_id, student_id FROM exam_attempts WHERE id = $1`, [attemptId]);
-    if (!attempt.length) throw new NotFoundException('Attempt not found.');
+    if (!attempt.length) throw new NotFoundException('Urinish topilmadi.');
 
     const { exam_id, student_id } = attempt[0];
 
