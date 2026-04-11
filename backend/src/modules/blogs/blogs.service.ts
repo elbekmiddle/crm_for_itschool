@@ -37,14 +37,32 @@ export class BlogsService {
   }
 
   async findOne(slug: string) {
-    try {
-      await this.db.query('UPDATE blogs SET views_count = views_count + 1 WHERE slug=$1', [slug]);
-    } catch {
-      /* views_count ustuni bo‘lmasa */
-    }
     const b = await this.db.query('SELECT b.*, u.first_name as author_name FROM blogs b LEFT JOIN users u ON b.created_by=u.id WHERE b.slug=$1', [slug]);
     if (!b[0]) throw new NotFoundException('Blog topilmadi');
     return b[0];
+  }
+
+  /** Ko‘rishlar soni — klient tomonida 1 daqiqada bir marta yig‘iladi, shu yerda qo‘shiladi. */
+  async addViewDeltas(deltas: Record<string, number>) {
+    if (!deltas || typeof deltas !== 'object') return { ok: true, updated: 0 };
+    const entries = Object.entries(deltas).filter(
+      ([slug, n]) => typeof slug === 'string' && slug.length > 0 && typeof n === 'number' && n > 0 && n <= 500,
+    );
+    if (!entries.length) return { ok: true, updated: 0 };
+    let updated = 0;
+    for (const [slug, add] of entries) {
+      const inc = Math.floor(add);
+      try {
+        const r = await this.db.query(
+          `UPDATE blogs SET views_count = COALESCE(views_count, 0) + $2 WHERE slug = $1 RETURNING id`,
+          [slug, inc],
+        );
+        if (r?.length) updated += 1;
+      } catch {
+        /* views_count ustuni bo‘lmasa */
+      }
+    }
+    return { ok: true, updated };
   }
 
   async update(id: string, data: any) {

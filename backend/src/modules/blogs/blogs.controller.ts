@@ -20,6 +20,12 @@ export class BlogsController {
   @ApiOperation({ summary: 'Get blog post by slug (Public)' })
   getBlog(@Param('slug') slug: string) { return this.blogsService.findOne(slug); }
 
+  @Post('views')
+  @ApiOperation({ summary: 'Batch increment view counts (Public, throttled on client)' })
+  recordViews(@Body() body: { deltas?: Record<string, number> }) {
+    return this.blogsService.addViewDeltas(body?.deltas || {});
+  }
+
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Permissions('ANALYTICS_VIEW')

@@ -320,11 +320,12 @@ const AnswerInput: React.FC<AnswerInputProps> = ({
 
   if (qType === 'multi_select' || qType === 'multiple_select') {
     const n = options.length;
-    const rawMax = question.max_choices;
-    const maxChoices =
-      rawMax != null && rawMax !== ''
-        ? Math.min(Math.max(1, Number(rawMax)), Math.max(1, n))
-        : Math.max(1, n);
+    /**
+     * Talaba tomonida "barcha to'g'ri variantlarni belgilash" muhim. Eski/standart bo'lmagan
+     * `max_choices` (masalan 4) 5 ta variant bilan saqlangan bo'lsa, 5-chi tanlanmas edi.
+     * Imtihon UI da yuqori chegara = variantlar soni.
+     */
+    const maxChoices = Math.max(1, n);
     return (
       <MultiSelectInput
         questionId={question.id}

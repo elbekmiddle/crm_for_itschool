@@ -178,6 +178,11 @@ const ExamSession: React.FC = () => {
 
   const qt = normType(currentQ.type);
 
+  const optionLabel = (opt: any) =>
+    opt != null && typeof opt === 'object' && 'text' in opt
+      ? String((opt as { text?: string }).text ?? '')
+      : String(opt ?? '');
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col pt-20">
       <div className="fixed top-0 left-0 right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 z-40 px-8 py-3 flex justify-between items-center">
@@ -244,7 +249,7 @@ const ExamSession: React.FC = () => {
 
               {(qt === 'multiple_choice' || qt === 'true_false') && (
                 <div className="space-y-4">
-                  {(currentQ?.options || []).map((opt: string, idx: number) => {
+                  {(currentQ?.options || []).map((opt: unknown, idx: number) => {
                     const sel = answers[currentQ.id] === idx;
                     return (
                       <button
@@ -269,7 +274,7 @@ const ExamSession: React.FC = () => {
                         <span
                           className={`text-lg font-bold ${sel ? 'text-indigo-900 dark:text-white' : 'text-slate-600 dark:text-slate-400'}`}
                         >
-                          {opt}
+                          {optionLabel(opt)}
                         </span>
                       </button>
                     );
@@ -279,7 +284,7 @@ const ExamSession: React.FC = () => {
 
               {qt === 'multiple_select' && (
                 <div className="space-y-4">
-                  {(currentQ?.options || []).map((opt: string, idx: number) => {
+                  {(currentQ?.options || []).map((opt: unknown, idx: number) => {
                     const cur = Array.isArray(answers[currentQ.id]) ? answers[currentQ.id] : [];
                     const sel = cur.includes(idx);
                     return (
@@ -305,7 +310,7 @@ const ExamSession: React.FC = () => {
                         <span
                           className={`text-lg font-bold ${sel ? 'text-indigo-900 dark:text-white' : 'text-slate-600 dark:text-slate-400'}`}
                         >
-                          {opt}
+                          {optionLabel(opt)}
                         </span>
                       </button>
                     );

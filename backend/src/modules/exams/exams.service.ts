@@ -46,15 +46,20 @@ function matchMultiSelectIndices(studentPayload: unknown, correctRaw: unknown): 
   const uArr = Array.isArray(studentPayload) ? studentPayload : [];
   const cArr = Array.isArray(correctRaw) ? correctRaw : [];
   if (!cArr.length) return false;
-  const uNums = uArr.map((x) => Number(x)).filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
-  /** CRM 0-based indekslar ro‘yxati → 1-based id lar */
-  const cNums = cArr
+  const c0 = cArr
     .map((x) => Number(x))
     .filter((n) => Number.isFinite(n) && Number.isInteger(n) && n >= 0)
-    .map((idx) => idx + 1)
     .sort((a, b) => a - b);
-  if (cNums.length !== uNums.length) return false;
-  return cNums.every((v, i) => v === uNums[i]);
+  let uRaw = uArr
+    .map((x) => Number(x))
+    .filter((n) => Number.isFinite(n) && Number.isInteger(n))
+    .sort((a, b) => a - b);
+  /** exam-platform: variant id lari 1-based ("1","2"…). CRM / frontend: 0-based indekslar. */
+  if (uRaw.length && uRaw[0] >= 1) {
+    uRaw = uRaw.map((v) => v - 1);
+  }
+  if (c0.length !== uRaw.length) return false;
+  return c0.every((v, i) => v === uRaw[i]);
 }
 
 @Injectable()
