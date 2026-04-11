@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { CalendarCheck, CheckCircle2, XCircle, Loader2, Sparkles, Zap, TrendingUp, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
+import { formatUzbekWeekdayDayMonth } from '../lib/uzbekDate';
 
 const AttendancePage: React.FC = () => {
   const { attendance, attendanceStats, fetchAttendance, isLoading } = useStudentStore();
@@ -165,7 +166,7 @@ const AttendancePage: React.FC = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-black text-[var(--text-h)] truncate">
-                        {r.lesson_date ? new Date(r.lesson_date).toLocaleDateString('uz-UZ', { weekday: 'short', day: 'numeric', month: 'short' }) : `Dars #${i + 1}`}
+                        {r.lesson_date ? formatUzbekWeekdayDayMonth(r.lesson_date) : `Dars #${i + 1}`}
                       </p>
                       {r.notes && <p className="text-[11px] font-medium text-[var(--text)] mt-1 truncate">{r.notes}</p>}
                     </div>

@@ -30,7 +30,7 @@ export const useStudentStore = create<StudentState>((set) => ({
   fetchExams: async () => {
     set({ isLoading: true });
     try {
-      const { data } = await api.get('/exams/student');
+      const { data } = await api.get('/exams/student/available');
       set({ exams: data, isLoading: false });
     } catch (e: any) {
       set({ error: e.message, isLoading: false });

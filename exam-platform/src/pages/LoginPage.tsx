@@ -6,6 +6,7 @@ import {
   RefreshCw, Send, ChevronRight,
   ShieldCheck, GraduationCap,
 } from 'lucide-react';
+import { jwtDecode } from 'jwt-decode';
 import { useAuthStore } from '../store/useAuthStore';
 import api from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,6 +38,19 @@ export default function LoginPage() {
   const didRedirect = useRef(false);
   useEffect(() => {
     if (!isAuthenticated || didRedirect.current) return;
+    const tok = useAuthStore.getState().token || localStorage.getItem('token');
+    if (tok) {
+      try {
+        const d = jwtDecode<{ exp?: number }>(tok);
+        if (typeof d.exp === 'number' && d.exp * 1000 < Date.now() - 10_000) {
+          useAuthStore.getState().logout();
+          return;
+        }
+      } catch {
+        useAuthStore.getState().logout();
+        return;
+      }
+    }
     didRedirect.current = true;
     navigate('/dashboard', { replace: true });
   }, [isAuthenticated, navigate]);

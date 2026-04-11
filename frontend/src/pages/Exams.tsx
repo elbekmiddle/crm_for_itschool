@@ -3,8 +3,8 @@ import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
 import {
   ClipboardList, Plus, Search, Loader2, Pencil, Trash2, X,
-  Play, Eye, ChevronLeft, ChevronRight, Radio, FileText, Sparkles, PenLine,
-  ListChecks, CheckCircle,
+  Play, ChevronLeft, ChevronRight, Radio, FileText, Sparkles, PenLine,
+  ListChecks, CheckCircle, Eye,
 } from 'lucide-react';
 
 import { useConfirm } from '../context/ConfirmContext';
@@ -25,7 +25,6 @@ const ExamsPage: React.FC = () => {
     groups,
     exams,
     courses,
-    examResults,
     fetchExams,
     fetchCourses,
     fetchGroups,
@@ -41,12 +40,14 @@ const ExamsPage: React.FC = () => {
     approveAllExamQuestions,
     removeQuestionFromExam,
     fetchExamResults,
+    examResults,
     isLoading,
   } = useAdminStore();
   const confirm = useConfirm();
   const [modal, setModal] = useState<
-    'create' | 'edit' | 'results' | 'ai' | 'manual' | 'review' | null
+    'create' | 'edit' | 'ai' | 'manual' | 'review' | 'results' | null
   >(null);
+  const [resultsLoading, setResultsLoading] = useState(false);
   const [targetExam, setTargetExam] = useState<any>(null);
   const [form, setForm] = useState({
     title: '',
@@ -91,7 +92,7 @@ const ExamsPage: React.FC = () => {
 
   useModalOverlayEffects(!!modal, {
     onEscape: () => {
-      if (aiGenerating || reviewLoading) return;
+      if (aiGenerating || reviewLoading || resultsLoading) return;
       setModal(null);
     },
   });
@@ -183,6 +184,17 @@ const ExamsPage: React.FC = () => {
     setEditingQId(null);
     setModal('review');
     await loadReview(exam.id);
+  };
+
+  const openResults = async (exam: any) => {
+    setTargetExam(exam);
+    setModal('results');
+    setResultsLoading(true);
+    try {
+      await fetchExamResults(exam.id);
+    } finally {
+      setResultsLoading(false);
+    }
   };
 
   const startEditQuestion = (q: any) => {
@@ -310,11 +322,6 @@ const ExamsPage: React.FC = () => {
     }
   };
 
-  const viewResults = async (examId: string) => {
-    await fetchExamResults(examId);
-    setModal('results');
-  };
-
   const handlePublish = async (id: string) => {
     try {
       await publishExam(id);
@@ -404,8 +411,8 @@ const ExamsPage: React.FC = () => {
                   <th>Imtihon nomi</th>
                   <th>Guruh</th>
                   <th>Vaqt</th>
+                  <th className="text-center whitespace-nowrap">O&apos;rtacha</th>
                   <th>Status</th>
-                  <th>Natijalar</th>
                   <th className="text-center w-[1%] whitespace-nowrap">Amallar</th>
                 </tr>
               </thead>
@@ -442,15 +449,20 @@ const ExamsPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="text-xs text-slate-500">{exam.duration_minutes || 30} daqiqa</td>
-                      <td><span className={cn("status-pill", st.cls)}>● {st.label}</span></td>
-                      <td>
-                        {exam.status === 'completed' ?
-                          <span className="text-sm font-bold text-green-600">{exam.avg_score || '—'}%</span> :
-                          <span className="text-slate-300">—</span>
-                        }
+                      <td className="text-center text-sm font-bold text-slate-600 dark:text-slate-300">
+                        {exam.avg_score != null && exam.avg_score !== '' ? `${exam.avg_score}%` : '—'}
                       </td>
+                      <td><span className={cn("status-pill", st.cls)}>● {st.label}</span></td>
                       <td className="align-middle w-[1%]">
                         <div className="flex flex-row flex-nowrap items-center justify-end gap-0.5 min-w-[11rem] sm:min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => void openResults(exam)}
+                            className="shrink-0 p-1.5 rounded-lg hover:bg-cyan-50 text-cyan-600 dark:hover:bg-cyan-950/40 dark:text-cyan-400"
+                            title="Natijalar"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
                           {exam.status === 'draft' && (
                             <>
                               <button
@@ -476,9 +488,6 @@ const ExamsPage: React.FC = () => {
                             title="Savollar — tekshirish"
                           >
                             <ListChecks className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => viewResults(exam.id)} className="shrink-0 p-1.5 rounded-lg hover:bg-primary-50 text-primary-600 dark:hover:bg-primary-950/30" title="Natijalar">
-                            <Eye className="w-4 h-4" />
                           </button>
                           <button onClick={() => openEdit(exam)} className="shrink-0 p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 dark:hover:bg-slate-800" title="Tahrirlash">
                             <Pencil className="w-4 h-4" />
@@ -512,6 +521,96 @@ const ExamsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Exam results */}
+      {modal === 'results' && targetExam && (
+        <div className="modal-overlay" onClick={() => !resultsLoading && setModal(null)}>
+          <div
+            className="modal-content max-h-[85vh] w-full max-w-3xl overflow-hidden p-0 animate-in-scale"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+              <div className="min-w-0">
+                <h2 className="text-lg font-black text-slate-800 dark:text-slate-100">Natijalar</h2>
+                <p className="truncate text-xs text-slate-500 dark:text-slate-400">{targetExam.title}</p>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  O`tish bali: {targetExam.passing_score ?? 60}% · topshirganlar: {examResults.length}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={resultsLoading}
+                onClick={() => setModal(null)}
+                className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-[calc(85vh-5rem)] overflow-y-auto px-6 py-4">
+              {resultsLoading ? (
+                <div className="flex justify-center py-16">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+                </div>
+              ) : examResults.length === 0 ? (
+                <p className="py-12 text-center text-slate-400">Hali natija yo`q</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="data-table data-table--compact w-full">
+                    <thead>
+                      <tr>
+                        <th>O&apos;quvchi</th>
+                        <th className="text-center">Ball</th>
+                        <th className="text-center">Holat</th>
+                        <th className="text-center">To`g`ri / jami</th>
+                        <th className="text-right">Vaqt</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {examResults.map((row: any) => {
+                        const passLine = Number(targetExam.passing_score ?? 60);
+                        const score = Number(row.score ?? 0);
+                        const passed =
+                          row.passed === true ||
+                          row.passed === 't' ||
+                          row.passed === 1 ||
+                          (!Number.isNaN(score) && score >= passLine);
+                        return (
+                          <tr key={row.id || `${row.student_id}-${row.exam_id}`}>
+                            <td className="font-semibold text-slate-700 dark:text-slate-200">
+                              {row.first_name} {row.last_name}
+                            </td>
+                            <td className="text-center font-bold text-primary-600 dark:text-primary-400">
+                              {Math.round(score)}%
+                            </td>
+                            <td className="text-center">
+                              <span
+                                className={cn(
+                                  'rounded-md px-2 py-0.5 text-[10px] font-black uppercase',
+                                  passed
+                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200'
+                                    : 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-200',
+                                )}
+                              >
+                                {passed ? 'O`tdi' : 'O`tmadi'}
+                              </span>
+                            </td>
+                            <td className="text-center text-xs text-slate-500">
+                              {row.correct_count != null ? `${row.correct_count} / ${row.total_questions ?? '—'}` : '—'}
+                            </td>
+                            <td className="text-right text-xs text-slate-500">
+                              {row.time_taken != null ? `${Math.round(Number(row.time_taken) / 60)} daq` : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create/Edit Modal */}
       {(modal === 'create' || modal === 'edit') && (
@@ -966,34 +1065,6 @@ const ExamsPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Results Modal */}
-      {modal === 'results' && (
-        <div className="modal-overlay" onClick={() => setModal(null)}>
-          <div className="modal-content p-6 animate-in-scale max-w-2xl px-10 py-10" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-black text-slate-800 tracking-tight">Imtihon Natijalari</h2>
-              <button onClick={() => setModal(null)} className="p-2 rounded-xl hover:bg-slate-100"><X className="w-5 h-5 text-slate-400" /></button>
-            </div>
-            <div className="overflow-hidden rounded-3xl border border-slate-100">
-              <table className="data-table">
-                <thead className="bg-slate-50/50">
-                  <tr><th>Talaba</th><th className="text-center">Ball</th><th className="text-right">Status</th></tr>
-                </thead>
-                <tbody>
-                  {examResults.map((r: any) => (
-                    <tr key={r.id}>
-                      <td className="font-bold text-slate-700">{r.student_name || `${r.first_name || ''} ${r.last_name || ''}`}</td>
-                      <td className="text-center font-black text-primary-600">{r.score}%</td>
-                      <td className="text-right"><span className={cn("status-pill", r.score >= 60 ? 'pill-active' : 'pill-dropped')}>{r.score >= 60 ? 'O\'tdi' : 'Yiqildi'}</span></td>
-                    </tr>
-                  ))}
-                  {examResults.length === 0 && <tr><td colSpan={3} className="text-center py-12 text-slate-300 font-bold italic">Natijalar hozircha mavjud emas</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

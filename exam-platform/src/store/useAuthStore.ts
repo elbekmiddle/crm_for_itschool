@@ -160,6 +160,7 @@ export const useAuthStore = create<AuthState>()(
         disconnectRealtimeSocket();
         localStorage.removeItem('token');
         localStorage.removeItem('exam-lock');
+        localStorage.removeItem('auth-storage');
         set({ user: null, token: null, isAuthenticated: false, verifyStep: 'phone', verifyPhone: '' });
       },
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle2, XCircle, Calendar } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { formatUzbekWeekdayDayMonth } from '../lib/uzbekDate';
 import type { AttendanceRecord, AttendanceStats } from '../types';
 
 interface AttendanceCardProps {
@@ -77,7 +78,7 @@ const AttendanceCard: React.FC<AttendanceCardProps> = ({
                 </span>
               </div>
               <span className="text-xs text-slate-400 font-medium">
-                {new Date(r.date).toLocaleDateString('uz-UZ')}
+                {formatUzbekWeekdayDayMonth(r.date)}
               </span>
             </div>
           ))}

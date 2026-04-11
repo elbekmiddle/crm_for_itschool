@@ -1,5 +1,8 @@
 import axios from 'axios';
 
+/** 401 da bir necha parallel so‘rov bir vaqtda redirect qilmasin */
+let authRedirectInProgress = false;
+
 const api = axios.create({
   baseURL: 'http://localhost:5001/api/v1',
   withCredentials: true,
@@ -28,9 +31,12 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      if (window.location.pathname !== '/login') {
+      if (window.location.pathname !== '/login' && !authRedirectInProgress) {
+        authRedirectInProgress = true;
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        /** Zustand persist — aks holda qayta yuklanganda isAuthenticated=true bo‘lib login↔dashboard tsikli */
+        localStorage.removeItem('auth-storage');
         window.location.href = '/login';
       }
     }

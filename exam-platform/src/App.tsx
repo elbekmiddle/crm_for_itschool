@@ -58,7 +58,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       const t = token || localStorage.getItem('token');
-      if (t) localStorage.setItem('token', t);
+      if (t && localStorage.getItem('token') !== t) {
+        localStorage.setItem('token', t);
+      }
       await syncSession();
       if (!cancelled) setSessionReady(true);
     })();

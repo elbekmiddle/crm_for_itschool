@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import SparklineChart from '../components/charts/SparklineChart';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../lib/utils';
@@ -7,11 +7,12 @@ import { useToast } from '../context/ToastContext';
 import api from '../lib/api';
 import { formatUzbekDayMonthYear } from '../lib/uzbekDate';
 import { isGroupLessonDay } from '../lib/groupSchedule';
-import { Calendar, Loader2 } from 'lucide-react';
+import { Calendar, Loader2, ChevronRight, User } from 'lucide-react';
 import { localYmd, toLocalYmd } from '../lib/localDate';
 
 const AttendancePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { groups, attendance, fetchGroups, fetchAttendance, markAttendance, isLoading } = useAdminStore();
   const { fetchGroupStudents } = useAdminStore();
   const [selectedGroupId, setSelectedGroupId] = useState('');
@@ -149,6 +150,20 @@ const AttendancePage: React.FC = () => {
   }).length;
   const totalStudents = students.length || 1;
   const attendancePercent = Math.round((presentCount / totalStudents) * 100);
+
+  const perStudentRollup = useMemo(() => {
+    if (!selectedGroupId || students.length === 0) return [];
+    return students.map((s: any) => {
+      const rows = attendance.filter((a: any) => a.student_id === s.id);
+      const present = rows.filter((a: any) => {
+        const u = String(a.status || '').toUpperCase();
+        return u === 'PRESENT' || u === 'LATE';
+      }).length;
+      const total = rows.length;
+      const pct = total > 0 ? Math.round((present / total) * 100) : null;
+      return { student: s, present, total, pct };
+    });
+  }, [students, attendance, selectedGroupId]);
 
   return (
     <div className="page-container animate-in">
@@ -348,6 +363,41 @@ const AttendancePage: React.FC = () => {
                   color="#22c55e"
                   values={[0, Math.max(0, Math.min(100, attendancePercent))]}
                 />
+              </div>
+            </div>
+
+            <div className="card p-6 dark:border-[var(--border)] dark:bg-[var(--bg-card)]">
+              <h3 className="section-title mb-1">Har bir o&apos;quvchi</h3>
+              <p className="mb-4 text-xs text-slate-400 dark:text-slate-500">
+                Yig&apos;ma: saqlangan davomat yozuvlari bo&apos;yicha foiz. Kartani bosing — profilga o&apos;tadi.
+              </p>
+              <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                {perStudentRollup.map(({ student: s, present, total, pct }) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => navigate(`/teacher/students/${s.id}`)}
+                    className="flex w-full items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5 text-left transition hover:border-primary-200 hover:bg-primary-50/50 dark:border-[var(--border)] dark:bg-slate-900/30 dark:hover:border-primary-800 dark:hover:bg-primary-950/20"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-600 dark:bg-primary-900/40 dark:text-primary-300">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-slate-800 dark:text-[var(--text-h)]">
+                        {s.first_name} {s.last_name}
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {total > 0 ? `${present}/${total} dars belgilangan` : 'Hali yozuv yo&apos;q'}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <span className="text-sm font-black text-primary-600 dark:text-primary-400">
+                        {pct != null ? `${pct}%` : '—'}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-slate-300 dark:text-slate-600" />
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
           </div>

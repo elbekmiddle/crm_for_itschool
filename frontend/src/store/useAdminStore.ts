@@ -106,6 +106,48 @@ interface AdminState {
   logout: () => void;
 }
 
+const CRM_USER_KEY = 'crm_user';
+const LEGACY_USER_KEY = 'user';
+
+function readCrmUserFromStorage(): any | null {
+  const raw = localStorage.getItem(CRM_USER_KEY);
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+  const leg = localStorage.getItem(LEGACY_USER_KEY);
+  if (!leg) return null;
+  try {
+    const p = JSON.parse(leg);
+    const staff = ['TEACHER', 'ADMIN', 'MANAGER', 'SUPERVISOR', 'OWNER', 'ACCOUNTANT'];
+    if (p?.role && staff.includes(String(p.role))) {
+      localStorage.setItem(CRM_USER_KEY, leg);
+      return p;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function persistCrmUser(user: any | null) {
+  if (user) {
+    const s = JSON.stringify(user);
+    localStorage.setItem(CRM_USER_KEY, s);
+    const staff = ['TEACHER', 'ADMIN', 'MANAGER', 'SUPERVISOR', 'OWNER', 'ACCOUNTANT'];
+    if (user.role && staff.includes(String(user.role))) {
+      localStorage.removeItem(LEGACY_USER_KEY);
+    }
+  } else {
+    localStorage.removeItem(CRM_USER_KEY);
+    localStorage.removeItem(LEGACY_USER_KEY);
+    localStorage.removeItem('access_token');
+  }
+}
+
 /** API xatolikda ham KPI kartochkalari ishlashi uchun minimal stats */
 const FALLBACK_DASHBOARD_STATS: Record<string, unknown> = {
   totalStudents: 0,
@@ -128,7 +170,7 @@ const FALLBACK_DASHBOARD_STATS: Record<string, unknown> = {
 };
 
 export const useAdminStore = create<AdminState>((set, get) => ({
-  user: JSON.parse(localStorage.getItem('user') || 'null'),
+  user: readCrmUserFromStorage(),
   isInitialized: false,
   stats: null,
   isLoading: false,
@@ -149,11 +191,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
   setUser: (user) => {
     set({ user });
-    if (user) localStorage.setItem('user', JSON.stringify(user));
-    else {
-      localStorage.removeItem('user');
-      localStorage.removeItem('access_token');
-    }
+    persistCrmUser(user);
   },
 
   // ──── Analytics ────
@@ -454,11 +492,13 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   fetchExamResults: async (examId) => {
-    set({ isLoading: true });
     try {
       const { data } = await api.get(`/exams/${examId}/results`);
-      set({ examResults: data, isLoading: false });
-    } catch (e) { set({ examResults: [], isLoading: false }); }
+      const rows = Array.isArray(data) ? data : [];
+      set({ examResults: rows });
+    } catch (e) {
+      set({ examResults: [] });
+    }
   },
 
   // ──── Users ────
@@ -602,8 +642,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       set({ isInitialized: true });
       reconnectRealtimeSocket();
     } catch (e) {
-      localStorage.removeItem('user');
-      localStorage.removeItem('access_token');
+      persistCrmUser(null);
       set({ user: null, isInitialized: true });
     }
   },
@@ -616,8 +655,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     } catch (e) {
       console.error('Logout xatosi:', e);
     } finally {
-      localStorage.removeItem('user');
-      localStorage.removeItem('access_token');
+      persistCrmUser(null);
       set({ user: null, isInitialized: true });
       window.location.href = '/login';
     }

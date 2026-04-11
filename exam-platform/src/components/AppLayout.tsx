@@ -291,11 +291,17 @@ const AppLayout: React.FC = () => {
 
       {/* ── Main content ── */}
       <main className={cn(
-        "flex-1 min-h-screen transition-all duration-500 flex flex-col relative",
+        "flex-1 min-h-screen transition-all duration-500 flex flex-col relative pt-20",
         contentML
       )}>
-        {/* Top Header */}
-        <header className="sticky top-0 z-40 h-20 bg-white/70 dark:bg-[#08060d]/70 backdrop-blur-xl border-b border-[#e5e4e7] dark:border-[#2e303a] px-8 flex items-center justify-between">
+        {/* Top Header — viewport bo‘yicha qotirilgan (scroll bilan ketmaydi) */}
+        <header
+          className={cn(
+            "fixed top-0 z-40 h-20 bg-white/70 dark:bg-[#08060d]/70 backdrop-blur-xl border-b border-[#e5e4e7] dark:border-[#2e303a] px-8 flex items-center justify-between",
+            "left-0 w-full",
+            sidebarCollapsed ? "lg:left-24 lg:w-[calc(100%-6rem)]" : "lg:left-72 lg:w-[calc(100%-18rem)]",
+          )}
+        >
            <div className="flex items-center gap-4">
               <button
                  onClick={() => setMobileOpen(true)}

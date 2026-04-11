@@ -15,6 +15,7 @@ import { create_exam } from './commands/create_exam';
 import { add_questions_to_exam } from './commands/add_questions_to_exam';
 import { insertQuestionCompat } from './commands/insert_question_compat';
 import * as dayjs from 'dayjs';
+import { validate as uuidValidate } from 'uuid';
 
 import { TelegramService } from '../../infrastructure/notifications/telegram.service';
 import { SocketsGateway } from '../sockets/sockets.gateway';
@@ -113,6 +114,9 @@ export class ExamsService {
   }
 
   async findOne(id: string) {
+    if (!uuidValidate(id)) {
+      throw new NotFoundException('Imtihon topilmadi');
+    }
     let exam: any[];
     try {
       exam = await this.dbService.query(`
@@ -814,6 +818,17 @@ export class ExamsService {
 
     const { exam_id, student_id } = attempt[0];
 
+    let passThreshold = 60;
+    try {
+      const pe = await this.dbService.query(`SELECT passing_score FROM exams WHERE id = $1`, [exam_id]);
+      const raw = pe[0]?.passing_score;
+      if (raw != null && raw !== '' && Number.isFinite(Number(raw))) {
+        passThreshold = Math.min(100, Math.max(0, Number(raw)));
+      }
+    } catch (e: any) {
+      if (e?.code !== '42703') throw e;
+    }
+
     // Calculate score
     const answers = await this.dbService.query(
       `
@@ -950,7 +965,7 @@ export class ExamsService {
     `, [finalScore, attemptId]);
 
     const incorrectCount = Math.max(0, totalCount - correctCount);
-    const passed = finalScore >= 50;
+    const passed = finalScore >= passThreshold;
     const attTimes = await this.dbService.query(
       `SELECT started_at, finished_at FROM exam_attempts WHERE id = $1`,
       [attemptId],
