@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject, forwardRef, BadRequestException } from '@nestjs/common';
 import { Queue, Worker } from 'bullmq';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
@@ -83,11 +83,9 @@ export class QueueService implements OnModuleInit {
 
   async addExamJob(data: any) {
     if (!this.aiQueue) {
-      this.logger.warn('Redis offline: Processing AI exam job synchronously...');
-      const { examId, lessonId, topic, level, count, teacherId } = data;
-      const questions = await this.aiService.generateExamQuestions(topic, level, count);
-      await process_exam_questions(this.dbService, examId, lessonId, teacherId, level, questions);
-      return { id: 'sync-' + Date.now(), getState: () => 'completed' };
+      throw new BadRequestException(
+        'AI navbat ishlamayapti: REDIS_URL sozlang va Redis ishlayotganini tekshiring. Sinxron AI chaqiruvlari HTTP vaqtinchalik bloklanishiga olib keladi.',
+      );
     }
     return this.aiQueue.add('generate-exam', data, {
       removeOnComplete: true,

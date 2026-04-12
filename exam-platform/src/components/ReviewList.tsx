@@ -54,8 +54,8 @@ const ReviewList: React.FC<ReviewListProps> = ({ details }) => {
                   </div>
                 </div>
 
-                {/* Correct answer (only if wrong) */}
-                {!item.is_correct && (
+                {/* Correct answer (only if wrong and server exposes key — talabaga kalit yashirilganda ko‘rinmaydi) */}
+                {!item.is_correct && item.correct_answer != null && item.correct_answer !== '' && (
                   <div className="p-4 rounded-xl bg-green-50/50 border border-green-100">
                     <div className="label-subtle mb-1.5 flex items-center gap-1.5 text-green-500">
                       <CheckCircle2 className="w-3.5 h-3.5" /> To'g'ri javob

@@ -82,16 +82,6 @@ export class AnalyticsService {
       ai_humor = aiResponse.analysis;
     }
 
-    // Demo Logic for Web Dasturlash
-    if (student.first_name?.includes('Web') || student.last_name?.includes('Dasturlash')) {
-      const demoAi = await this.aiService.analyzeStudent({
-        name: "Web Dasturlash O'qituvchisi",
-        special_mode: "DEMO",
-        topic: "Full-Stack Development"
-      });
-      ai_humor = `${ai_humor ? ai_humor + '\n\n' : ''}🚀 DEMO: ${demoAi.analysis}`;
-    }
-
     if (!ai_humor && this.aiService.isConfigured()) {
       try {
         ai_humor = await this.aiService.getStudentHumorStatus({

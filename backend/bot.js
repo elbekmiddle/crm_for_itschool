@@ -8,11 +8,19 @@ const fetch = require('node-fetch');
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const BASE_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
-const API_URL = `http://localhost:${process.env.PORT || 5001}/api/v1`;
+const API_URL = (process.env.API_INTERNAL_URL || `http://127.0.0.1:${process.env.PORT || 5001}/api/v1`).replace(
+  /\/$/,
+  '',
+);
 
 /** Blog havolasi (ixtiyoriy). Kurslar bazadan (callback) ko‘rinadi. */
 const LINK_BLOG = (process.env.TELEGRAM_MENU_BLOG_URL || '').trim();
 const PUBLIC_WEB = (process.env.PUBLIC_WEB_URL || 'http://localhost:5173').replace(/\/$/, '');
+/** Exam platform (Vite) — Telegram xabarlarida; PUBLIC_EXAM_PLATFORM_URL bo‘lmasa PUBLIC_WEB ishlatiladi */
+const EXAM_PUBLIC_BASE = (process.env.PUBLIC_EXAM_PLATFORM_URL || process.env.PUBLIC_WEB_URL || 'http://localhost:5174').replace(
+  /\/$/,
+  '',
+);
 
 // Simple Redis client via Upstash REST API
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
@@ -114,10 +122,17 @@ function normalizeUzPhoneDigits(phone) {
   return d;
 }
 
-/** Redis kalit — Nest `auth.service` bilan bir xil: verify:+998... */
-function verifyRedisKey(digits) {
-  const d = String(digits || '').replace(/\D/g, '');
-  return d ? `verify:+${d}` : 'verify:';
+/** Nest `POST /auth/send-verify-code` — bitta manba (Redis kalit + Telegram xabari) */
+async function requestVerifyCodeViaApi(phoneE164) {
+  const res = await fetch(`${API_URL}/auth/send-verify-code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: phoneE164 }),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`send-verify-code ${res.status}: ${txt}`);
+  }
 }
 
 async function getStudentByPhone(phone) {
@@ -223,16 +238,19 @@ async function handleMessage(msg) {
       await sendMessage(chatId, '❌ Hisobingiz ulanmagan. /start buyrug\'ini yuboring.');
       return;
     }
-    // Generate 6-digit reset code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    await redisSet(verifyRedisKey(normalizeUzPhoneDigits(student.phone)), code, 300);
+    const digits = normalizeUzPhoneDigits(student.phone);
+    const fullPhone = `+${digits}`;
+    try {
+      await requestVerifyCodeViaApi(fullPhone);
+    } catch (e) {
+      await sendMessage(chatId, `❌ Kod yuborilmadi: ${escapeHtmlBot(e.message)}. Keyinroq urinib ko‘ring yoki admin bilan bog‘laning.`);
+      return;
+    }
     await redisSet(stateKey, STATE_RESET, 300);
     await sendMessage(chatId,
-      `🔐 <b>Parol tiklash kodi:</b>\n\n` +
-      `<b><code>${code}</code></b>\n\n` +
-      `⏰ Kod 5 daqiqa davomida amal qiladi.\n` +
-      `❗ Ushbu kodni hech kimga bermang!\n\n` +
-      `Bu kodni Exam Platform'da kiriting va yangi parol yarating.`
+      `🔐 <b>Tasdiqlash kodi</b> CRM orqali yuborildi.\n\n` +
+      `Telegram yoki SMS/CRM xabaridagi 6 raqamli kodni Exam Platform'da kiriting va yangi parol yarating.\n\n` +
+      `⏰ Kod 5 daqiqa davomida amal qiladi.`
     );
     return;
   }
@@ -256,18 +274,25 @@ async function handleMessage(msg) {
     await linkStudentTelegram(student.id, chatId, msg.from);
     await redisDel(stateKey);
 
-    // Send verification code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    await redisSet(verifyRedisKey(digits), code, 300);
+    try {
+      await requestVerifyCodeViaApi(fullPhone);
+    } catch (e) {
+      await sendMessage(
+        chatId,
+        `✅ Ulandi, lekin kod yuborilmadi: ${escapeHtmlBot(e.message)}`,
+        { reply_markup: { remove_keyboard: true } },
+      );
+      return;
+    }
 
     await sendMessage(chatId,
       `✅ Hisobingiz ulandi!\n\n` +
       `👤 <b>${student.first_name} ${student.last_name}</b>\n` +
       `🆔 ID: <code>${student.id}</code>\n` +
       (msg.from?.username ? `🔗 @${msg.from.username}\n` : '') +
-      `\n🔐 <b>Tasdiqlash kodingiz:</b>\n<b><code>${code}</code></b>\n\n` +
+      `\n🔐 <b>Tasdiqlash kodi</b> CRM xabari orqali yuborildi.\n\n` +
       `⏰ Kod 5 daqiqa amal qiladi.\n` +
-      `Exam Platform'da "Tasdiqlash" sahifasiga bu kodni kiriting.`,
+      `Exam Platform'da "Tasdiqlash" sahifasiga kodni kiriting.`,
       { reply_markup: { remove_keyboard: true } }
     );
     return;
@@ -286,12 +311,16 @@ async function handleMessage(msg) {
     // Save full Telegram user data
     await linkStudentTelegram(student.id, chatId, msg.from);
     await redisDel(stateKey);
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    await redisSet(verifyRedisKey(digits), code, 300);
+    try {
+      await requestVerifyCodeViaApi(fullPhone);
+    } catch (e) {
+      await sendMessage(chatId, `✅ Ulandi, lekin kod yuborilmadi: ${escapeHtmlBot(e.message)}`);
+      return;
+    }
     await sendMessage(chatId,
       `✅ Ulandi! <b>${student.first_name}</b>\n` +
       (msg.from?.username ? `🔗 @${msg.from.username}\n` : '') +
-      `\n🔐 Tasdiqlash kodi: <b><code>${code}</code></b>\n\n` +
+      `\n🔐 Tasdiqlash kodi CRM xabari orqali yuborildi.\n\n` +
       `⏰ 5 daqiqa amal qiladi.`
     );
     return;
@@ -449,7 +478,7 @@ async function notifyExamAssigned(telegramChatId, studentName, examTitle, examDa
     `📌 Imtihon: <b>${examTitle}</b>\n` +
     `📅 Sana: ${examDate || 'Tez orada'}\n\n` +
     `🚀 Exam Platform'ga kiring va tayyorlanishni boshlang!\n` +
-    `🔗 http://localhost:5174`
+    `🔗 ${EXAM_PUBLIC_BASE}`
   );
 }
 
@@ -486,7 +515,7 @@ async function notifyExamResult(telegramChatId, studentName, examTitle, score) {
     `📝 ${examTitle}\n` +
     `🎯 Ball: <b>${score}%</b>\n\n` +
     `${comment}\n\n` +
-    `Natijangizni ko'rish: http://localhost:5174/exams`
+    `Natijangizni ko'rish: ${EXAM_PUBLIC_BASE}/exams`
   );
 }
 

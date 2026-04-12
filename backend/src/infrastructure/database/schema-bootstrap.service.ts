@@ -167,6 +167,19 @@ export class SchemaBootstrapService implements OnModuleInit {
           ALTER TABLE exam_attempts ADD COLUMN IF NOT EXISTS deadline_at TIMESTAMP;
           ALTER TABLE exam_attempts ADD COLUMN IF NOT EXISTS finished_at TIMESTAMP;
           ALTER TABLE exam_attempts ADD COLUMN IF NOT EXISTS score NUMERIC(5,2);
+          ALTER TABLE exam_attempts ADD COLUMN IF NOT EXISTS violation_count INTEGER NOT NULL DEFAULT 0;
+        `,
+      },
+      {
+        label: 'exam_violations',
+        sql: `
+          CREATE TABLE IF NOT EXISTS exam_violations (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            attempt_id UUID NOT NULL REFERENCES exam_attempts(id) ON DELETE CASCADE,
+            violation_type VARCHAR(64) NOT NULL DEFAULT 'unknown',
+            occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+          CREATE INDEX IF NOT EXISTS idx_exam_violations_attempt ON exam_violations(attempt_id);
         `,
       },
       {

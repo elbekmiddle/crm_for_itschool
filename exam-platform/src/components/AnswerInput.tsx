@@ -208,20 +208,61 @@ export const CodeEditorInput: React.FC<TextInputProps> = ({
   };
 
   const handleRun = () => {
-    try {
-      const logs: string[] = [];
-      const originalLog = console.log;
-      console.log = (...args) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '));
-      
-      // Basic sandbox
-      const fn = new Function(value);
-      fn();
-      
-      console.log = originalLog;
-      setOutput(logs.join('\n') || 'Kod muvaffaqiyatli bajarildi (hech narsa print qilinmadi)');
-    } catch (err: any) {
-      setOutput(`Xatolik: ${err.message}`);
-    }
+    const src = `
+      self.onmessage = function (e) {
+        var code = e.data;
+        var logs = [];
+        function capture() {
+          for (var i = 0; i < arguments.length; i++) {
+            var a = arguments[i];
+            logs.push(typeof a === 'object' ? JSON.stringify(a) : String(a));
+          }
+        }
+        var console = { log: capture, warn: capture, error: capture };
+        try {
+          self.fetch = function () {
+            return Promise.reject(new Error('fetch imtihon rejimida taqiqlanadi'));
+          };
+          self.importScripts = function () {
+            throw new Error('importScripts taqiqlanadi');
+          };
+          var fn = new Function('console', '"use strict";\\n' + code);
+          fn(console);
+          self.postMessage({ ok: true, output: logs.join('\\n') });
+        } catch (err) {
+          self.postMessage({
+            ok: false,
+            error: String(err && err.message ? err.message : err),
+            output: logs.join('\\n'),
+          });
+        }
+      };
+    `;
+    const blob = new Blob([src], { type: 'application/javascript' });
+    const url = URL.createObjectURL(blob);
+    const w = new Worker(url);
+    w.onmessage = (ev) => {
+      URL.revokeObjectURL(url);
+      w.terminate();
+      const d = ev.data as { ok?: boolean; output?: string; error?: string };
+      if (d?.ok) {
+        setOutput(
+          (d.output && d.output.trim()) ||
+            'Kod muvaffaqiyatli bajarildi (hech narsa print qilinmadi)',
+        );
+      } else {
+        setOutput(
+          (d?.error ? 'Xatolik: ' + d.error : 'Xatolik') +
+            (d?.output ? '\n' + d.output : ''),
+        );
+      }
+    };
+    w.onerror = (err) => {
+      URL.revokeObjectURL(url);
+      w.terminate();
+      setOutput('Xatolik: ' + (err.message || 'Worker'));
+    };
+    w.postMessage(value);
   };
 
   return (

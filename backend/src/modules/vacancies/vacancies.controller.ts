@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Param, Delete, UseGuards } from '@nestjs/c
 import { VacanciesService } from './vacancies.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CreateVacancyDto, ApplyVacancyDto } from './dto/vacancy.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -16,7 +17,7 @@ export class VacanciesController {
   getVacancies() { return this.vacanciesService.getVacancies(); }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Permissions('ANALYTICS_VIEW')
   @Post()
   @ApiOperation({ summary: 'Create a new vacancy', description: 'Permissions: ANALYTICS_VIEW' })
@@ -25,7 +26,7 @@ export class VacanciesController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Permissions('ANALYTICS_VIEW')
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a vacancy', description: 'Permissions: ANALYTICS_VIEW' })
@@ -40,7 +41,7 @@ export class VacanciesController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Permissions('ANALYTICS_VIEW')
   @Get('applications')
   @ApiOperation({ summary: 'List all applications', description: 'Permissions: ANALYTICS_VIEW' })

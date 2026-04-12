@@ -1,7 +1,9 @@
 import { Controller, Post, Get, Param, Body, UseGuards, Delete, ValidationPipe } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { LeadsService } from './leads.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { CreateLeadDto } from './dto/lead.dto';
@@ -11,6 +13,7 @@ import { CreateLeadDto } from './dto/lead.dto';
 export class LeadsController {
   constructor(private readonly leadsService: LeadsService) {}
 
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
   @Post()
   @ApiOperation({ summary: 'Create a new lead (Public)', description: 'No authentication required. Used for website contact form.' })
   createLead(@Body(new ValidationPipe()) data: CreateLeadDto) {
@@ -18,7 +21,7 @@ export class LeadsController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Permissions('STUDENT_CREATE')
   @Get()
   @ApiOperation({ summary: 'Get all leads', description: 'Permissions: STUDENT_CREATE' })
@@ -27,7 +30,7 @@ export class LeadsController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Permissions('STUDENT_CREATE')
   @Post(':id/convert')
   @ApiOperation({ summary: 'Convert lead to student', description: 'Permissions: STUDENT_CREATE' })
@@ -36,7 +39,7 @@ export class LeadsController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Permissions('STUDENT_DELETE')
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a lead', description: 'Permissions: STUDENT_DELETE' })

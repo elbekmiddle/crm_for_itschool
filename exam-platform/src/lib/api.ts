@@ -3,8 +3,12 @@ import axios from 'axios';
 /** 401 da bir necha parallel so‘rov bir vaqtda redirect qilmasin */
 let authRedirectInProgress = false;
 
+const rawBase =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
+  'http://localhost:5001/api/v1';
+
 const api = axios.create({
-  baseURL: 'http://localhost:5001/api/v1',
+  baseURL: String(rawBase).replace(/\/$/, ''),
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',

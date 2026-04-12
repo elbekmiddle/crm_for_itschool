@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ForbiddenException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { get_group_attendance } from './queries/get_group_attendance';
 import { get_individual_attendance } from './queries/get_individual_attendance';
@@ -34,18 +34,22 @@ export class AttendanceService {
       status: data.status,
     });
 
-    // If student is ABSENT, maybe get a funny AI status and notify
     if (data.status === 'ABSENT') {
-       const aiComment = await this.aiService.getStudentHumorStatus({
-         status: 'ABSENT',
-         group_id: data.group_id,
-         student_id: data.student_id
-       });
-       
        this.socketsGateway.emitToAll('attendance_missed', {
          studentId: data.student_id,
          groupId: data.group_id ?? null,
        });
+
+       void this.aiService
+         .getStudentHumorStatus({
+           status: 'ABSENT',
+           group_id: data.group_id,
+           student_id: data.student_id,
+         })
+         .then((aiComment) => {
+           this.socketsGateway.emitToRoom(`user:${data.student_id}`, 'ai_comment', { aiComment });
+         })
+         .catch(() => {});
 
        try {
          const student = await this.dbService.query(`SELECT first_name, telegram_chat_id, parent_phone FROM students WHERE id = $1`, [data.student_id]);
@@ -79,10 +83,8 @@ export class AttendanceService {
        } catch (e) {
          // Non-blocking
        }
-
-       return { ...result, ai_comment: aiComment };
     }
-    
+
     return result;
   }
 
@@ -108,7 +110,12 @@ export class AttendanceService {
   }
 
   async update(id: string, status: string) {
-    const row = await update_attendance(this.dbService, id, status);
+    const allowed = new Set(['PRESENT', 'ABSENT', 'LATE', 'EXCUSED']);
+    const u = String(status || '').toUpperCase();
+    if (!allowed.has(u)) {
+      throw new BadRequestException(`Holat noto'g'ri. Ruxsat: ${[...allowed].join(', ')}`);
+    }
+    const row = await update_attendance(this.dbService, id, u);
     this.socketsGateway.emitDashboardRefresh({ source: 'attendance', action: 'updated' });
     return row;
   }

@@ -31,12 +31,14 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      // In development, allow all origins
-      if (!isProduction || !origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('CORS xatoligi: Bu domen (origin) ruxsat berilganlar ro\'yxatida yo\'q: ' + origin));
+      if (!origin) {
+        const allowNoOrigin = !isProduction;
+        return callback(allowNoOrigin ? null : new Error('Origin talab qilinadi'), allowNoOrigin);
       }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('CORS: ruxsatsiz domen'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

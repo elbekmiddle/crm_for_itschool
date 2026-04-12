@@ -32,6 +32,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const token = req.cookies?.access_token || req.headers.authorization?.split(' ')[1];
     
     if (token) {
+      if (!this.redisService.isEnabled()) {
+        throw new UnauthorizedException('Autentifikatsiya xizmati vaqtincha ishlamayapti');
+      }
       try {
         const blacklisted = await this.redisService.get(`blacklist:${token}`);
         if (blacklisted) {
@@ -39,26 +42,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         }
       } catch (e: any) {
         if (e instanceof UnauthorizedException) throw e;
-        // Redis tarmoq xatosi — kirishni bloklamaslik
+        throw new UnauthorizedException('Autentifikatsiya xizmati vaqtincha ishlamayapti');
       }
     }
-    
+
     const role = normalizeRole(payload.role);
-    /** Token ichidagi `permissions` (login paytida yozilgan) + rol bo‘yicha server ro‘yxati — eski/yarim tokenlarda 403 bo‘lmasin. */
-    const fromJwt = Array.isArray(payload.permissions)
-      ? payload.permissions.filter((x: unknown): x is string => typeof x === 'string')
-      : [];
-    const serverPerms = permissionsForRole(role);
-    const permissions = Array.from(new Set([...serverPerms, ...fromJwt]));
+    const permissions = permissionsForRole(role);
 
     return {
       id: payload.sub,
-      email: payload.email,
       role: role || payload.role,
       permissions,
-      first_name: payload.first_name,
-      last_name: payload.last_name,
-      phone: payload.phone,
     };
   }
 }

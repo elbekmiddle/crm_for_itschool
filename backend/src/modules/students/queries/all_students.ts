@@ -7,6 +7,13 @@ export async function all_students(
   user?: any,
   compact: boolean = false,
 ) {
+  if (user?.role === 'STUDENT') {
+    return {
+      data: [],
+      meta: { total: 0, page, limit, totalPages: 0 },
+    };
+  }
+
   const offset = (page - 1) * limit;
   let whereStr = 'WHERE deleted_at IS NULL';
   const filterParams: any[] = [];

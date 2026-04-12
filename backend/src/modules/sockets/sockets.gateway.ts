@@ -93,6 +93,18 @@ export class SocketsGateway implements OnGatewayInit, OnGatewayConnection, OnGat
 
     client.on('join_room', (room: string) => {
       if (!room || typeof room !== 'string') return;
+      const u = (client.data as { user?: { sub?: string; role?: string } }).user;
+      const sub = u?.sub;
+      if (!sub) return;
+      const role = u?.role;
+      const allowed =
+        room === 'app' ||
+        room === `user:${sub}` ||
+        (typeof role === 'string' && room === `role:${role}`);
+      if (!allowed) {
+        this.logger.warn(`Client ${client.id} denied join_room ${room}`);
+        return;
+      }
       client.join(room);
       this.logger.log(`Client ${client.id} joined room ${room}`);
     });

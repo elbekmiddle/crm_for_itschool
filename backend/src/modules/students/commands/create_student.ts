@@ -37,12 +37,14 @@ export async function create_student(dbService: DbService, createStudentDto: Cre
       [first_name, last_name, phone_norm, parent_name || null, parent_phone_norm || null, createdBy]
     );
     return result[0];
-  } catch (error) {
-    if (error.code === '23505') {
-      if (error.detail?.includes('phone')) {
+  } catch (error: any) {
+    if (error?.code === '23505') {
+      const c = String(error?.constraint ?? '');
+      const d = String(error?.detail ?? '');
+      if (c.includes('phone') || d.includes('(phone)')) {
         throw new ConflictException('Bu telefon raqam bilan talaba allaqachon mavjud');
       }
-      if (error.detail?.includes('parent_phone')) {
+      if (c.includes('parent_phone') || d.includes('(parent_phone)')) {
         throw new ConflictException('Ota-ona telefoni allaqachon ro‘yxatdan o‘tgan');
       }
     }

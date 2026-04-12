@@ -181,11 +181,12 @@ const StudentProfilePage: React.FC = () => {
 
   const studentTimeline = useMemo(() => mergeStudentTimeline(dashboard), [dashboard]);
 
-  /** Bir vaqt o‘qida: imtihon ball, davomat %, to‘lov (so‘m) */
+  /** Bir vaqt o‘qida: imtihon ball, davomat %, to‘lov (so‘m) — yorug‘ fon uchun o‘q/tooltip ranglari */
   const dynamicsChart = useMemo(() => {
     const base = standardLineChartOptions();
-    const tickMuted = 'rgba(148, 163, 184, 0.95)';
-    const gridMuted = 'rgba(148, 163, 184, 0.12)';
+    const chartAxis = '#475569';
+    const chartAxisSoft = '#64748b';
+    const gridLine = 'rgba(148, 163, 184, 0.32)';
 
     const merged = studentTimeline;
     if (merged) {
@@ -204,7 +205,7 @@ const StudentProfilePage: React.FC = () => {
         borderWidth: 2,
         pointRadius: pointR,
         pointHoverRadius: 6,
-        pointBackgroundColor: '#fff',
+        pointBackgroundColor: '#ffffff',
         pointBorderColor: COLOR_EXAM,
         pointBorderWidth: 2,
         yAxisID: 'y',
@@ -223,7 +224,7 @@ const StudentProfilePage: React.FC = () => {
         borderWidth: 2,
         pointRadius: pointR,
         pointHoverRadius: 6,
-        pointBackgroundColor: '#fff',
+        pointBackgroundColor: '#ffffff',
         pointBorderColor: COLOR_ATT,
         pointBorderWidth: 2,
         yAxisID: 'y',
@@ -242,7 +243,7 @@ const StudentProfilePage: React.FC = () => {
         borderWidth: 2,
         pointRadius: pointR,
         pointHoverRadius: 6,
-        pointBackgroundColor: '#fff',
+        pointBackgroundColor: '#ffffff',
         pointBorderColor: COLOR_PAY,
         pointBorderWidth: 2,
         yAxisID: 'y1',
@@ -265,7 +266,7 @@ const StudentProfilePage: React.FC = () => {
               position: 'bottom' as const,
               align: 'center' as const,
               labels: {
-                color: tickMuted,
+                color: chartAxis,
                 usePointStyle: true,
                 boxWidth: 10,
                 padding: 14,
@@ -274,6 +275,13 @@ const StudentProfilePage: React.FC = () => {
             },
             tooltip: {
               ...base.plugins.tooltip,
+              backgroundColor: 'rgba(255, 255, 255, 0.97)',
+              titleColor: '#0f172a',
+              bodyColor: '#334155',
+              borderColor: 'rgba(148, 163, 184, 0.45)',
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 12,
               displayColors: true,
               callbacks: {
                 title: (items: any[]) => (items[0]?.label ? String(items[0].label) : ''),
@@ -298,7 +306,7 @@ const StudentProfilePage: React.FC = () => {
               offset: false,
               ticks: {
                 ...base.scales.x.ticks,
-                color: tickMuted,
+                color: chartAxisSoft,
                 maxRotation: 40,
                 autoSkip: true,
                 maxTicksLimit: 14,
@@ -315,15 +323,15 @@ const StudentProfilePage: React.FC = () => {
               title: {
                 display: true,
                 text: 'Ball / davomat (0–100)',
-                color: tickMuted,
+                color: chartAxis,
                 font: { size: 11, weight: '600' },
               },
               ticks: {
                 ...base.scales.y.ticks,
-                color: tickMuted,
+                color: chartAxisSoft,
                 stepSize: 20,
               },
-              grid: { color: gridMuted },
+              grid: { color: gridLine },
             },
             y1: {
               id: 'y1',
@@ -335,11 +343,11 @@ const StudentProfilePage: React.FC = () => {
               title: {
                 display: true,
                 text: "To'lov (so'm)",
-                color: tickMuted,
+                color: chartAxis,
                 font: { size: 11, weight: '600' },
               },
               ticks: {
-                color: tickMuted,
+                color: chartAxisSoft,
                 callback: (val: string | number) =>
                   typeof val === 'number' ? val.toLocaleString('uz-UZ') : val,
               },
@@ -380,15 +388,15 @@ const StudentProfilePage: React.FC = () => {
           ...base.scales,
           x: {
             ...base.scales.x,
-            ticks: { ...base.scales.x.ticks, display: false, color: tickMuted },
+            ticks: { ...base.scales.x.ticks, display: false, color: chartAxisSoft },
             grid: { display: false },
           },
           y: {
             ...base.scales.y,
             min: 0,
             max: 100,
-            ticks: { ...base.scales.y.ticks, color: tickMuted },
-            grid: { color: gridMuted },
+            ticks: { ...base.scales.y.ticks, color: chartAxisSoft },
+            grid: { color: gridLine },
           },
         },
       },
@@ -572,35 +580,33 @@ const StudentProfilePage: React.FC = () => {
             user?.role === 'STUDENT') && (
             <div
               className={cn(
-                'relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.75rem] border shadow-lg transition-shadow',
-                'border-slate-200/90 bg-gradient-to-br from-white via-slate-50/80 to-primary-50/40',
-                'dark:border-white/[0.08] dark:from-[#1c1d24] dark:via-[var(--bg-card)] dark:to-[#1a1028]/90',
+                'relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.75rem] border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/95 to-primary-50/35 shadow-lg shadow-slate-200/30',
               )}
             >
-              <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-primary-500/15 blur-3xl dark:bg-[#aa3bff]/20" />
-              <div className="pointer-events-none absolute -bottom-16 -left-12 h-40 w-40 rounded-full bg-indigo-500/10 blur-2xl dark:bg-indigo-500/15" />
+              <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-primary-400/12 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-14 -left-10 h-36 w-36 rounded-full bg-indigo-400/10 blur-2xl" />
 
-              <div className="relative z-10 border-b border-slate-100/80 px-6 py-5 dark:border-white/[0.06]">
+              <div className="relative z-10 border-b border-slate-100 px-6 py-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 text-white shadow-lg shadow-primary-500/25">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 text-white shadow-md shadow-primary-500/20">
                       <TrendingUp className="h-6 w-6" />
                     </div>
                     <div>
-                      <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-[var(--text-h)]">
+                      <h3 className="text-base font-black tracking-tight text-slate-900">
                         Dinamika
                       </h3>
                       {studentTimeline ? (
                         <>
-                          <p className="mt-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                          <p className="mt-1 text-sm font-semibold text-slate-600">
                             {formatDayShort(studentTimeline.from)} — {formatDayShort(studentTimeline.to)}
                           </p>
-                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          <p className="mt-1 text-xs text-slate-500">
                             Imtihon va davomat — chapda 0–100. To‘lov — o‘ngda so‘m.
                           </p>
                         </>
                       ) : (
-                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 text-xs text-slate-500">
                           Hozircha grafik uchun yozuv yo‘q.
                         </p>
                       )}

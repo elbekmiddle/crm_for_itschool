@@ -26,6 +26,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'EXAM_READ',
     'ANALYTICS_VIEW',
     'ATTENDANCE_READ',
+    'AI_USE',
   ],
   TEACHER: [
     'STUDENT_READ',
@@ -43,6 +44,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'EXAM_READ',
     'PAYMENT_READ',
     'ANALYTICS_VIEW',
+    'AI_USE',
   ],
   STUDENT: [
     'STUDENT_READ',

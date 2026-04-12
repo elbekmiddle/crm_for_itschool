@@ -1,20 +1,37 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Patch, Req, ForbiddenException, UseInterceptors, UploadedFile } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  UseGuards,
+  Patch,
+  Req,
+  ForbiddenException,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Roles('ADMIN', 'MANAGER')
   @Permissions('ANALYTICS_VIEW')
   @Post()
   @ApiOperation({ summary: 'Create a new user', description: 'Permissions: ANALYTICS_VIEW' })
@@ -22,6 +39,7 @@ export class UsersController {
     return this.usersService.create(body);
   }
 
+  @Roles('ADMIN', 'MANAGER')
   @Permissions('ANALYTICS_VIEW')
   @Get()
   @ApiOperation({ summary: 'Get all users', description: 'Permissions: ANALYTICS_VIEW' })
@@ -51,7 +69,15 @@ export class UsersController {
   }
 
   @Post(':id/upload-photo')
-  @UseInterceptors(FileInterceptor('photo'))
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const ok = ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype);
+        cb(ok ? null : new BadRequestException('Faqat JPEG, PNG yoki WEBP ruxsat etilgan'), ok);
+      },
+    }),
+  )
   @ApiOperation({ summary: 'Upload user profile photo', description: 'Role restriction: Teacher/Manager/Admin' })
   async uploadPhoto(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @Req() req: any) {
     if (req.user.role === 'STUDENT') throw new ForbiddenException('Talabalar rasm yuklay olmaydi');
@@ -62,6 +88,7 @@ export class UsersController {
     return { photo_url: result.photo_url };
   }
 
+  @Roles('ADMIN', 'MANAGER')
   @Permissions('ANALYTICS_VIEW')
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a user', description: 'Permissions: ANALYTICS_VIEW' })

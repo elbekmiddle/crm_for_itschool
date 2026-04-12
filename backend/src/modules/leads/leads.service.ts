@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { DbService } from '../../infrastructure/database/db.service';
 import { TelegramService } from '../../infrastructure/notifications/telegram.service';
 import { SocketsGateway } from '../sockets/sockets.gateway';
@@ -49,51 +50,69 @@ export class LeadsService {
     if (!lead.length) throw new BadRequestException('Lid topilmadi');
 
     const l = lead[0];
-    const password = '123'; // Temporary password
+    const rawPassword =
+      Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+    const passwordHash = await bcrypt.hash(rawPassword, 10);
 
-    // 1. Transaction to create user, student profile, course access, and group
+    const client = await this.dbService.getClient();
     try {
-       await this.dbService.query('BEGIN');
-       
-       const user = await this.dbService.query(`
+      await client.query('BEGIN');
+
+      const user = await client.query(
+        `
          INSERT INTO users (phone, password, role, first_name, last_name, branch_id)
          VALUES ($1, $2, 'STUDENT', $3, $4, $5) RETURNING id
-       `, [l.phone, password, l.first_name, l.last_name, branchId]);
+       `,
+        [l.phone, passwordHash, l.first_name, l.last_name, branchId],
+      );
 
-       const userId = user[0].id;
+      const userId = user.rows[0].id;
 
-       await this.dbService.query(`
+      await client.query(
+        `
          INSERT INTO students (id, first_name, last_name, parent_name, phone)
          VALUES ($1, $2, $3, $4, $5)
-       `, [userId, l.first_name, l.last_name, l.parent_name, l.phone]);
+       `,
+        [userId, l.first_name, l.last_name, l.parent_name, l.phone],
+      );
 
-       // Link to course if present
-       if (l.course_id) {
-         await this.dbService.query(`
+      if (l.course_id) {
+        await client.query(
+          `
            INSERT INTO student_courses (student_id, course_id, price_agreed)
            VALUES ($1, $2, 0)
-         `, [userId, l.course_id]);
-       }
+         `,
+          [userId, l.course_id],
+        );
+      }
 
-       // Link to group if present
-       if (groupId) {
-         await this.dbService.query(`
+      if (groupId) {
+        await client.query(
+          `
            INSERT INTO group_students (group_id, student_id)
            VALUES ($1, $2)
-         `, [groupId, userId]);
-       }
+         `,
+          [groupId, userId],
+        );
+      }
 
-       await this.dbService.query(`UPDATE leads SET status='converted' WHERE id=$1`, [id]);
-       await this.dbService.query('COMMIT');
-       
-       // Notify via socket
-       this.socketsGateway.emitToAll('lead_converted', { leadId: id, studentId: userId });
-       this.socketsGateway.emitDashboardRefresh({ source: 'lead', action: 'converted' });
+      await client.query(`UPDATE leads SET status='converted' WHERE id=$1`, [id]);
+      await client.query('COMMIT');
 
-       return { success: true, message: "Talaba ro'yxatga olindi", userId };
-    } catch (e) {
-       await this.dbService.query('ROLLBACK');
-       throw new BadRequestException("Talabani qo'shishda xatolik: " + e.message);
+      this.socketsGateway.emitToAll('lead_converted', { leadId: id, studentId: userId });
+      this.socketsGateway.emitDashboardRefresh({ source: 'lead', action: 'converted' });
+
+      return {
+        success: true,
+        message: "Talaba ro'yxatga olindi",
+        userId,
+        temporary_password: rawPassword,
+      };
+    } catch (e: any) {
+      await client.query('ROLLBACK');
+      throw new BadRequestException("Talabani qo'shishda xatolik: " + (e?.message || e));
+    } finally {
+      client.release();
     }
   }
 

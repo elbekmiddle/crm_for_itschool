@@ -23,10 +23,12 @@ import { CheckCodeDto } from './dto/check-code.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
 import { StudentPasswordLoginDto } from './dto/student-password-login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ConfirmForgotPasswordDto } from './dto/confirm-forgot-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 
 /** JWT `expiresIn` qatori (masalan `15m`, `7d`) → cookie maxAge ms */
 function jwtExpiresToCookieMs(expr: unknown, fallbackMs: number): number {
@@ -52,6 +54,7 @@ export class AuthController {
 
   /* ── ADMIN / TEACHER / MANAGER ── */
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Foydalanuvchi kirishi (admin/manager/teacher) email+parol bilan' })
@@ -80,6 +83,7 @@ export class AuthController {
    * Step 1: Check phone number
    * Returns: { exists, is_verified, has_telegram, first_name }
    */
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Post('check-phone')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '1-qadam: Telefon raqam mavjudligini tekshirish' })
@@ -90,6 +94,7 @@ export class AuthController {
   /**
    * Step 2a: Send verification code via Telegram bot
    */
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('send-verify-code')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '2a-qadam: Telegram orqali 6 raqamli kod yuborish (5 daqiqa)' })
@@ -100,6 +105,7 @@ export class AuthController {
   /**
    * Step 1.5: Pre-validate code without setting password (for UX: show error before asking for new password)
    */
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
   @Post('check-code')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '1.5-qadam: Telegram kodini tekshirish (parolsiz)' })
@@ -110,6 +116,7 @@ export class AuthController {
   /**
    * Step 2b: Verify code + set password → returns JWT
    */
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
   @Post('verify-code')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '2b-qadam: Telegram kodini tasdiqlash, parol o\'rnatish va tizimga kirish' })
@@ -125,6 +132,7 @@ export class AuthController {
   /**
    * Step 2c: Already verified — login with phone + password
    */
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('student-login-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '2c-qadam: Tasdiqlangan o\'quvchini telefon + parol bilan kirish' })
@@ -137,6 +145,7 @@ export class AuthController {
     };
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('staff-phone-login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Xodim: telefon + parol (o‘qituvchi / menejer / admin)' })
@@ -170,19 +179,28 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Tizimdan chiqish' })
   async logout(@Req() req: ExpressRequest, @Res({ passthrough: true }) res: Response) {
-    const token = req.cookies?.access_token;
-    if (token) {
-      await this.authService.logout(token);
+    const access = req.cookies?.access_token;
+    const refresh = req.cookies?.refresh_token;
+    if (access || refresh) {
+      await this.authService.logout(access, refresh);
     }
     this.clearCookies(res);
     return { message: 'Tizimdan muvaffaqiyatli chiqdingiz' };
   }
 
+  @Throttle({ default: { limit: 3, ttl: 3600000 } })
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Parolni tiklash (Telegram orqali)' })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.recoverPassword(dto.email);
+  }
+
+  @Post('forgot-password/confirm')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Tasdiqlash kodi + yangi parol (Telegram kodidan keyin)' })
+  async confirmForgotPassword(@Body() dto: ConfirmForgotPasswordDto) {
+    return this.authService.confirmForgotPassword(dto.email, dto.code, dto.new_password);
   }
 
   @Get('me')

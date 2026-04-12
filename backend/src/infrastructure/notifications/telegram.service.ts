@@ -155,9 +155,13 @@ export class TelegramService {
 
   // --- Payments ---
   async notifyPaymentDue(chatId: string, name: string, amount: number, month: string, studentId?: string): Promise<void> {
+    const sumLine =
+      amount > 0
+        ? `💰 To'lov: <b>${amount.toLocaleString()} so'm</b>\n`
+        : `💰 Summa: <i>kelishilgan to'lovni kurs bo'yicha tekshiring</i>\n`;
     const text = `💳 <b>To'lov vaqti keldi!</b>\n\n` +
       `O'quvchi: <b>${name}</b>\n` +
-      `💰 To'lov: <b>${amount.toLocaleString()} so'm</b>\n` +
+      sumLine +
       `🗓 Oy: ${month}\n\n` +
       `Iltimos, o'quv markaziga kelib to'lovni amalga oshiring.`;
     await this.sendMessage(text, chatId, studentId, 'To\'lov haqida ogohlantirish');

@@ -39,6 +39,55 @@ function matchMcqOrTfStudentToCorrect(studentPayload: unknown, correctRaw: unkno
   return uStr !== '' && cStr !== '' && uStr === cStr;
 }
 
+/** PATCH body kalitlari — SQL injection (ustun nomi) oldini olish */
+const ALLOWED_EXAM_PATCH_FIELDS = new Set([
+  'course_id',
+  'title',
+  'description',
+  'duration_minutes',
+  'time_limit',
+  'passing_score',
+  'total_points',
+  'status',
+  'shuffle_questions',
+  'show_answers_feedback',
+  'allow_review',
+  'hide_correct_answers',
+  'randomize_answer_order',
+  'enable_anti_cheat',
+  'max_attempts',
+  'start_date',
+  'end_date',
+  'start_time',
+  'end_time',
+  'instructions',
+  'time_warning_minutes',
+  'allow_calculator',
+  'allow_notes',
+  'show_progress_bar',
+  'show_timer',
+  'allow_back_tracking',
+  'lock_questions',
+  'proctor_required',
+  'record_session',
+  'verify_identity',
+  'full_screen_required',
+  'webcam_required',
+  'microphone_required',
+  'notification_email',
+  'group_id',
+]);
+
+const ALLOWED_QUESTION_PATCH_FIELDS = new Set([
+  'text',
+  'options',
+  'correct_answer',
+  'type',
+  'level',
+  'status',
+  'lesson_id',
+]);
+
 function matchMultiSelectIndices(studentPayload: unknown, correctRaw: unknown): boolean {
   const uArr = Array.isArray(studentPayload) ? studentPayload : [];
   const cArr = Array.isArray(correctRaw) ? correctRaw : [];
@@ -117,7 +166,7 @@ export class ExamsService {
     throw lastErr;
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, options?: { viewerRole?: string }) {
     if (!uuidValidate(id)) {
       throw new NotFoundException('Imtihon topilmadi');
     }
@@ -162,12 +211,24 @@ export class ExamsService {
       return v;
     };
 
-    const normalized = questions.map((q: any) => ({
-      ...q,
-      options: parseJson(q.options, []),
-      correct_answer: parseJson(q.correct_answer, q.correct_answer),
-      type: String(q.type || 'multiple_choice').toLowerCase().replace(/-/g, '_'),
-    }));
+    const revealCorrectAnswers =
+      options?.viewerRole === 'TEACHER' ||
+      options?.viewerRole === 'ADMIN' ||
+      options?.viewerRole === 'MANAGER';
+
+    const normalized = questions.map((q: any) => {
+      const row = {
+        ...q,
+        options: parseJson(q.options, []),
+        correct_answer: parseJson(q.correct_answer, q.correct_answer),
+        type: String(q.type || 'multiple_choice').toLowerCase().replace(/-/g, '_'),
+      };
+      if (!revealCorrectAnswers) {
+        const { correct_answer: _omit, ...rest } = row;
+        return rest;
+      }
+      return row;
+    });
 
     let group_name: string | null = null;
     const gid = exam[0]?.group_id;
@@ -276,9 +337,9 @@ export class ExamsService {
 
   async update(id: string, data: any) {
     const { questions: _nestedQuestions, ...rest } = data || {};
-    const keys = Object.keys(rest);
+    const keys = Object.keys(rest).filter((k) => ALLOWED_EXAM_PATCH_FIELDS.has(k));
     if (!keys.length) {
-      const one = await this.findOne(id);
+      const one = await this.findOne(id, { viewerRole: 'TEACHER' });
       return one;
     }
     const prevStatusRows = await this.dbService.query(`SELECT status FROM exams WHERE id = $1`, [id]);
@@ -406,6 +467,9 @@ export class ExamsService {
     delete row.id;
     delete row.teacherId;
     delete row.created_by;
+    for (const k of Object.keys(row)) {
+      if (!ALLOWED_QUESTION_PATCH_FIELDS.has(k)) delete row[k];
+    }
     if (row.options !== undefined && typeof row.options !== 'string') {
       row.options = JSON.stringify(row.options ?? []);
     }
@@ -711,6 +775,19 @@ export class ExamsService {
       return activeAttempt[0];
     }
 
+    const priorFinished = await this.dbService.query(
+      `
+      SELECT id FROM exam_attempts
+      WHERE exam_id = $1 AND student_id = $2
+        AND status IN ('submitted', 'graded', 'timed_out')
+      LIMIT 1
+    `,
+      [examId, studentId],
+    );
+    if (priorFinished.length) {
+      throw new ConflictException("Bu imtihonni allaqachon topshirgansiz.");
+    }
+
     // 3. Create new attempt
     const deadline = dayjs().add(exam[0].time_limit, 'minute').toDate();
     const result = await this.dbService.query(`
@@ -889,19 +966,35 @@ export class ExamsService {
       `
       INSERT INTO attempt_answers (attempt_id, question_id, answer)
       SELECT $1, $2, $3::jsonb
-      WHERE EXISTS (SELECT 1 FROM exam_attempts ea WHERE ea.id = $1 AND ea.status = 'in_progress')
+      WHERE EXISTS (
+        SELECT 1 FROM exam_attempts ea
+        WHERE ea.id = $1 AND ea.status = 'in_progress'
+          AND (ea.deadline_at IS NULL OR ea.deadline_at > NOW())
+      )
       ON CONFLICT (attempt_id, question_id) DO UPDATE
       SET answer = EXCLUDED.answer, answered_at = NOW()
-      WHERE EXISTS (SELECT 1 FROM exam_attempts ea WHERE ea.id = EXCLUDED.attempt_id AND ea.status = 'in_progress')
+      WHERE EXISTS (
+        SELECT 1 FROM exam_attempts ea
+        WHERE ea.id = EXCLUDED.attempt_id AND ea.status = 'in_progress'
+          AND (ea.deadline_at IS NULL OR ea.deadline_at > NOW())
+      )
       RETURNING id
     `,
       `
       INSERT INTO attempt_answers (attempt_id, question_id, answer_payload)
       SELECT $1, $2, $3
-      WHERE EXISTS (SELECT 1 FROM exam_attempts ea WHERE ea.id = $1 AND ea.status = 'in_progress')
+      WHERE EXISTS (
+        SELECT 1 FROM exam_attempts ea
+        WHERE ea.id = $1 AND ea.status = 'in_progress'
+          AND (ea.deadline_at IS NULL OR ea.deadline_at > NOW())
+      )
       ON CONFLICT (attempt_id, question_id) DO UPDATE
       SET answer_payload = EXCLUDED.answer_payload, answered_at = NOW()
-      WHERE EXISTS (SELECT 1 FROM exam_attempts ea WHERE ea.id = EXCLUDED.attempt_id AND ea.status = 'in_progress')
+      WHERE EXISTS (
+        SELECT 1 FROM exam_attempts ea
+        WHERE ea.id = EXCLUDED.attempt_id AND ea.status = 'in_progress'
+          AND (ea.deadline_at IS NULL OR ea.deadline_at > NOW())
+      )
       RETURNING id
     `,
     ];
@@ -923,13 +1016,60 @@ export class ExamsService {
     throw last;
   }
 
+  /** Anti-cheat: frontend yoki boshqa manbadan — serverda qayd etiladi */
+  async reportViolation(attemptId: string, studentId: string, type: string) {
+    const rows = await this.dbService.query(
+      `SELECT id, student_id, status, deadline_at FROM exam_attempts WHERE id = $1`,
+      [attemptId],
+    );
+    if (!rows.length) throw new NotFoundException('Urinish topilmadi.');
+    if (String(rows[0].student_id) !== String(studentId)) {
+      throw new ForbiddenException('Bu urinish sizga tegishli emas.');
+    }
+    const st = String(rows[0].status ?? '').toLowerCase();
+    if (st !== 'in_progress') {
+      throw new ConflictException('Sessiya aktiv emas.');
+    }
+    const dl = rows[0].deadline_at;
+    if (dl && new Date(dl).getTime() <= Date.now()) {
+      throw new ForbiddenException('Imtihon vaqti tugagan.');
+    }
+    const vtype = String(type || 'unknown').slice(0, 64) || 'unknown';
+    try {
+      await this.dbService.query(
+        `UPDATE exam_attempts SET violation_count = COALESCE(violation_count, 0) + 1 WHERE id = $1`,
+        [attemptId],
+      );
+    } catch (e: any) {
+      if (e?.code !== '42703') throw e;
+    }
+    try {
+      await this.dbService.query(
+        `INSERT INTO exam_violations (attempt_id, violation_type) VALUES ($1, $2)`,
+        [attemptId, vtype],
+      );
+    } catch (e: any) {
+      if (e?.code !== '42P01' && e?.code !== '42703') throw e;
+    }
+    return { ok: true, violation_type: vtype };
+  }
+
   async submitExamAttempt(attemptId: string) {
     return this.finishAttempt(attemptId);
   }
 
   private async finishAttempt(attemptId: string) {
-    const attempt = await this.dbService.query(`SELECT exam_id, student_id FROM exam_attempts WHERE id = $1`, [attemptId]);
+    const attempt = await this.dbService.query(
+      `SELECT exam_id, student_id, status FROM exam_attempts WHERE id = $1`,
+      [attemptId],
+    );
     if (!attempt.length) throw new NotFoundException('Urinish topilmadi.');
+
+    const st = String(attempt[0].status ?? '').toLowerCase();
+    if (st && st !== 'in_progress') {
+      const existing = await this.dbService.query(`SELECT * FROM exam_attempts WHERE id = $1`, [attemptId]);
+      return existing[0];
+    }
 
     const { exam_id, student_id } = attempt[0];
 
@@ -1073,11 +1213,20 @@ export class ExamsService {
 
     const finalScore = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
 
-    const result = await this.dbService.query(`
-      UPDATE exam_attempts 
-      SET status = 'submitted', finished_at = NOW(), score = $1 
-      WHERE id = $2 RETURNING *
-    `, [finalScore, attemptId]);
+    const result = await this.dbService.query(
+      `
+      UPDATE exam_attempts
+      SET status = 'submitted', finished_at = NOW(), score = $1
+      WHERE id = $2 AND status = 'in_progress'
+      RETURNING *
+    `,
+      [finalScore, attemptId],
+    );
+
+    if (!result.length) {
+      const existing = await this.dbService.query(`SELECT * FROM exam_attempts WHERE id = $1`, [attemptId]);
+      return existing[0];
+    }
 
     const incorrectCount = Math.max(0, totalCount - correctCount);
     const passed = finalScore >= passThreshold;
@@ -1095,6 +1244,53 @@ export class ExamsService {
     }
 
     const syncExamResults = async () => {
+      try {
+        const byAttempt = await this.dbService.query(
+          `SELECT id FROM exam_results WHERE attempt_id = $1 LIMIT 1`,
+          [attemptId],
+        );
+        if (byAttempt.length) {
+          const erId = byAttempt[0].id;
+          const fullUpdate = `
+            UPDATE exam_results SET
+              score = $1::numeric,
+              passed = $2,
+              correct_count = $3,
+              incorrect_count = $4,
+              total_questions = $5,
+              time_taken = $6,
+              updated_at = NOW()
+            WHERE id = $7
+          `;
+          try {
+            await this.dbService.query(fullUpdate, [
+              finalScore,
+              passed,
+              correctCount,
+              incorrectCount,
+              totalCount,
+              timeTakenRow,
+              erId,
+            ]);
+            return;
+          } catch (e: any) {
+            try {
+              await this.dbService.query(
+                `UPDATE exam_results SET score = $1::numeric, passed = $2, updated_at = NOW() WHERE id = $3`,
+                [finalScore, passed, erId],
+              );
+            } catch (e2: any) {
+              this.logger.warn(`exam_results UPDATE by id fallback: ${e2?.message || e2}`);
+            }
+            return;
+          }
+        }
+      } catch (e: any) {
+        if (e?.code !== '42P01' && e?.code !== '42703') {
+          this.logger.warn(`exam_results by attempt_id: ${e?.message || e}`);
+        }
+      }
+
       const baseParams = [
         exam_id,
         student_id,
@@ -1136,6 +1332,30 @@ export class ExamsService {
         }
       }
       const inserts: Array<{ sql: string; params: any[] }> = [
+        {
+          sql: `INSERT INTO exam_results (id, attempt_id, exam_id, student_id, score, passed, correct_count, incorrect_count, total_questions, time_taken)
+           VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9)
+           ON CONFLICT (exam_id, student_id) DO UPDATE SET
+             attempt_id = EXCLUDED.attempt_id,
+             score = EXCLUDED.score,
+             passed = EXCLUDED.passed,
+             correct_count = EXCLUDED.correct_count,
+             incorrect_count = EXCLUDED.incorrect_count,
+             total_questions = EXCLUDED.total_questions,
+             time_taken = EXCLUDED.time_taken,
+             updated_at = NOW()`,
+          params: [
+            attemptId,
+            exam_id,
+            student_id,
+            finalScore,
+            passed,
+            correctCount,
+            incorrectCount,
+            totalCount,
+            timeTakenRow,
+          ],
+        },
         {
           sql: `INSERT INTO exam_results (id, attempt_id, exam_id, student_id, score, passed, correct_count, incorrect_count, total_questions, time_taken)
            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9)`,
@@ -1188,7 +1408,10 @@ export class ExamsService {
     return result[0];
   }
 
-  async getAttemptResult(attemptId: string) {
+  async getAttemptResult(
+    attemptId: string,
+    viewer?: { viewerRole?: string; viewerId?: string },
+  ) {
     const attempt = await this.dbService.query(`
       SELECT a.*, e.title as exam_title
       FROM exam_attempts a
@@ -1197,6 +1420,10 @@ export class ExamsService {
     `, [attemptId]);
 
     if (!attempt.length) return null;
+
+    if (viewer?.viewerRole === 'STUDENT' && viewer.viewerId && attempt[0].student_id !== viewer.viewerId) {
+      throw new ForbiddenException('Bu urinish sizga tegishli emas.');
+    }
 
     let details: any[];
     try {
@@ -1220,6 +1447,13 @@ export class ExamsService {
     `,
         [attemptId],
       );
+    }
+
+    if (viewer?.viewerRole === 'STUDENT') {
+      details = details.map((d: any) => {
+        const { correct_answer: _omit, ...rest } = d;
+        return rest;
+      });
     }
 
     const correct_count = details.filter((d) => d.is_correct).length;

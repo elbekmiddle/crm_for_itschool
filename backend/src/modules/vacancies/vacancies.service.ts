@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { DbService } from '../../infrastructure/database/db.service';
 import { TelegramService } from '../../infrastructure/notifications/telegram.service';
 
@@ -20,6 +20,17 @@ export class VacanciesService {
 
    async applyVacancy(data: any) {
       const { vacancy_id, name, phone, resume_url } = data;
+      if (typeof resume_url === 'string' && resume_url.trim()) {
+        try {
+          const u = new URL(resume_url.trim());
+          if (!['http:', 'https:'].includes(u.protocol)) {
+            throw new BadRequestException('resume_url faqat http yoki https bo‘lishi kerak');
+          }
+        } catch (e: any) {
+          if (e instanceof BadRequestException) throw e;
+          throw new BadRequestException('resume_url noto‘g‘ri format');
+        }
+      }
       const res = await this.db.query(`
          INSERT INTO applications (vacancy_id, name, phone, resume_url) 
          VALUES ($1, $2, $3, $4) RETURNING *

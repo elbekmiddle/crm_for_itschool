@@ -4,6 +4,9 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  ServiceUnavailableException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -27,9 +30,6 @@ import { normalizeRole, permissionsForRole } from '../../common/constants/role-p
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-
-  /** Redis bo‘lmasa: tasdiqlash kodi vaqtinchalik server xotirasida (restart = kod yo‘qoladi) */
-  private readonly verifyCodeMemory = new Map<string, { code: string; exp: number }>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -75,36 +75,48 @@ export class AuthService {
     return rows[0];
   }
 
-  async logout(token: string) {
+  private async blacklistToken(token: string | undefined) {
+    if (!token) return;
+    if (!this.redisService.isEnabled()) {
+      throw new ServiceUnavailableException(
+        'Sessiyani bekor qilish uchun Redis (UPSTASH_REDIS_*) sozlangan bo‘lishi kerak.',
+      );
+    }
     try {
-      const decoded = this.jwtService.decode(token) as any;
-      if (!decoded || !decoded.exp) return { success: true };
+      const decoded = this.jwtService.decode(token) as { exp?: number } | null;
+      if (!decoded?.exp) return;
       const ttl = decoded.exp - Math.floor(Date.now() / 1000);
       if (ttl > 0) {
         await this.redisService.set(`blacklist:${token}`, '1', { ex: ttl });
       }
-      return { success: true };
-    } catch {
-      return { success: true };
+    } catch (e: any) {
+      if (e instanceof ServiceUnavailableException) throw e;
+      throw new ServiceUnavailableException('Sessiyani bekor qilishda xatolik. Redisni tekshiring.');
     }
   }
 
+  async logout(accessToken?: string, refreshToken?: string) {
+    await this.blacklistToken(accessToken);
+    await this.blacklistToken(refreshToken);
+    return { success: true };
+  }
+
   async login(loginDto: LoginDto) {
-    this.logger.debug(`[login] email: ${loginDto.email}`);
+    this.logger.debug('[login] attempt');
     const users = await this.dbService.query(
       'SELECT id, email, password, role, first_name, last_name FROM users WHERE email = $1',
       [loginDto.email]
     );
     
     if (!users.length) {
-      this.logger.warn(`[login] User not found: ${loginDto.email}`);
+      this.logger.warn('[login] user not found');
       throw new NotFoundException('Foydalanuvchi topilmadi');
     }
     
     const user = users[0];
     const isPasswordValid = await bcrypt.compare(loginDto.password, user.password).catch(() => false);
     if (!isPasswordValid) {
-      this.logger.warn(`[login] Invalid password for: ${loginDto.email}`);
+      this.logger.warn('[login] invalid password');
       throw new UnauthorizedException('Email yoki parol noto\'g\'ri');
     }
     
@@ -154,7 +166,7 @@ export class AuthService {
    */
   async checkPhone(dto: CheckPhoneDto) {
     const phone = this.normalizePhone(dto.phone);
-    this.logger.debug(`[checkPhone] normalized: ${dto.phone} → ${phone}`);
+    this.logger.debug('[checkPhone] ok');
     const students = await get_student_by_phone(this.dbService, phone);
     if (students.length) {
       const student = students[0];
@@ -163,7 +175,6 @@ export class AuthService {
         login_kind: 'student' as const,
         is_verified: !!student.is_verified,
         has_telegram: !!student.telegram_chat_id,
-        first_name: student.first_name,
       };
     }
     const staffRows = await get_staff_by_phone(this.dbService, phone);
@@ -175,7 +186,6 @@ export class AuthService {
         role: u.role,
         is_verified: true,
         has_telegram: !!u.telegram_chat_id,
-        first_name: u.first_name,
         message: 'Xodim akkaunti topildi',
       };
     }
@@ -184,8 +194,7 @@ export class AuthService {
       login_kind: null,
       is_verified: false,
       has_telegram: false,
-      first_name: null as string | null,
-      message: `Bu telefon raqam (${phone}) tizimda yo'q. Admin bilan bog'laning.`,
+      message: 'Bu telefon raqam tizimda topilmadi. Admin bilan bog‘laning.',
     };
   }
 
@@ -194,23 +203,22 @@ export class AuthService {
    * Generates 6-digit code, stores in Redis with 5min TTL, sends via bot
    */
   async sendVerifyCode(dto: CheckPhoneDto) {
+    if (!this.redisService.isEnabled()) {
+      throw new ServiceUnavailableException(
+        'Tasdiqlash kodi uchun Redis (UPSTASH_REDIS_REST_URL) sozlanmagan.',
+      );
+    }
     const phone = this.normalizePhone(dto.phone);
     const students = await get_student_by_phone(this.dbService, phone);
     if (!students.length) throw new NotFoundException('Talaba topilmadi — telefon raqamni tekshiring.');
 
     const student = students[0];
 
-    // Generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const redisKey = `verify:${phone}`;
 
-    if (this.redisService.isEnabled()) {
-      await this.redisService.set(redisKey, code, { ex: 300 });
-    } else {
-      this.verifyCodeMemory.set(phone, { code, exp: Date.now() + 300_000 });
-      this.logger.warn(`[sendVerifyCode] Redis yo'q — kod vaqtinchalik server xotirasida: ${redisKey}`);
-    }
-    this.logger.debug(`[sendVerifyCode] phone=${phone} redis_key=${redisKey} (6 xonali kod yuborildi)`);
+    await this.redisService.set(redisKey, code, { ex: 300 });
+    this.logger.debug('[sendVerifyCode] code dispatched');
 
     if (student.telegram_chat_id) {
       await this.telegramService.sendVerifyCode(student.telegram_chat_id, code, student.first_name, student.id);
@@ -231,40 +239,40 @@ export class AuthService {
    * Returns 200 if code matches, 400 if wrong/expired
    */
   private async readVerifyCode(phone: string): Promise<string | null> {
+    if (!this.redisService.isEnabled()) return null;
     const redisKey = `verify:${phone}`;
-    if (this.redisService.isEnabled()) {
-      const raw = await this.redisService.get(redisKey);
-      if (raw == null || raw === '') return null;
-      return String(raw).replace(/\D/g, '');
-    }
-    const row = this.verifyCodeMemory.get(phone);
-    if (!row) return null;
-    if (Date.now() > row.exp) {
-      this.verifyCodeMemory.delete(phone);
-      return null;
-    }
-    return String(row.code).replace(/\D/g, '');
+    const raw = await this.redisService.get(redisKey);
+    if (raw == null || raw === '') return null;
+    return String(raw).replace(/\D/g, '');
   }
 
   private async clearVerifyCode(phone: string) {
-    const redisKey = `verify:${phone}`;
-    this.verifyCodeMemory.delete(phone);
-    if (this.redisService.isEnabled()) {
-      await this.redisService.del(redisKey);
-    }
+    if (!this.redisService.isEnabled()) return;
+    await this.redisService.del(`verify:${phone}`);
+    await this.redisService.del(`verify_attempts:${phone}`);
   }
 
   async checkCode(dto: CheckCodeDto) {
+    if (!this.redisService.isEnabled()) {
+      throw new ServiceUnavailableException('Kod tekshiruvi uchun Redis talab qilinadi.');
+    }
     const phone = this.normalizePhone(dto.phone);
+    const attKey = `verify_attempts:${phone}`;
+    const prev = parseInt(String((await this.redisService.get(attKey)) ?? '0'), 10) || 0;
+    if (prev >= 5) {
+      throw new HttpException('Juda ko‘p urinish. 5 daqiqadan keyin qayta urining.', HttpStatus.TOO_MANY_REQUESTS);
+    }
     const entered = String(dto.code || '').replace(/\D/g, '');
     const storedNorm = await this.readVerifyCode(phone);
-    this.logger.debug(`[checkCode] phone=${phone} has_stored=${!!storedNorm}`);
+    this.logger.debug('[checkCode] validation');
     if (!storedNorm) {
       throw new BadRequestException('Kod muddati tugagan. Qaytadan so\'rang.');
     }
     if (storedNorm !== entered) {
+      await this.redisService.set(attKey, String(prev + 1), { ex: 300 });
       throw new BadRequestException('Noto\'g\'ri kod. Telegram dan kodni yana bir bor tekshiring.');
     }
+    await this.redisService.del(attKey);
     return { valid: true, message: 'Kod to\'g\'ri!' };
   }
 
@@ -272,10 +280,13 @@ export class AuthService {
    * Step 2b: Verify code + set new password + return JWT
    */
   async verifyCodeAndSetPassword(dto: VerifyCodeDto) {
+    if (!this.redisService.isEnabled()) {
+      throw new ServiceUnavailableException('Tasdiqlash uchun Redis talab qilinadi.');
+    }
     const phone = this.normalizePhone(dto.phone);
     const entered = String(dto.code || '').replace(/\D/g, '');
     const storedNorm = await this.readVerifyCode(phone);
-    this.logger.debug(`[verifyCode] phone=${phone} has_stored=${!!storedNorm}`);
+    this.logger.debug('[verifyCode] step');
     if (!storedNorm) {
       throw new BadRequestException('Kod muddati tugagan. Qaytadan so\'rang.');
     }
@@ -376,11 +387,23 @@ export class AuthService {
 
   async refreshToken(refreshToken: string) {
     try {
+      if (!this.redisService.isEnabled()) {
+        throw new UnauthorizedException('Token yangilash uchun Redis talab qilinadi.');
+      }
+      let bl: string | null | undefined;
+      try {
+        bl = await this.redisService.get(`blacklist:${refreshToken}`);
+      } catch {
+        throw new UnauthorizedException('Autentifikatsiya xizmati vaqtincha ishlamayapti');
+      }
+      if (bl != null && bl !== '') {
+        throw new UnauthorizedException('Sessiya bekor qilingan');
+      }
       const payload = this.jwtService.verify(refreshToken, {
         secret: this.configService.get('JWT_REFRESH_SECRET'),
       });
-      
-      this.logger.debug(`[refreshToken] sub: ${payload.sub} role: ${payload.role}`);
+
+      this.logger.debug('[refreshToken] ok');
       
       let user;
       if (payload.role === 'STUDENT') {
@@ -394,8 +417,9 @@ export class AuthService {
       }
       
       return this.generateTokens(user);
-    } catch (error) {
-      this.logger.warn(`[refreshToken] failed: ${error.message}`);
+    } catch (error: any) {
+      if (error instanceof UnauthorizedException) throw error;
+      this.logger.warn(`[refreshToken] failed: ${error?.message || error}`);
       throw new UnauthorizedException('JWT muddati tugagan yoki noto\'g\'ri');
     }
   }
@@ -408,11 +432,6 @@ export class AuthService {
     const payload = {
       sub: user.id,
       role: resolvedRole || user.role,
-      permissions: permissionsForRole(resolvedRole),
-      first_name: user.first_name || '',
-      last_name: user.last_name || '',
-      phone: user.phone || '',
-      email: user.email || '',
     };
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, {
@@ -423,24 +442,70 @@ export class AuthService {
   }
 
   async recoverPassword(email: string) {
+    const generic = {
+      success: true,
+      message: "Agar bu email tizimda bo'lsa, xabar yuborilgan.",
+    };
     const users = await this.dbService.query(
-      'SELECT id, email, first_name FROM users WHERE email = $1',
-      [email]
+      'SELECT id, email, first_name, telegram_chat_id FROM users WHERE email = $1',
+      [email],
     );
-    if (!users.length) throw new NotFoundException('Foydalanuvchi topilmadi');
-    const user = users[0];
+    if (!users.length) return generic;
+    const user = users[0] as { id: string; telegram_chat_id?: string | null; first_name?: string };
+
+    if (!this.redisService.isEnabled()) {
+      throw new ServiceUnavailableException('Parol tiklash uchun Redis talab qilinadi.');
+    }
 
     const tempCode = Math.floor(100000 + Math.random() * 900000).toString();
-    
+    const codeHash = await bcrypt.hash(tempCode, 10);
+    await this.redisService.set(`pwrecover:${user.id}`, codeHash, { ex: 900 });
+
     if (user.telegram_chat_id) {
-       await this.telegramService.sendPasswordRecovery(user.telegram_chat_id, user.first_name || 'Xodim', tempCode);
-       const hashed = await bcrypt.hash(tempCode, 10);
-       await this.dbService.query('UPDATE users SET password = $1 WHERE id = $2', [hashed, user.id]);
-       return { success: true, message: 'Telegram botga vaqtinchalik parol yuborildi!' };
-    } else {
-       await this.telegramService.notifyAdminOfPasswordRequest(user);
-       return { success: true, message: 'Telegram bot ulanmagan. Administratorga xabar yuborildi!' };
+      await this.telegramService.sendPasswordRecovery(
+        user.telegram_chat_id,
+        user.first_name || 'Xodim',
+        tempCode,
+      );
+      return generic;
     }
+    await this.telegramService.notifyAdminOfPasswordRequest(user);
+    return generic;
+  }
+
+  async confirmForgotPassword(email: string, code: string, newPassword: string) {
+    if (!this.redisService.isEnabled()) {
+      throw new ServiceUnavailableException('Parol tasdiqlash uchun Redis talab qilinadi.');
+    }
+    const users = await this.dbService.query(
+      'SELECT id, email, first_name FROM users WHERE email = $1',
+      [email],
+    );
+    if (!users.length) throw new NotFoundException('Foydalanuvchi topilmadi');
+    const user = users[0] as { id: string };
+
+    let stored: string | null = null;
+    try {
+      const r = await this.redisService.get(`pwrecover:${user.id}`);
+      if (typeof r === 'string') stored = r;
+    } catch {
+      /* */
+    }
+    if (!stored) {
+      throw new BadRequestException('Tasdiqlash kodi topilmadi yoki muddati tugagan. Qaytadan so‘rang.');
+    }
+    const ok = await bcrypt.compare(String(code).trim(), stored);
+    if (!ok) {
+      throw new BadRequestException('Kod noto‘g‘ri');
+    }
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.dbService.query('UPDATE users SET password = $1 WHERE id = $2', [hashed, user.id]);
+    try {
+      await this.redisService.del(`pwrecover:${user.id}`);
+    } catch {
+      /* */
+    }
+    return { success: true, message: 'Parol yangilandi' };
   }
 
   /** Joriy parolni tekshirib, yangi parolni saqlash (faqat `users` jadvali — admin/manager/teacher). */

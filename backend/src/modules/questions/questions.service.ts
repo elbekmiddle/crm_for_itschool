@@ -16,12 +16,22 @@ export class QuestionsService {
   }
 
   async getStats() {
-    const res = await this.dbService.query(`SELECT COUNT(*) FROM questions`);
+    const res = await this.dbService.query(`SELECT COUNT(*)::text AS c FROM questions`);
+    const total = parseInt(res[0]?.c ?? '0', 10) || 0;
+    let pendingCount = 0;
+    try {
+      const p = await this.dbService.query(
+        `SELECT COUNT(*)::text AS c FROM questions WHERE COALESCE(status::text, '') IN ('draft', 'pending')`,
+      );
+      pendingCount = parseInt(p[0]?.c ?? '0', 10) || 0;
+    } catch {
+      pendingCount = 0;
+    }
     return {
-      totalQuestions: parseInt(res[0].count, 10),
-      checkedRate: 98.4,
-      usageCount: parseInt(res[0].count, 10) * 12,
-      pendingCount: Math.floor(parseInt(res[0].count, 10) * 0.05)
+      totalQuestions: total,
+      checkedRate: null,
+      usageCount: null,
+      pendingCount,
     };
   }
 }

@@ -13,6 +13,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { QueueModule } from './infrastructure/queue/queue.module';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ExamsModule } from './modules/exams/exams.module';
 import { LessonsModule } from './modules/lessons/lessons.module';
 import { QuestionsModule } from './modules/questions/questions.module';
@@ -28,8 +29,6 @@ import { RootController } from './root.controller';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { LeadsModule } from './modules/leads/leads.module';
 import { BlogsModule } from './modules/blogs/blogs.module';
-import { RolesGuard } from './common/guards/roles.guard';
-import { PermissionsGuard } from './common/guards/permissions.guard';
 
 @Module({
   imports: [
@@ -37,6 +36,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ScheduleModule.forRoot(),
     DbModule,
     AuthModule,
     StudentsModule,
@@ -57,7 +57,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     SocketsModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
-      limit: 100,
+      limit: 200,
     }]),
     LeadsModule,
     BlogsModule,
@@ -66,10 +66,6 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: RolesGuard,
     },
     {
       provide: APP_INTERCEPTOR,

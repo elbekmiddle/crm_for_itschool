@@ -11,9 +11,15 @@ export class DbService implements OnModuleInit {
     this.logger.log('Database service initialized.');
   }
 
+  /** Har bir SQL uchun DEBUG juda ko‘p yozadi (sekinlik + disk). Faqat `LOG_DB_QUERIES=true` bo‘lsa yoqiladi. */
+  private logQueryDebug(label: string, paramCount: number) {
+    if (String(process.env.LOG_DB_QUERIES || '').toLowerCase() !== 'true') return;
+    this.logger.debug(`${label} (${paramCount} params)`);
+  }
+
   async query<T = any>(queryText: string, values?: any[]): Promise<T[]> {
     try {
-      this.logger.debug(`Executing query: ${queryText}`);
+      this.logQueryDebug('DB query', values?.length ?? 0);
       const result: QueryResult = await this.pool.query(queryText, values);
       return result.rows;
     } catch (error: any) {
@@ -23,7 +29,7 @@ export class DbService implements OnModuleInit {
           `Query failed (schema/column mismatch ${code}): ${queryText} — ${error?.message || ''}`,
         );
       } else {
-        this.logger.error(`Query failed: ${queryText}`, error.stack);
+        this.logger.error(`Query failed (${values?.length ?? 0} params): ${error?.message || error}`, error.stack);
       }
       throw error;
     }
@@ -35,7 +41,7 @@ export class DbService implements OnModuleInit {
    */
   async querySafe<T = any>(queryText: string, values: any[] = [], fallback: T[] = []): Promise<T[]> {
     try {
-      this.logger.debug(`Executing query (safe): ${queryText}`);
+      this.logQueryDebug('DB query safe', values?.length ?? 0);
       const result: QueryResult = await this.pool.query(queryText, values);
       return result.rows as T[];
     } catch (error) {

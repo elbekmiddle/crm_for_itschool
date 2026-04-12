@@ -310,13 +310,36 @@ export class AiService implements OnModuleInit {
     return jsonArr;
   }
 
+  private sanitizeAnalyzeStudentInput(data: any) {
+    return {
+      name: String(data?.name ?? '').slice(0, 200),
+      missed_classes: Math.max(0, Math.min(50000, parseInt(String(data?.missed_classes ?? 0), 10) || 0)),
+      total_attended: Math.max(0, Math.min(50000, parseInt(String(data?.total_attended ?? 0), 10) || 0)),
+    };
+  }
+
+  private sanitizeGroupSummaryInput(data: any) {
+    const rawStudents = Array.isArray(data?.students)
+      ? data.students
+      : Array.isArray(data?.members)
+        ? data.members
+        : [];
+    return {
+      groupName: String(data?.groupName ?? data?.name ?? '').slice(0, 200),
+      students: rawStudents.slice(0, 60).map((s: any) => ({
+        name: String(s?.first_name ?? s?.name ?? '').slice(0, 120),
+        attended: Math.max(0, Math.min(50000, parseInt(String(s?.attended ?? s?.present ?? 0), 10) || 0)),
+        missed: Math.max(0, Math.min(50000, parseInt(String(s?.missed ?? 0), 10) || 0)),
+      })),
+    };
+  }
+
   async analyzeStudent(data: any) {
+    const safe = this.sanitizeAnalyzeStudentInput(data);
     const sys =
-      data.special_mode === 'DEMO'
-        ? "You are a legendary Web Development Teacher. Provide an inspiring, humorous, and tech-savvy 'Web Dasturlash' (Web Development) themed analysis of this student. Use terms like 'Full-stack', 'Commit', 'Bug-free' etc."
-        : "Analyze student performance based on attendance and payments. Keep it humorous. If attendance < 60%, warn them of risk. Use Uzbek language for the analysis.";
+      "Analyze student performance based on attendance counts only. Keep it humorous. If implied attendance < 60%, warn of risk. Use Uzbek language.";
     try {
-      const content = await this.completeWithProvider(sys, JSON.stringify(data));
+      const content = await this.completeWithProvider(sys, JSON.stringify(safe));
       return { analysis: content };
     } catch (error: any) {
       if (error?.message === 'NO_AI') {
@@ -330,10 +353,11 @@ export class AiService implements OnModuleInit {
   }
 
   async groupSummary(data: any) {
+    const safe = this.sanitizeGroupSummaryInput(data);
     try {
       const content = await this.completeWithProvider(
         'Summarize group dynamics based on given data. Identify the best student (max attendance) and keep response humorous.',
-        JSON.stringify(data),
+        JSON.stringify(safe),
       );
       return { summary: content };
     } catch (error: any) {
@@ -520,10 +544,15 @@ Prefer Uzbek or bilingual wording when natural for an IT school.`;
     if (this.resolveAiProvider() === 'none') {
       return "Kelajakda zo'r dasturchi bo'ladi (lekin AI o'chiq)!";
     }
+    const safe = {
+      name: String(studentData?.name ?? '').slice(0, 200),
+      present: Math.max(0, Math.min(50000, parseInt(String(studentData?.present ?? 0), 10) || 0)),
+      missed: Math.max(0, Math.min(50000, parseInt(String(studentData?.missed ?? 0), 10) || 0)),
+    };
     try {
       return await this.completeWithProvider(
         "Sen IT o'quv markazining hazilkash yordamchisisan. Studentning davomati va holatiga qarab, unga bitta qisqa (1-2 gap), juda kulgili va o'zbek tilida holat (status) yozib ber. Masalan, agar dars qoldirsa: 'Bu bolani qidiruvga berish kerak, yo'qolib qoldi.', yoki zo'r bo'lsa: 'Sohasining sherlaridan biri 😎'. Faqat xabar qismini qaytar.",
-        JSON.stringify(studentData),
+        JSON.stringify(safe),
       );
     } catch {
       return "Zahira kodi: Darslarga vaqtida keling, yo'qsa AI xafa bo'ladi!";

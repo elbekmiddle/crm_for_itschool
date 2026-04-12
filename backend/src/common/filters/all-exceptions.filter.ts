@@ -20,6 +20,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
     let message = 'Ichki server xatoligi yuz berdi';
+    const isProduction = process.env.NODE_ENV === 'production';
 
     // Handle Postgres Specific Errors
     if (exception.code === '23505') {
@@ -28,11 +29,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
     if (exception.code === '42P01') {
       status = HttpStatus.SERVICE_UNAVAILABLE;
-      message = 'Jadval hali tayyor emas. Iltimos, migratsiyani ishga tushiring.';
+      message = isProduction
+        ? 'Xizmat vaqtincha mavjud emas. Keyinroq qayta urinib ko‘ring.'
+        : 'Jadval hali tayyor emas. Iltimos, migratsiyani ishga tushiring.';
     }
     if (exception.code === '42703') {
       status = HttpStatus.SERVICE_UNAVAILABLE;
-      message = 'Bazadagi ustunlar to‘liq emas. Iltimos, migratsiyani yangilang.';
+      message = isProduction
+        ? 'Xizmat vaqtincha mavjud emas. Keyinroq qayta urinib ko‘ring.'
+        : 'Bazadagi ustunlar to‘liq emas. Iltimos, migratsiyani yangilang.';
     }
     if (
       exception.code === 'ECONNRESET' ||

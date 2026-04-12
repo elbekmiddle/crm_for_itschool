@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Request, Patch, Delete, ForbiddenException } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ExamsService } from './exams.service';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { GradeExamDto } from './dto/grade-exam.dto';
@@ -27,7 +28,7 @@ export class ExamsController {
   @Get('manage/:examId')
   @ApiOperation({ summary: 'Imtihon batafsil + savollar (tahrir / tekshirish)' })
   getExamForManage(@Param('examId') examId: string) {
-    return this.examsService.findOne(examId);
+    return this.examsService.findOne(examId, { viewerRole: 'TEACHER' });
   }
 
   @Permissions('EXAM_MANAGE')
@@ -94,6 +95,7 @@ export class ExamsController {
   }
 
   @Permissions('EXAM_MANAGE')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post(':id/ai-generate')
   @ApiOperation({ summary: 'AI generates questions and attaches to exam', description: 'Permissions: EXAM_MANAGE' })
   generateAiExam(@Param('id') examId: string, @Body() body: { lesson_id: string; topic: string; level: string; count: number }, @Request() req) {
@@ -141,6 +143,18 @@ export class ExamsController {
   }
 
   @Permissions('EXAM_PASS')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @Post('attempt/:attemptId/violation')
+  @ApiOperation({ summary: 'Anti-cheat hodisasini serverda qayd etish', description: 'Permissions: EXAM_PASS' })
+  reportViolation(
+    @Param('attemptId') attemptId: string,
+    @Body() body: { type?: string },
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.examsService.reportViolation(attemptId, req.user.id, body?.type || 'unknown');
+  }
+
+  @Permissions('EXAM_PASS')
   @Post('attempt/:attemptId/submit')
   @ApiOperation({ summary: 'Submit exam session', description: 'Permissions: EXAM_PASS' })
   submitExamAttempt(@Param('attemptId') attemptId: string) {
@@ -150,16 +164,22 @@ export class ExamsController {
   @Permissions('EXAM_PASS')
   @Get('attempt/:attemptId/result')
   @ApiOperation({ summary: 'Get exam result', description: 'Permissions: EXAM_PASS' })
-  getAttemptResult(@Param('attemptId') attemptId: string) {
-    return this.examsService.getAttemptResult(attemptId);
+  getAttemptResult(@Param('attemptId') attemptId: string, @Request() req) {
+    return this.examsService.getAttemptResult(attemptId, {
+      viewerRole: req.user?.role,
+      viewerId: req.user?.id,
+    });
   }
 
   /** Javoblarni ko‘rish sahifasi (natija bilan bir xil yuk); `GET :id` bilan chalkashmasin. */
   @Permissions('EXAM_PASS')
   @Get('review/:attemptId')
   @ApiOperation({ summary: 'Review attempt (same payload as result)', description: 'Permissions: EXAM_PASS' })
-  getAttemptReview(@Param('attemptId') attemptId: string) {
-    return this.examsService.getAttemptResult(attemptId);
+  getAttemptReview(@Param('attemptId') attemptId: string, @Request() req) {
+    return this.examsService.getAttemptResult(attemptId, {
+      viewerRole: req.user?.role,
+      viewerId: req.user?.id,
+    });
   }
 
   @Permissions('EXAM_PASS')
@@ -180,8 +200,8 @@ export class ExamsController {
   @Permissions('EXAM_PASS')
   @Get(':id')
   @ApiOperation({ summary: 'Get specific exam details', description: 'Permissions: EXAM_PASS' })
-  getExamDetails(@Param('id') id: string) {
-    return this.examsService.findOne(id);
+  getExamDetails(@Param('id') id: string, @Request() req) {
+    return this.examsService.findOne(id, { viewerRole: req.user?.role });
   }
 
   @Permissions('EXAM_MANAGE')

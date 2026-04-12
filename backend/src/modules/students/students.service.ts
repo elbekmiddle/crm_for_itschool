@@ -88,19 +88,19 @@ export class StudentsService {
     const data = await get_student_dashboard(this.dbService, id);
     if (!data) return null;
 
-    let humor: unknown = null;
-    try {
-      humor = await this.aiService.getStudentHumorStatus({
+    void this.aiService
+      .getStudentHumorStatus({
         present_days: data.present_days,
         absent_days: data.absent_days,
         last_payment: data.payments[0]?.paid_at,
         name: data.first_name,
-      });
-    } catch {
-      humor = null;
-    }
+      })
+      .then((humor) => {
+        this.socketsGateway.emitToRoom(`user:${id}`, 'dashboard_ai_status', { humor });
+      })
+      .catch(() => {});
 
-    return { ...data, ai_status: humor };
+    return { ...data, ai_status: null };
   }
 
   async transferCourse(id: string, oldCourseId: string, newCourseId: string) {
@@ -143,6 +143,14 @@ export class StudentsService {
     const client = await this.dbService.getClient();
     try {
       await client.query('BEGIN');
+      const inOld = await client.query(
+        `SELECT 1 FROM group_students WHERE student_id = $1 AND group_id = $2 AND left_at IS NULL LIMIT 1`,
+        [id, oldGroupId],
+      );
+      if (!inOld.rows.length) {
+        await client.query('ROLLBACK');
+        throw new BadRequestException('Talaba ushbu guruhda (faol) emas.');
+      }
       await client.query(
         `UPDATE group_students SET left_at = NOW() WHERE student_id = $1 AND group_id = $2`,
         [id, oldGroupId],

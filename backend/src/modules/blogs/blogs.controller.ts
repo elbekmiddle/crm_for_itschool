@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Body, Param, Delete, UseGuards, Patch, Request } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { BlogsService } from './blogs.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -20,6 +21,7 @@ export class BlogsController {
   @ApiOperation({ summary: 'Get blog post by slug (Public)' })
   getBlog(@Param('slug') slug: string) { return this.blogsService.findOne(slug); }
 
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Post('views')
   @ApiOperation({ summary: 'Batch increment view counts (Public, throttled on client)' })
   recordViews(@Body() body: { deltas?: Record<string, number> }) {

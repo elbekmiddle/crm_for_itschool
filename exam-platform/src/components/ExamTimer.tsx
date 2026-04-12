@@ -4,12 +4,13 @@ import { Timer } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const ExamTimer: React.FC = () => {
-  const { timeLeft, tick, examTitle } = useExamStore();
+  const { timeLeft, tick, examTitle, isExamFinished } = useExamStore();
 
   useEffect(() => {
+    if (isExamFinished) return;
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [tick]);
+  }, [tick, isExamFinished]);
 
   const formatTime = (seconds: number) => {
     if (seconds < 0) seconds = 0;

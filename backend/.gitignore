@@ -3,3 +3,14 @@
 /dist
 /database
 /docker-compose.yml
+
+# Local scripts — credentials / one-off probes (never commit)
+reset_admin.js
+check_user.js
+verify_pass.js
+tmp_probe.js
+debug_student.js
+populate_demo_data.js
+scripts/debug_student*.js
+scripts/populate_demo*.js
+scripts/seed_demo_data.js

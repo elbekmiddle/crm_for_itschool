@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, UseGuards, Delete, Query, Request, ForbiddenException } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -24,7 +24,10 @@ export class PaymentsController {
   @Permissions('PAYMENT_READ')
   @Get('student/:id')
   @ApiOperation({ summary: 'Check student payment status and history', description: 'Permissions: PAYMENT_READ' })
-  getStudentPayments(@Param('id') id: string) {
+  getStudentPayments(@Param('id') id: string, @Request() req: { user?: { id?: string; role?: string } }) {
+    if (req.user?.role === 'STUDENT' && id !== req.user.id) {
+      throw new ForbiddenException("Faqat o'z to'lovlaringizni ko'ra olasiz");
+    }
     return this.paymentsService.getStudentPayments(id);
   }
 

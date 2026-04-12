@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import DOMPurify from 'dompurify'
 
 type Run = {
   text?: string
@@ -65,7 +66,11 @@ export function BlogRichBody({ content }: { content: string }) {
   if (!blocks) {
     const looksHtml = /<[a-z][\s\S]*>/i.test(content)
     if (looksHtml) {
-      return <div className="blog-rich-html" dangerouslySetInnerHTML={{ __html: content }} />
+      const safe = DOMPurify.sanitize(content, {
+        ALLOWED_TAGS: ['p', 'b', 'i', 'u', 'em', 'strong', 'h2', 'h3', 'h4', 'br', 'ul', 'ol', 'li', 'a', 'blockquote', 'span', 'div'],
+        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style'],
+      })
+      return <div className="blog-rich-html" dangerouslySetInnerHTML={{ __html: safe }} />
     }
     return <div className="blog-rich-plain">{content}</div>
   }

@@ -215,15 +215,30 @@ const ReviewPage: React.FC = () => {
                           String(sa ?? '') === String(optId ?? '') || String(sa ?? '') === String(oi + 1)
                         );
                       })();
-                      const isCorrectOpt = optionIsCorrectMcq(q.correct_answer, oi, optId, optVal);
+                      const caUnwrapped = unwrapCell(q.correct_answer);
+                      const hasReveal =
+                        caUnwrapped != null && caUnwrapped !== '' && !(Array.isArray(caUnwrapped) && caUnwrapped.length === 0);
+                      const isCorrectOpt = hasReveal && optionIsCorrectMcq(q.correct_answer, oi, optId, optVal);
+                      let rowTone: 'green' | 'red' | 'neutral';
+                      if (hasReveal) {
+                        if (isCorrectOpt) rowTone = 'green';
+                        else if (isStudentAnswer) rowTone = 'red';
+                        else rowTone = 'neutral';
+                      } else if (isCorrect === true && isStudentAnswer) {
+                        rowTone = 'green';
+                      } else if (isCorrect === false && isStudentAnswer) {
+                        rowTone = 'red';
+                      } else {
+                        rowTone = 'neutral';
+                      }
                       const optKey = `${rowKey}-opt-${oi}-${String(optId ?? oi)}`;
                       return (
                         <div
                           key={optKey}
                           className={`p-4 rounded-2xl text-sm font-bold border-2 transition-all flex items-center justify-between ${
-                            isCorrectOpt
+                            rowTone === 'green'
                               ? 'bg-green-400/10 border-green-400 text-green-700 dark:text-green-400'
-                              : isStudentAnswer && !isCorrectOpt
+                              : rowTone === 'red'
                                 ? 'bg-red-50 border-red-200 text-red-700 dark:text-red-400'
                                 : 'bg-white dark:bg-slate-800/40 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 opacity-60'
                           }`}
@@ -231,14 +246,14 @@ const ReviewPage: React.FC = () => {
                           <div className="flex items-center gap-3">
                             <div
                               className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 ${
-                                isCorrectOpt ? 'bg-green-500 border-green-500 text-white' : 'border-slate-200'
+                                rowTone === 'green' ? 'bg-green-500 border-green-500 text-white' : 'border-slate-200'
                               }`}
                             >
-                              {isCorrectOpt ? '✓' : oi + 1}
+                              {rowTone === 'green' ? '✓' : oi + 1}
                             </div>
                             {optVal}
                           </div>
-                          {isStudentAnswer && !isCorrectOpt && (
+                          {isStudentAnswer && rowTone === 'red' && (
                             <span className="text-[10px] font-black uppercase text-red-500 bg-red-100 px-2 py-1 rounded-lg">
                               Sizning javobingiz
                             </span>

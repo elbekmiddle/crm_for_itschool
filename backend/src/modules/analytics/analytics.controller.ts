@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards, Request, Res } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Request, Res, ForbiddenException } from '@nestjs/common';
 import { Response } from 'express';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -27,6 +27,9 @@ export class AnalyticsController {
   @ApiOperation({ summary: 'Analyze single student progress', description: 'Permissions: STUDENT_READ' })
   getStudentAnalytics(@Param('id') id: string, @Request() req) {
     const targetId = id === 'me' ? req.user.id : id;
+    if (req.user?.role === 'STUDENT' && targetId !== req.user.id) {
+      throw new ForbiddenException("Faqat o'z statistikangizni ko'ra olasiz");
+    }
     return this.analyticsService.getStudentAnalytics(targetId);
   }
 
@@ -60,8 +63,14 @@ export class AnalyticsController {
   @ApiOperation({ summary: 'Export all students to CSV', description: 'Permissions: ANALYTICS_VIEW' })
   async exportStudents(@Res() res: Response) {
     const data = await this.analyticsService.getStudentsForExport();
+    const esc = (v: unknown) => {
+      const t = String(v ?? '');
+      return /^[=+\-@\t\r]/.test(t) ? `'${t.replace(/'/g, "''")}'` : t;
+    };
     const header = 'ID,First Name,Last Name,Phone,Created At\n';
-    const rows = data.map(s => `${s.id},${s.first_name},${s.last_name},${s.phone},${s.created_at}`).join('\n');
+    const rows = data
+      .map((s: any) => [s.id, esc(s.first_name), esc(s.last_name), esc(s.phone), s.created_at].join(','))
+      .join('\n');
     const csv = header + rows;
     res.header('Content-Type', 'text/csv');
     res.attachment('students_export.csv');

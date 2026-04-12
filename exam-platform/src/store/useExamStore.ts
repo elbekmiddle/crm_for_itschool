@@ -51,7 +51,7 @@ interface ExamState {
   retryPending: () => Promise<void>;
   toggleFlag: (questionId: string) => void;
   tick: () => void;
-  incrementViolations: () => void;
+  incrementViolations: (type?: string) => void;
   nextQuestion: () => void;
   prevQuestion: () => void;
   jumpToQuestion: (index: number) => void;
@@ -123,6 +123,7 @@ export const useExamStore = create<ExamState>()(
             questions: Array.isArray(questions) ? questions : [],
             answers: existingAnswers,
             flagged: new Set(),
+            pendingAnswers: [],
             timeLeft,
             startedAt: attempt.started_at,
             deadlineAt: attempt.deadline_at,
@@ -227,9 +228,15 @@ export const useExamStore = create<ExamState>()(
         }
       },
 
-      incrementViolations: () => {
-        const newCount = get().violations + 1;
+      incrementViolations: (type = 'visibility_blur') => {
+        const { attemptId, violations, isExamStarted, isExamFinished } = get();
+        const newCount = violations + 1;
         set({ violations: newCount });
+        if (attemptId && isExamStarted && !isExamFinished) {
+          void api
+            .post(`/exams/attempt/${attemptId}/violation`, { type })
+            .catch(() => undefined);
+        }
         if (newCount >= 3 && get().isExamStarted && !get().isExamFinished) {
           get().finishExam('cheating');
         }

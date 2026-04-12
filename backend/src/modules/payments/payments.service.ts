@@ -1,4 +1,5 @@
-import { Injectable, OnModuleInit, Logger, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { DbService } from '../../infrastructure/database/db.service';
 import { all_payments } from './queries/all_payments';
 import { all_payments_page, count_payments } from './queries/all_payments_paginated';
@@ -9,7 +10,7 @@ import { TelegramService } from '../../infrastructure/notifications/telegram.ser
 import { SocketsGateway } from '../sockets/sockets.gateway';
 
 @Injectable()
-export class PaymentsService implements OnModuleInit {
+export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
 
   constructor(
@@ -18,11 +19,7 @@ export class PaymentsService implements OnModuleInit {
     private readonly socketsGateway: SocketsGateway,
   ) {}
 
-  onModuleInit() {
-    this.logger.log('Payment Cron initialized.');
-    setInterval(() => this.checkOverduePayments(), 1000 * 60 * 60 * 24);
-  }
-
+  @Cron(CronExpression.EVERY_DAY_AT_9AM)
   async checkOverduePayments() {
     this.logger.log('Checking overdue payments...');
     try {
@@ -35,7 +32,17 @@ export class PaymentsService implements OnModuleInit {
           FROM payments
           GROUP BY student_id
         )
-        SELECT s.id, s.first_name, s.telegram_chat_id
+        SELECT s.id, s.first_name, s.telegram_chat_id,
+          COALESCE(
+            (
+              SELECT sc.price_agreed::numeric
+              FROM student_courses sc
+              WHERE sc.student_id = s.id AND sc.status = 'active'
+              ORDER BY sc.created_at DESC NULLS LAST
+              LIMIT 1
+            ),
+            0
+          ) AS due_amount
         FROM students s
         LEFT JOIN pc ON pc.student_id = s.id
         WHERE s.deleted_at IS NULL
@@ -48,10 +55,11 @@ export class PaymentsService implements OnModuleInit {
         `,
       );
       for (const student of rows) {
+        const amt = Math.max(0, Number(student.due_amount) || 0);
         await this.telegramService.notifyPaymentDue(
           student.telegram_chat_id,
           student.first_name,
-          500000,
+          amt,
           'Joriy',
           student.id,
         );

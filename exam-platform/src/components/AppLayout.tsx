@@ -22,7 +22,7 @@ const navItems = [
   { to: '/profile',    icon: User,             label: 'Profilim',     shortcut: '2' },
   { to: '/course',     icon: BookOpen,         label: 'Kursim',       shortcut: '3' },
   { to: '/attendance', icon: CalendarCheck,    label: 'Davomat',      shortcut: '4' },
-  { to: '/payments',   icon: CreditCard,       label: "To'lovlar",    shortcut: '5' },
+  { to: '/payments',   icon: CreditCard,       label: "To‘lovlar",    shortcut: '5' },
   { to: '/exams',      icon: ClipboardList,    label: 'Imtihonlar',   shortcut: '6' },
 ];
 
