@@ -139,10 +139,18 @@ export class GroupsController {
   @Permissions('GROUP_DELETE')
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a group', description: 'Permissions: GROUP_DELETE' })
-  remove(@Param('id') id: string, @Request() req: any) {
-    if (req.user?.role !== 'TEACHER') {
-      throw new ForbiddenException('Guruhni faqat o‘qituvchi o‘chirishi mumkin');
+  async remove(@Param('id') id: string, @Request() req: any) {
+    const role = req.user?.role;
+    if (role === 'ADMIN' || role === 'MANAGER') {
+      return this.groupsService.softDelete(id);
     }
-    return this.groupsService.softDelete(id);
+    if (role === 'TEACHER') {
+      const isOwner = await this.groupsService.isGroupOwner(id, req.user.id);
+      if (!isOwner) {
+        throw new ForbiddenException('Siz faqat o‘z guruhingizni o‘chirishingiz mumkin');
+      }
+      return this.groupsService.softDelete(id);
+    }
+    throw new ForbiddenException('Guruhni o‘chirish uchun ruxsat yo‘q');
   }
 }
